@@ -64,7 +64,7 @@ read it first if that is your habit. It
 2. asks whether to take `starship.toml` too, and what to call your account
    (next section);
 3. copies `cship.toml` to `~/.config/cship.toml` — a copy, never a symlink,
-   backed up beside it as `cship.toml.pre-dotfiles.<timestamp>` if one was
+   backed up beside it as `cship.toml.unpreened.<timestamp>` if one was
    there, left untouched if identical. A symlink there is moved aside even
    to identical content: the copy is yours to tune;
 4. wires `statusLine` in `~/.claude/settings.json` (or under
@@ -107,7 +107,7 @@ alone. After upgrading cship that way, run this installer again: it
 recognises the bare entry and takes it over.
 
 **Leaving.** Each backup sits beside the file it replaced, as
-`<file>.pre-dotfiles.<timestamp>`; move it back. Then remove the `statusLine`
+`<file>.unpreened.<timestamp>`; move it back. Then remove the `statusLine`
 entry from `settings.json`, or run `cship uninstall`, which removes the entry,
 the binary and its caches and leaves `cship.toml` where it is.
 

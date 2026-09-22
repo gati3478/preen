@@ -37,7 +37,7 @@ script's manual.
 ```sh
 git clone https://github.com/gati3478/preen ~/preen
 cd ~/preen && ./bin/bootstrap
-./bin/dot-doctor
+./bin/preen doctor
 ```
 
 `bootstrap` names what is missing and asks before going on; asks your name and
@@ -46,7 +46,7 @@ every row of `manifest.tsv`; and writes `~/.config/kitty/local.conf`, the one
 path kitty's config language cannot template. It does not modify your clone.
 What it finds in the way:
 
-- a plain file is kept beside itself as `<file>.pre-dotfiles`
+- a plain file is kept beside itself as `<file>.unpreened`
   (`~/.gitconfig.local` with a timestamp);
 - a symlink is never written through: at a `link` row it is replaced and its
   old target printed, at a `copy` row it is moved aside;
@@ -57,13 +57,13 @@ The shipped `ssh/config` then names Proton Pass's agent socket for every
 host. Keys on disk still sign; `IdentityAgent SSH_AUTH_SOCK` under `Host *`
 in `config.local` keeps an agent of your own.
 
-`dot-doctor` reads every row back, then runs its own checks of the tools,
+`preen doctor` reads every row back, then runs its own checks of the tools,
 warning rather than failing where one is absent. The author's preferences are
 asserted against your live config only when asked (python 3.11 or newer),
 because they are the author's:
 
 ```sh
-~/preen/bin/dot-doctor --taste
+~/preen/bin/preen doctor --taste
 ```
 
 ## What is here
@@ -83,7 +83,7 @@ ripgrep/           flags: hidden in, .git out, smart case, clickable matches
 mise/              the runtime manager's global pins
 ssh/               an Include for your own config, then the agent line; no hosts
 macos/             System Settings by `defaults`; bootstrap does not run it
-bin/               bootstrap, dot-apply, dot-doctor, and what the doctor runs
+bin/               bootstrap, preen — apply and doctor — and what the doctor runs
 lib/               install.sh, the half the installers share
 manifest.tsv       the source's public rows: file → live path → link or copy
 preferences.toml   each preference's value and why, and the rows that check it
@@ -94,7 +94,7 @@ LICENSE            MIT
 
 **One table drives install and verification.** `manifest.tsv` maps each file
 here to its live path and says whether the row is a symlink or a copy.
-`bin/dot-apply` installs from it; `bin/dot-doctor` checks against it. There is
+`preen apply` installs from it; `preen doctor` checks against it. There is
 no second list, so "installed" and "checked" read the same row.
 
 **`link` or `copy`, decided by who writes the file.** Where an application only
@@ -123,15 +123,15 @@ identity, each machine's overlays and its half of `preferences.toml`, the
 personal scripts, the prose that argues every preference and the wiki around
 it, and the tools that publish this mirror and pull rewritten copies back.
 Comments in these files cite them — `docs/preferences.md`, `traps.md`,
-`dot-publish` — because the files are published as they are. Nothing here
-reads those, nothing breaks without them, and `dot-doctor --taste` says so
+`preen publish` — because the files are published as they are. Nothing here
+reads those, nothing breaks without them, and `preen doctor --taste` says so
 once and carries on.
 
 ## Make it yours
 
-Fork or clone, keep `manifest.tsv`'s format and the two verbs, `dot-apply` and
-`dot-doctor`, replace the rows with your own files, and delete every directory
-you do not want along with its rows. The checks in `bin/dot-doctor` probe the
+Fork or clone, keep `manifest.tsv`'s format and the two verbs, `preen apply` and
+`preen doctor`, replace the rows with your own files, and delete every directory
+you do not want along with its rows. The checks in `bin/preen-doctor` probe the
 tools the author runs; read them and cut what is not yours.
 
 MIT.

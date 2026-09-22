@@ -6,10 +6,10 @@
 # instances of a doctor count going stale in under a week. Read the state
 # off the run, not off a number.
 #
-#   dot-doctor            every unit, one line each
-#   dot-doctor --quiet    the headings, every warn and FAIL, the verdict — an
+#   preen doctor          every unit, one line each
+#   preen doctor --quiet  the headings, every warn and FAIL, the verdict — an
 #                         ok line prints nothing, and still nothing is counted
-#   dot-doctor --taste    also assert the preference spec where it is off by
+#   preen doctor --taste  also assert the preference spec where it is off by
 #                         default: outside the source repo (see SOURCE_REPO)
 set -uo pipefail
 
@@ -22,7 +22,7 @@ for arg in "$@"; do
   case "$arg" in
     --quiet) QUIET=yes ;;
     --taste) TASTE=yes ;;
-    *) printf 'dot-doctor: unknown argument: %s (--quiet, --taste)\n' "$arg" >&2; exit 2 ;;
+    *) printf 'preen doctor: unknown argument: %s (--quiet, --taste)\n' "$arg" >&2; exit 2 ;;
   esac
 done
 source "$REPO/bin/lib/publish-fingerprint.sh"
@@ -44,14 +44,14 @@ SOURCE_REPO=no
 # added a docs/ directory to their clone had the author's taste asserted unasked.
 [ -d "$REPO/hosts" ] && SOURCE_REPO=yes
 
-# dot-pull reconciles a copy row back into the repo and is NOT in the mirror.
+# preen pull reconciles a copy row back into the repo and is NOT in the mirror.
 # Naming it there sent an adopter after a tool they do not have, in the one
 # message they are most likely to ever see: every copy row exists precisely
 # because the application rewrites that file itself (found 14-09-2026).
-if [ -x "$REPO/bin/dot-pull" ]; then
-  RECONCILE="run dot-pull to reconcile"
+if [ -x "$REPO/bin/preen-pull" ]; then
+  RECONCILE="run preen pull to reconcile"
 else
-  RECONCILE="the application rewrote it — copy it over the repo's copy to keep the change, or re-run dot-apply to discard it"
+  RECONCILE="the application rewrote it — copy it over the repo's copy to keep the change, or re-run preen apply to discard it"
 fi
 
 echo "== manifest rows =="
@@ -100,7 +100,7 @@ while IFS=$'\t' read -r src tgt mode perms; do
       ;;
   esac
 
-  # The `perms` column is APPLIED by dot-apply (`chmod "$perms"`) and, until
+  # The `perms` column is APPLIED by preen apply (`chmod "$perms"`) and, until
   # 14-08-2026, was verified by nothing here — this loop read $perms and never
   # used it. So a host's ssh config could drift from 0600 to 0644 and every row
   # still reported ok: the column looked like a guarantee and was only ever an
@@ -123,7 +123,7 @@ done < "$MANIFEST"
 # doesn't match the ''|'#'* skip either, so it falls through into a mode
 # check with $mode empty; or the manifest loses its trailing newline and
 # `read` drops the last line outright (the classic `while read` gotcha).
-# dot-apply hard-errors on a bad row; this makes dot-doctor unable to
+# preen apply hard-errors on a bad row; this makes preen doctor unable to
 # silently see fewer rows than the manifest actually has.
 expected_rows=$(awk -F'\t' '$1 !~ /^($|#)/ { c++ } END { print c+0 }' "$MANIFEST")
 if [ "$rows_seen" -ne "$expected_rows" ]; then
@@ -278,7 +278,7 @@ fi
 
 # The check below needs a real file at $REPO/<src>. In the checked-out repo
 # that's public/shell/zshrc, but this same script is also staged verbatim
-# into the flattened public mirror (see dot-publish), where there is no
+# into the flattened public mirror (see bin/preen-publish), where there is no
 # public/ prefix at all — the row's source there is just shell/zshrc.
 # Deriving the path from manifest.tsv (present, correctly stripped, in both
 # layouts) instead of hardcoding "public/..." is what makes one script
@@ -357,12 +357,12 @@ if [ -n "${USER:-}" ] && pgrep -qf "/usr/bin/login -f -l -p $USER " 2>/dev/null;
   fi
 fi
 
-# The public mirror must not silently fall behind. Honours $DOT_MIRROR, the
-# same override dot-publish accepts — a doctor that checks a different
+# The public mirror must not silently fall behind. Honours $PREEN_MIRROR, the
+# same override preen publish accepts — a doctor that checks a different
 # path than the tool that maintains it is its own drift.
 # The next two checks are SOURCE-REPO ONLY.
-# dot-publish stages this script verbatim into the public mirror, where
-# `publish/` does not exist and neither does dot-publish itself. Run there,
+# preen publish stages this script verbatim into the public mirror, where
+# `publish/` does not exist and neither does bin/preen-publish itself. Run there,
 # the currency check could never pass (its fingerprint hashes HEAD:public and
 # HEAD:docs/public-README.md, neither of which survives the flattening) and its
 # advice pointed at a script that was never shipped. An adopter got a permanent
@@ -370,14 +370,14 @@ fi
 # `publish/` is the context signal — same guard style as blocked-upstream.md
 # below. Found by audit 09-08-2026.
 if [ -d "$REPO/publish" ]; then
-  MIRROR="${DOT_MIRROR:-$HOME/Development/preen}"
+  MIRROR="${PREEN_MIRROR:-$HOME/Development/preen}"
   if [ -d "$MIRROR/.git" ]; then
     here=$(publish_fingerprint "$REPO" 2>/dev/null || echo none)
     marker=$(cat "$REPO/publish/.last-published" 2>/dev/null || echo none)
     if [ "$here" = "$marker" ]; then
       ok "public mirror is current"
     else
-      warn "public/ has changed since the last publish — run dot-publish"
+      warn "public/ has changed since the last publish — run preen publish"
     fi
   else
     warn "public mirror not cloned at $MIRROR"

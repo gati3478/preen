@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Apply the macOS half of the taste — the settings System Settings owns and
 # no manifest row can carry. The values are the ones docs/preferences.md
-# § macOS names; dot-doctor asserts them LIVE through the `defaults` targets
+# § macOS names; preen doctor asserts them LIVE through the `defaults` targets
 # in the preference spec, so drift between this file and the taste shows
 # up there, never here. Idempotent. User-level only: the one root step
 # (Touch ID for sudo) is printed, not run. Trackpad, language and region

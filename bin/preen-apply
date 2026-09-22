@@ -4,7 +4,7 @@
 # Modes:
 #   link  a symlink into the repo — editing the repo IS editing the live file
 #   copy  the application rewrites this file itself, so it is copied and
-#         reconciled by dot-pull rather than linked
+#         reconciled by preen pull rather than linked
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -15,7 +15,7 @@ DRY_RUN="${1:-}"
 # root would create root-owned files in a user's home, which then fail to be
 # rewritten by the tools that own them.
 if [ "$(id -u)" -eq 0 ]; then
-  echo "dot-apply: refusing to run as root — this installs user files" >&2
+  echo "preen apply: refusing to run as root — this installs user files" >&2
   exit 1
 fi
 
@@ -47,7 +47,7 @@ on_exit() {
   local rc=$?
   if [ "$rc" -ne 0 ] && [ "$applied" -gt 0 ] && [ "$stop_advice" = yes ]; then
     echo "--" >&2
-    echo "dot-apply: stopped after $applied of $expected_rows entries. Fix what is reported above and run it again — every row is idempotent, so a re-run continues rather than repeating." >&2
+    echo "preen apply: stopped after $applied of $expected_rows entries. Fix what is reported above and run it again — every row is idempotent, so a re-run continues rather than repeating." >&2
   fi
   return "$rc"
 }
@@ -94,8 +94,8 @@ while IFS=$'\t' read -r src tgt mode perms; do
       if [ -f "$abs_tgt" ] && [ ! -L "$abs_tgt" ]; then
         # Under a name nothing holds yet: a second plain file here — a tool
         # replaced the link — must not overwrite the first run's backup.
-        bak="$abs_tgt.pre-dotfiles"; n=1
-        while [ -e "$bak" ] || [ -L "$bak" ]; do bak="$abs_tgt.pre-dotfiles.$n"; n=$((n + 1)); done
+        bak="$abs_tgt.unpreened"; n=1
+        while [ -e "$bak" ] || [ -L "$bak" ]; do bak="$abs_tgt.unpreened.$n"; n=$((n + 1)); done
         cp "$abs_tgt" "$bak"
         echo "backed up       $tgt -> $tgt${bak#"$abs_tgt"}"
       elif [ -L "$abs_tgt" ] && [ ! "$abs_tgt" -ef "$abs_src" ]; then
@@ -115,8 +115,8 @@ while IFS=$'\t' read -r src tgt mode perms; do
       # nothing anywhere showed it (found 14-09-2026, on 8 of 30 rows). Move
       # the link aside, link and all, as the statusline drop-in's place() does.
       if [ -L "$abs_tgt" ]; then
-        bak="$abs_tgt.pre-dotfiles"; n=1
-        while [ -e "$bak" ] || [ -L "$bak" ]; do bak="$abs_tgt.pre-dotfiles.$n"; n=$((n + 1)); done
+        bak="$abs_tgt.unpreened"; n=1
+        while [ -e "$bak" ] || [ -L "$bak" ]; do bak="$abs_tgt.unpreened.$n"; n=$((n + 1)); done
         mv "$abs_tgt" "$bak"
         echo "moved aside     $tgt (a symlink -> $(readlink "$bak"))"
       elif [ -f "$abs_tgt" ] && ! cmp -s "$abs_src" "$abs_tgt"; then
@@ -125,8 +125,8 @@ while IFS=$'\t' read -r src tgt mode perms; do
         # reader of the mirror's page closed the tab on that (22-09-2026). The
         # link row's rule: kept beside itself, under a name nothing holds yet;
         # identical content is left alone, so a re-run backs up nothing.
-        bak="$abs_tgt.pre-dotfiles"; n=1
-        while [ -e "$bak" ] || [ -L "$bak" ]; do bak="$abs_tgt.pre-dotfiles.$n"; n=$((n + 1)); done
+        bak="$abs_tgt.unpreened"; n=1
+        while [ -e "$bak" ] || [ -L "$bak" ]; do bak="$abs_tgt.unpreened.$n"; n=$((n + 1)); done
         cp "$abs_tgt" "$bak"
         echo "backed up       $tgt -> $tgt${bak#"$abs_tgt"}"
       fi
@@ -143,17 +143,17 @@ while IFS=$'\t' read -r src tgt mode perms; do
   applied=$((applied + 1))
 done < "$MANIFEST"
 
-# Guards the classic `while read` gotcha (same fix as dot-doctor/dot-pull):
+# Guards the classic `while read` gotcha (same fix as preen doctor and preen pull):
 # a manifest missing its trailing newline silently drops its last row from
 # this loop entirely — `read` still populates the row's variables but
 # returns non-zero on that final line, so the loop condition fails before
-# the body runs. dot-apply is the tool that actually DEPLOYS the manifest;
-# unlike dot-doctor (verifies) and dot-pull (reconciles copy-mode files),
+# the body runs. preen apply is the tool that actually DEPLOYS the manifest;
+# unlike preen doctor (verifies) and preen pull (reconciles copy-mode files),
 # a silent short-deploy here means a stale symlink or missing file stays
 # live with no error and an "N entries applied" count that looks correct.
 if [ "$rows_seen" -ne "$expected_rows" ]; then
   stop_advice=no   # the loop finished; a re-run repeats this, it does not continue
-  echo "dot-apply: refusing — processed $rows_seen manifest row(s) but $MANIFEST has $expected_rows — a row was silently skipped (missing trailing newline?)" >&2
+  echo "preen apply: refusing — processed $rows_seen manifest row(s) but $MANIFEST has $expected_rows — a row was silently skipped (missing trailing newline?)" >&2
   exit 1
 fi
 

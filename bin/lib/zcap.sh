@@ -1,6 +1,6 @@
 # zcap: run a command in a login+interactive zsh under a PTY, isolated
-# from dot-capture's own caller environment, and return its cleaned
-# output. Sourced by bin/dot-capture; extracted into its own file (like
+# from preen capture's own caller environment, and return its cleaned
+# output. Sourced by bin/preen-capture; extracted into its own file (like
 # bin/lib/dump-kitty.py and bin/lib/check-floors.sh) so
 # tests/test-kitty-harness.sh can exercise the real function directly.
 #
@@ -52,13 +52,13 @@
 # measure the fabrication. eza's `auto` modes are the worked example
 # (docs/traps.md).
 #
-# Isolated from dot-capture's own caller's environment — otherwise this
+# Isolated from preen capture's own caller's environment — otherwise this
 # section measures whoever ran the capture, not the shell config. Without
 # `env -i`, three sections silently absorbed caller state: env-names
 # picked up Claude Code's CLAUDE_* vars (7 names, confirmed to vary
 # between an agent run and a plain terminal); PATH picked up 18 entries
 # never added by any dotfile (17 Claude plugin bin dirs, kitty's own
-# MacOS bin dir — present only because dot-capture happened to be run
+# MacOS bin dir — present only because preen capture happened to be run
 # from inside a real kitty session, which this harness's `script`-based
 # PTY never actually goes through); FPATH picked up one more kitty
 # injection plus two entries — .docker/completions and homebrew's
@@ -82,7 +82,7 @@
 #                  $terminfo, keyed on TERM. Pinned to xterm-kitty — what
 #                  a real kitty tab actually sets — so those bindings key
 #                  the way they do in a kitty tab regardless of the
-#                  terminal dot-capture is invoked from.
+#                  terminal preen capture is invoked from.
 #                  This does NOT make it a shell with kitty's shell
 #                  integration loaded — that is injected by kitty's own
 #                  ZDOTDIR trampoline at spawn (not by TERM) and armed by a

@@ -1,4 +1,4 @@
-# Preference-SSOT assertions, for dot-doctor to source.
+# Preference-SSOT assertions, for bin/preen-doctor to source.
 #
 # The Python half does the reading and deciding; this half only colours the
 # result, so the section looks like every other check rather than like a foreign
@@ -7,14 +7,14 @@
 #
 # Degrades politely rather than failing the run: an absent python3 or a python
 # older than 3.11 (no tomllib) produces one warn line, not a FAIL. The
-# assertions are a layer on top of dot-doctor, and losing them should not make
+# assertions are a layer on top of preen doctor, and losing them should not make
 # the manifest verification look broken.
 
 run_pref_checks() {
   local repo="$1"
   local script="$repo/bin/lib/pref-check.py"
 
-  # Guard on the spec. dot-publish copies a short NAMED list of files into the
+  # Guard on the spec. preen publish copies a short NAMED list of files into the
   # mirror rather than staging bin/ wholesale, and this script is on that list
   # — so the mirror does run this function, against a spec in the flat layout
   # and with no hosts/ half. The guard earns its place there as much as here: a
@@ -22,9 +22,9 @@ run_pref_checks() {
   # rather than report a checker that found nothing.
   #
   # ⚠️ This comment has now been wrong twice about its own premise: first
-  # claiming dot-publish "stages bin/ verbatim", then that this script "never
+  # claiming preen publish "stages bin/ verbatim", then that this script "never
   # reaches the mirror" (corrected 18-09-2026, after it started shipping). Read
-  # dot-publish before trusting the next sentence someone writes here.
+  # bin/preen-publish before trusting the next sentence someone writes here.
   #
   # It used to name docs/preferences.toml here. The spec is several files now —
   # a shipped half, one per host — and the shipped one sits at a different depth
@@ -47,7 +47,7 @@ run_pref_checks() {
 
   # NOT named `status`: that identifier is read-only in zsh (an alias for $?),
   # so `local out status` aborts the function outright the moment anything
-  # sources this file from a zsh shell. dot-doctor is bash, so the bug was
+  # sources this file from a zsh shell. bin/preen-doctor is bash, so the bug was
   # latent — it surfaced the first time the function was sourced directly to
   # test the degradation path below. Found 14-08-2026.
   local out err rc errfile
@@ -61,7 +61,7 @@ run_pref_checks() {
   # failure. pref-check.py reports that condition on stderr and exits non-zero,
   # which — with stderr discarded, as it was until 14-08-2026 — looked
   # identical to a crash. This machine's /usr/bin/python3 is 3.9, so every
-  # dot-doctor run outside an interactive mise shell hit that path and FAILed
+  # preen doctor run outside an interactive mise shell hit that path and FAILed
   # on an environment condition the header promises is tolerated.
   if [ -z "$out" ] && [ "$rc" -ne 0 ] && [[ "$err" == *'needs python'* ]]; then
     warn "preference checks skipped — $err"
@@ -71,12 +71,12 @@ run_pref_checks() {
   # Silence is legitimate — a spec whose entries are all `n_a` emits nothing by
   # design — so emptiness alone must not read as a crash. The exit status is
   # what separates the two, and a crash is a FAILURE, not a warning: this used
-  # to `return 0`, so a checker that died still let dot-doctor print
+  # to `return 0`, so a checker that died still let preen doctor print
   # "no failures". That is the silent-success shape this repo keeps getting
   # bitten by, reproduced inside the guard written to complain about it.
   # stderr is no longer folded into $out: a Python warning on stderr would
   # otherwise arrive as an "unrecognised status" line.
-  # A pattern match, not `printf | grep -q`: under dot-doctor's pipefail a
+  # A pattern match, not `printf | grep -q`: under preen doctor's pipefail a
   # grep that exits at the first tab leaves printf with SIGPIPE on a large
   # output, and 141 read as "did not run" (audit, 11-09-2026 — the guard
   # flipped at roughly twice today's output).
@@ -101,7 +101,7 @@ run_pref_checks() {
   done <<< "$out"
 
   # A checker that emitted lines and THEN died returned non-zero with the
-  # traceback on stderr and nothing above naming it — dot-doctor would print
+  # traceback on stderr and nothing above naming it — preen doctor would print
   # FAILURES ABOVE over a section with no FAIL line. Name the cause.
   if [ "$rc" -ne 0 ] && [ -n "$err" ]; then
     bad "preference checks exited $rc with stderr — $(printf '%s' "$err" | tail -1)"

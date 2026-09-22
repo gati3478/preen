@@ -31,7 +31,7 @@
 	# The ANSI ride (preferences.md § Colour): named 4-bit colors and pure
 	# attributes only, so a kitty theme swap recolors diffs for free. delta's
 	# `brightblack` keyword betrays the rule — it emits 38;5;8 — hence
-	# `normal dim` for the zero style; dot-doctor proves the output 4-bit.
+	# `normal dim` for the zero style; preen doctor proves the output 4-bit.
 	syntax-theme = ansi
 	minus-style = red
 	minus-emph-style = reverse red

@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# preen <verb> [args…] — apply · doctor · publish · pull · capture, each a
+# script beside this one as preen-<verb>. The mirror ships apply and doctor
+# only, so a verb that is not here says so rather than failing on a path.
+set -euo pipefail
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+usage() { cat <<'EOF'
+usage: preen <verb> [args]
+  apply     deploy every manifest row
+  doctor    check every row, then the semantic checks (--quiet, --taste)
+  publish   stage, scan and push the public mirror
+  pull      reconcile rewritten copy rows back into the repo
+  capture   snapshot the resolved state under a label
+EOF
+}
+verb="${1:-}"
+case "$verb" in
+  -h|--help) usage; exit 0 ;;
+  "") usage >&2; exit 2 ;;
+  apply|doctor|publish|pull|capture)
+    [ -x "$DIR/preen-$verb" ] || { echo "preen: $verb is not shipped in this copy" >&2; exit 2; }
+    shift; exec "$DIR/preen-$verb" "$@" ;;
+  *) echo "preen: unknown verb: $verb (apply, doctor, publish, pull, capture)" >&2; exit 2 ;;
+esac

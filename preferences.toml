@@ -8,7 +8,7 @@
 # `preferences.md` is the authority and carries the reasoning. This file carries
 # only what a check can act on, and `bin/lib/pref-check.py` asserts it against
 # LIVE config — not against the copies in this repo, because a `copy`-mode entry
-# can be legitimately stale between `dot-pull` runs and the question is what the
+# can be legitimately stale between `preen pull` runs and the question is what the
 # application actually renders.
 #
 # "Live config" means the whole config an application assembles, not one file:
@@ -577,7 +577,7 @@ want = "#fabd2f"
 # and carries NO border
 # directives, so active_border_color reverts to kitty's default #00ff00 —
 # measured 26-08-2026 against the collection's own --dump-theme. The manifest
-# copy-row check sees the rewrite, but its remedy (dot-pull) then captures the
+# copy-row check sees the rewrite, but its remedy (preen pull) then captures the
 # loss into the repo with every palette assertion still green. These two pin
 # the accent carriers — the same aqua tmux's active-window pill asserts.
 [pref.terminal_palette.targets.kitty_active_tab]
@@ -788,7 +788,7 @@ want = "ansi"
 # so unlike eza, silence does not comply — the rider must be claimed. Reaches
 # zoxide's zi too: the env var passes through to its fzf child unchanged
 # (probe-measured 27-08-2026). eza rides by default and is watched
-# behaviourally by dot-doctor's fixture check instead — its compliant state
+# behaviourally by preen doctor's fixture check instead — its compliant state
 # is an absence no text reader can see.
 [pref.follow_terminal_palette.targets.fzf]
 target = "zshrc"
@@ -1513,7 +1513,7 @@ want_any = "ZSH_AUTOSUGGEST_STRATEGY=atuin"
 # Widgets bound once at the first prompt instead of re-wrapped on every
 # precmd — upstream's own lever, 7 ms per prompt (20 rebinds in 142 ms,
 # 02-09-2026). Safe because nothing creates a widget after z-sy-h, which
-# dot-doctor's ordering check owns; a plugin sourced below it anyway would
+# preen doctor's ordering check owns; a plugin sourced below it anyway would
 # need a manual `_zsh_autosuggest_bind_widgets`.
 [pref.autosuggestions.targets.zshrc_manual_rebind]
 target = "zshrc"
@@ -1528,7 +1528,7 @@ want_any = "ZSH_AUTOSUGGEST_MANUAL_REBIND=1"
 
 [pref.syntax_highlighting]
 value = "an unknown command turns red before Enter"
-why = "Errors caught at the prompt cost nothing; the same mistake after Enter costs a round trip. Must be sourced LAST (upstream rule) — dot-doctor's semantic check owns the ordering half. Sole implementation: zshzle's highlight contexts do not include command validity, and region_highlight — exactly what z-sy-h drives — is the only route (ruled from the 27-08-2026 sweep)."
+why = "Errors caught at the prompt cost nothing; the same mistake after Enter costs a round trip. Must be sourced LAST (upstream rule) — preen doctor's semantic check owns the ordering half. Sole implementation: zshzle's highlight contexts do not include command validity, and region_highlight — exactly what z-sy-h drives — is the only route (ruled from the 27-08-2026 sweep)."
 
 [pref.syntax_highlighting.targets.zsh_live]
 key = "widgets"
@@ -2957,7 +2957,7 @@ target = "gitcfg"
 key = "interactive.diffFilter"
 want_contains = "delta"
 
-# The style keys are asserted here; dot-doctor proves the OUTPUT stays
+# The style keys are asserted here; preen doctor proves the OUTPUT stays
 # 4-bit behaviourally — the eza precedent (an SGR grep over fixture
 # output; eza's fixture is a listing, this one a diff) — because a delta
 # upgrade could grow a new decorated element whose default is truecolor
@@ -3051,7 +3051,7 @@ why = "untrackedCache keeps the win the 28-08-2026 sweep measured (`git status` 
 # Absence, not a false: core.fsmonitor unset IS git's default, and this config
 # holds only non-defaults. want_absent therefore reads the FILE for the key
 # coming back, in the spelling this repo writes. The other spellings and every
-# scope the manifest does not own are dot-doctor's, which reads git's own
+# scope the manifest does not own are preen doctor's, which reads git's own
 # effective boolean beside this row (source-repo only, mutation-checked on
 # `true` and on `yes`, 15-09-2026).
 [pref.git_big_repo_status.targets.gitcfg]

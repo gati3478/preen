@@ -5,7 +5,7 @@ The spec is public/preferences.toml plus one hosts/<name>/preferences.toml per
 machine, read as one document (see spec_files); `--spec-files` prints the list.
 
 Emits one TAB-separated `status<TAB>message` line per assertion, for
-bin/lib/pref-check.sh to colour the same way dot-doctor colours everything else.
+bin/lib/pref-check.sh to colour the same way preen doctor colours everything else.
 Statuses: ok | fail | warn, plus `section` for a heading the wrapper prints bare.
 
     pref-check.py                     run every assertion
@@ -14,7 +14,7 @@ Statuses: ok | fail | warn, plus `section` for a heading the wrapper prints bare
                                       require every row it feeds to go red
 
 Reads the DEPLOYED path, never this repo's copy: a `copy`-mode entry can be
-legitimately stale between dot-pull runs, and the question this asks is what the
+legitimately stale between preen pull runs, and the question this asks is what the
 application actually renders. Ends with the surfaces section: each closed
 surface's tools, installed version against closed-at, read without launching
 an application.
@@ -44,7 +44,7 @@ except ImportError:
     sys.exit("pref-check: needs python >= 3.11 (tomllib)")
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-# `public/` is stripped when dot-publish builds the mirror, so anything shipped
+# `public/` is stripped when preen publish builds the mirror, so anything shipped
 # from it sits one directory higher there. Every path this file derives from the
 # repo takes the first of the two that exists — never both, which for the spec
 # would merge one document with itself.
@@ -2582,7 +2582,7 @@ def probe_mac_nano_is_pico():
     """
     # Every prefix that precedes /usr/bin in this machine's login PATH and
     # could plausibly carry a nano. Named explicitly rather than derived: the
-    # probe runs in dot-doctor's process, whose PATH is not the login shell's.
+    # probe runs in preen doctor's process, whose PATH is not the login shell's.
     candidates = spec_path("probes", "mac_nano_is_pico", "real_nano_candidates",
                            ("/opt/homebrew/bin/nano", "/opt/homebrew/sbin/nano",
                             "/usr/local/bin/nano", "~/.local/bin/nano",

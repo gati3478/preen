@@ -100,9 +100,9 @@ show_summary() { # show_summary — print what the writes did, in the order they
 }
 
 backup_name() { # backup_name <file> → a name beside it that nothing holds yet
-  local b="$1.pre-dotfiles.$STAMP" n=1
+  local b="$1.unpreened.$STAMP" n=1
   while [ -e "$b" ] || [ -L "$b" ]; do
-    b="$1.pre-dotfiles.$STAMP.$n"
+    b="$1.unpreened.$STAMP.$n"
     n=$((n + 1))
   done
   printf '%s' "$b"

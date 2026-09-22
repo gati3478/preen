@@ -227,7 +227,7 @@ fi
 # place for its default Atuin-AI `?` binding. The update check stays on —
 # its notice is this surface's version-bump signal. The init also sets
 # ZSH_AUTOSUGGEST_STRATEGY=(atuin), so the ghost text and Ctrl+R answer
-# from one store; dot-doctor pins it. Guarded on the TTY like fzf, and on
+# from one store; preen doctor pins it. Guarded on the TTY like fzf, and on
 # the binary — a host without atuin keeps fzf's Ctrl+R.
 if [[ -t 1 ]] && (( $+commands[atuin] )); then
   eval "$(atuin init zsh --disable-up-arrow --disable-ai)"
@@ -270,7 +270,7 @@ alias fp='kitten choose-files'   # keyboard file picker with previews
 # ── Zsh Plugins ──────────────────────────────────────────
 # Bind the suggestion widgets once, at the first prompt, instead of on
 # every precmd — safe because nothing creates a widget after z-sy-h, which
-# dot-doctor asserts. Guarded so a fresh adopter without the formula gets a
+# preen doctor asserts. Guarded so a fresh adopter without the formula gets a
 # silent no-op, not an error on every shell.
 ZSH_AUTOSUGGEST_MANUAL_REBIND=1
 [ -f /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh ] && \
@@ -290,7 +290,7 @@ fi
 # on the fallback path (traps.md). Nothing that creates a widget goes below.
 # brackets colours by nesting level with the cursor's match marked; pattern
 # paints one shape red before Enter. Every style is a named 4-bit colour,
-# which dot-doctor re-proves live.
+# which preen doctor re-proves live.
 ZSH_HIGHLIGHT_HIGHLIGHTERS=(main brackets pattern)
 typeset -A ZSH_HIGHLIGHT_PATTERNS
 ZSH_HIGHLIGHT_PATTERNS+=('rm -rf *' 'fg=white,bold,bg=red')

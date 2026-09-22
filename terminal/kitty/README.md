@@ -94,7 +94,7 @@ It
    not find. None of the four stops it, and it never launches kitty;
 2. copies `kitty.conf` and `current-theme.conf` into
    `~/.config/kitty/preen/` — copies, never symlinks, each backed up beside
-   itself as `<file>.pre-dotfiles.<timestamp>` if a different one was there,
+   itself as `<file>.unpreened.<timestamp>` if a different one was there,
    left untouched if identical;
 3. makes sure `~/.config/kitty/preen/local.conf` holds one line: the tab
    title, rewritten for your home directory. kitty's config language expands
@@ -175,7 +175,7 @@ cost nothing.
    a `left alone` line means it was already yours and was never touched.
 
 Where a backup was taken it sits beside the file it replaced, as
-`<file>.pre-dotfiles.<timestamp>`; move it back.
+`<file>.unpreened.<timestamp>`; move it back.
 
 Took the whole repository through `bin/bootstrap`? Then `~/.config/kitty/kitty.conf`
 is a symlink into your clone, this installer refuses to append to it, and none
