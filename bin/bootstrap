@@ -118,6 +118,29 @@ touch "$HOME/.zshenv.local" "$HOME/.zprofile.local"
 echo "wrote empty ~/.zshenv.local and ~/.zprofile.local (fill in if needed)"
 
 echo
+echo "== ssh =="
+# The shipped ssh/config includes ~/.ssh/config.local on its first line, and
+# ssh keeps the first value it reads, so a config of the adopter's own belongs
+# there whole — the drop-ins' rule: their file becomes the overlay when none
+# exists. Left to dot-apply it would be kept as config.pre-dotfiles, and every
+# host in it would go dark until someone moved it by hand.
+SSH_CONF="$HOME/.ssh/config"
+SSH_LOCAL="$HOME/.ssh/config.local"
+if [ -e "$SSH_LOCAL" ] || [ -L "$SSH_LOCAL" ]; then
+  echo "~/.ssh/config.local is there — left as it is"
+elif [ -f "$SSH_CONF" ] && [ ! -L "$SSH_CONF" ]; then
+  # A config that names config.local itself would, moved there, include itself.
+  if grep -q 'config\.local' "$SSH_CONF"; then
+    echo "~/.ssh/config names config.local itself — the deploy below keeps it as ~/.ssh/config.pre-dotfiles; merge it by hand"
+  else
+    mv "$SSH_CONF" "$SSH_LOCAL"
+    echo "moved ~/.ssh/config -> ~/.ssh/config.local — the shipped config includes it first, so every line of it still wins"
+  fi
+else
+  echo "no ~/.ssh/config of yours — nothing to move"
+fi
+
+echo
 echo "== deploying =="
 "$REPO/bin/dot-apply"
 

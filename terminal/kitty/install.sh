@@ -235,6 +235,19 @@ fi
 if [ -n "$title_line" ] && [ -L "$PREEN_DIR/local.conf" ]; then
   die "$(short "$PREEN_DIR/local.conf") is a symlink to $(readlink "$PREEN_DIR/local.conf") — the tab-title line would be appended into that file. Add it there yourself, or replace the link. Nothing was changed."
 fi
+# A kitty.conf or local.conf that cannot be written — root-owned after a sudo
+# edit, or a directory — stopped the run at its last write with the copies
+# already on disk (the audit of 22-09-2026 watched it). Asked here, beside the
+# symlink refusals, so a stopped run has still changed nothing.
+if [ -e "$KITTY_CONF" ] && { [ ! -f "$KITTY_CONF" ] || [ ! -w "$KITTY_CONF" ]; }; then
+  die "$(short "$KITTY_CONF") is not a file this run can append to. Nothing was changed."
+fi
+if [ -n "$title_line" ] && [ -e "$PREEN_DIR/local.conf" ] && { [ ! -f "$PREEN_DIR/local.conf" ] || [ ! -w "$PREEN_DIR/local.conf" ]; }; then
+  die "$(short "$PREEN_DIR/local.conf") is not a file this run can append to. Nothing was changed."
+fi
+for d in "$KITTY_DIR" "$PREEN_DIR"; do
+  if [ -e "$d" ] && { [ ! -d "$d" ] || [ ! -w "$d" ]; }; then die "$(short "$d") is not a directory this run can write into. Nothing was changed."; fi
+done
 
 if [ "$dry_run" = yes ]; then
   echo

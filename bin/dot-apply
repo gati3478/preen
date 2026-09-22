@@ -92,8 +92,12 @@ while IFS=$'\t' read -r src tgt mode perms; do
     link)
       # Back up a pre-existing REGULAR file before replacing it with a link.
       if [ -f "$abs_tgt" ] && [ ! -L "$abs_tgt" ]; then
-        cp "$abs_tgt" "$abs_tgt.pre-dotfiles"
-        echo "backed up       $tgt -> $tgt.pre-dotfiles"
+        # Under a name nothing holds yet: a second plain file here — a tool
+        # replaced the link — must not overwrite the first run's backup.
+        bak="$abs_tgt.pre-dotfiles"; n=1
+        while [ -e "$bak" ] || [ -L "$bak" ]; do bak="$abs_tgt.pre-dotfiles.$n"; n=$((n + 1)); done
+        cp "$abs_tgt" "$bak"
+        echo "backed up       $tgt -> $tgt${bak#"$abs_tgt"}"
       elif [ -L "$abs_tgt" ] && [ ! "$abs_tgt" -ef "$abs_src" ]; then
         # An adopter coming from stow, chezmoi or yadm has SYMLINKS here, not
         # plain files, and this branch replaced them without a word — the file
@@ -115,6 +119,16 @@ while IFS=$'\t' read -r src tgt mode perms; do
         while [ -e "$bak" ] || [ -L "$bak" ]; do bak="$abs_tgt.pre-dotfiles.$n"; n=$((n + 1)); done
         mv "$abs_tgt" "$bak"
         echo "moved aside     $tgt (a symlink -> $(readlink "$bak"))"
+      elif [ -f "$abs_tgt" ] && ! cmp -s "$abs_src" "$abs_tgt"; then
+        # A plain file here is the adopter's own, or the application's rewrite
+        # of an earlier copy, and it was overwritten with no backup — a cold
+        # reader of the mirror's page closed the tab on that (22-09-2026). The
+        # link row's rule: kept beside itself, under a name nothing holds yet;
+        # identical content is left alone, so a re-run backs up nothing.
+        bak="$abs_tgt.pre-dotfiles"; n=1
+        while [ -e "$bak" ] || [ -L "$bak" ]; do bak="$abs_tgt.pre-dotfiles.$n"; n=$((n + 1)); done
+        cp "$abs_tgt" "$bak"
+        echo "backed up       $tgt -> $tgt${bak#"$abs_tgt"}"
       fi
       cp "$abs_src" "$abs_tgt"
       ;;

@@ -138,6 +138,10 @@ if [ -z "$cship_version" ] || ! version_ge "$cship_version" "$CSHIP_FLOOR"; then
 fi
 echo "cship $cship_version at $(short "$cship_bin")"
 
+# starship 1.26 creates ~/.cache/starship on any invocation, --version
+# included, and a dry run had promised to leave the home alone (the audit of
+# 22-09-2026). Its cache goes to this run's temp directory, gone on exit.
+export STARSHIP_CACHE="$WORK/starship-cache"
 starship_bin="$(command -v starship 2>/dev/null || true)"
 if [ -n "$starship_bin" ]; then
   echo "starship $("$starship_bin" --version 2>/dev/null | head -1 | awk '{ print $2 }') at $(short "$starship_bin")"
@@ -146,6 +150,11 @@ else
 fi
 
 # ── settings.json, probed before anything is written ─────────────────────────
+# Apple's python3 caches the bytecode of every module it imports under
+# ~/Library/Caches/com.apple.python, so the probe below left thirty-odd files
+# in a home the dry run had promised to leave alone (found by
+# tests/test-readme.sh, 22-09-2026). Off, for every python this script runs.
+export PYTHONDONTWRITEBYTECODE=1
 # python3 is probed by running it: on a Mac without the Command Line Tools,
 # /usr/bin/python3 is a stub that exists, so `command -v` alone would say yes
 # and the first real call would abort.

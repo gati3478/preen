@@ -122,7 +122,9 @@ nothing: `~/.config/kitty` or `~/.config/kitty/kitty.conf` is a symlink —
 everything here would land in, or be appended to, whatever it points at, which
 something else manages, so it belongs there instead;
 `~/.config/kitty/preen/local.conf` is a symlink, for the same reason;
-`~/.config` is not a directory, is not writable, or is a
+`kitty.conf` or `preen/local.conf` is there and cannot be appended to, or
+`~/.config/kitty` or `preen/` cannot be written into — root-owned after a
+`sudo` edit, say; `~/.config` is not a directory, is not writable, or is a
 symlink to nothing; a source file that is missing, empty, or not the file it
 claims to be.
 

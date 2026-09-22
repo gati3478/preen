@@ -40,7 +40,9 @@ expand() { printf '%s' "${1/#\~/$HOME}"; }
 # it — an adopter never agreed to those decisions, and failing their correct
 # setup over one is how a verification step loses its meaning.
 SOURCE_REPO=no
-[ -d "$REPO/docs" ] && SOURCE_REPO=yes
+# hosts/ never ships. docs/ was the test until 23-09-2026, and an adopter who
+# added a docs/ directory to their clone had the author's taste asserted unasked.
+[ -d "$REPO/hosts" ] && SOURCE_REPO=yes
 
 # dot-pull reconciles a copy row back into the repo and is NOT in the mirror.
 # Naming it there sent an adopter after a tool they do not have, in the one
