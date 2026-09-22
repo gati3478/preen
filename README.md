@@ -3,16 +3,16 @@
 A macOS terminal and editor setup — kitty, zsh, tmux, starship, the cship
 statusline for Claude Code, Zed, Sublime Text — in Gruvbox on Fira Code, and
 the taste behind it, written as assertions a checker runs against live config.
-_Preen_: to groom to your own standard. Generated from a private repository;
-every file here is whole (the manifest is that repository's public rows), and
-what stays there is said under The model.
+_Preen_: to groom to your own standard. Generated from a private repository,
+whose files these are, published as they are; what stays there is said under
+The model.
 
 ## Take one piece
 
 The statusline, [`prompt/`](prompt/README.md), which needs
 [cship](https://github.com/stephenleo/cship) 1.8.2 or newer; or the terminal,
 [`terminal/kitty/`](terminal/kitty/README.md). To see what a script would do
-and stop — the statusline's asks its two questions first:
+and stop — the statusline's script asks its two questions first:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/prompt/install.sh | bash -s -- --dry-run
@@ -41,18 +41,21 @@ cd ~/preen && ./bin/bootstrap
 ```
 
 `bootstrap` names what is missing and asks before going on; asks your name and
-email for git and writes them to `~/.gitconfig.local`; creates two empty shell
-overlays, `~/.zshenv.local` and `~/.zprofile.local`; deploys every row of
-`manifest.tsv`; and writes `~/.config/kitty/local.conf`, the one path kitty's
-config language cannot template. It does not modify your clone. A plain file
-already where a row goes is kept beside itself as `<file>.pre-dotfiles`, the
-identity file with a timestamp. A symlink there is never written through: at
-a `link` row it is replaced and its old target printed, at a `copy` row it is
-moved aside. An ssh config of yours becomes `~/.ssh/config.local`, which the
-shipped one includes first, so every line of it wins. The shipped one then
-names a password manager's agent socket for every host; keys on disk still
-sign, and `IdentityAgent SSH_AUTH_SOCK` under `Host *` in `config.local`
-keeps an agent of your own.
+email for git; creates the two empty overlays the shell config reads; deploys
+every row of `manifest.tsv`; and writes `~/.config/kitty/local.conf`, the one
+path kitty's config language cannot template. It does not modify your clone.
+What it finds in the way:
+
+- a plain file is kept beside itself as `<file>.pre-dotfiles`
+  (`~/.gitconfig.local` with a timestamp);
+- a symlink is never written through: at a `link` row it is replaced and its
+  old target printed, at a `copy` row it is moved aside;
+- an ssh config of yours becomes `~/.ssh/config.local`, which the shipped one
+  includes first, so every line of it wins.
+
+The shipped `ssh/config` then names Proton Pass's agent socket for every
+host. Keys on disk still sign; `IdentityAgent SSH_AUTH_SOCK` under `Host *`
+in `config.local` keeps an agent of your own.
 
 `dot-doctor` reads every row back, then runs its own checks of the tools,
 warning rather than failing where one is absent. The author's preferences are
@@ -82,7 +85,7 @@ ssh/               an Include for your own config, then the agent line; no hosts
 macos/             System Settings by `defaults`; bootstrap does not run it
 bin/               bootstrap, dot-apply, dot-doctor, and what the doctor runs
 lib/               install.sh, the half the installers share
-manifest.tsv       repo file → live path → link or copy; the one table
+manifest.tsv       the source's public rows: file → live path → link or copy
 preferences.toml   each preference's value and why, and the rows that check it
 LICENSE            MIT
 ```
@@ -116,13 +119,13 @@ each piece's page carries its palette table.
 
 **Not here:** what cannot ship — the IntelliJ IDEA tree (it names an
 employer), the fonts, the Obsidian snippets, the real ssh hosts, the git
-identity, each machine's overlays and its half of the spec, the personal
-scripts, the prose that argues every preference and the wiki around it, and
-the verbs that publish this mirror and pull rewritten copies back. Comments in
-these files cite them — `docs/preferences.md`, `traps.md`, `dot-publish` —
-because the files are published as they are. Nothing here reads those,
-nothing breaks without them, and `dot-doctor --taste` says so once and
-carries on.
+identity, each machine's overlays and its half of `preferences.toml`, the
+personal scripts, the prose that argues every preference and the wiki around
+it, and the tools that publish this mirror and pull rewritten copies back.
+Comments in these files cite them — `docs/preferences.md`, `traps.md`,
+`dot-publish` — because the files are published as they are. Nothing here
+reads those, nothing breaks without them, and `dot-doctor --taste` says so
+once and carries on.
 
 ## Make it yours
 
