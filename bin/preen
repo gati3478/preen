@@ -1,24 +1,32 @@
 #!/usr/bin/env bash
 # preen <verb> [args…] — apply · doctor · publish · pull · capture, each a
 # script beside this one as preen-<verb>. The mirror ships apply and doctor
-# only, so a verb that is not here says so rather than failing on a path.
+# only, so usage lists the verbs that are here and one that is not says so.
 set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-usage() { cat <<'EOF'
-usage: preen <verb> [args]
-  apply     deploy every manifest row
-  doctor    check every row, then the semantic checks (--quiet, --taste)
-  publish   stage, scan and push the public mirror
-  pull      reconcile rewritten copy rows back into the repo
-  capture   snapshot the resolved state under a label
-EOF
+describe() {
+  case "$1" in
+    apply)   echo "deploy every manifest row" ;;
+    doctor)  echo "check every row, then the semantic checks (--quiet, --taste)" ;;
+    publish) echo "stage, scan and push the public mirror" ;;
+    pull)    echo "reconcile rewritten copy rows back into the repo" ;;
+    capture) echo "snapshot the resolved state under a label" ;;
+  esac
+}
+usage() {
+  echo "usage: preen <verb> [args]"
+  local v
+  for v in apply doctor publish pull capture; do
+    if [ -e "$DIR/preen-$v" ]; then printf '  %-9s %s\n' "$v" "$(describe "$v")"; fi
+  done
 }
 verb="${1:-}"
 case "$verb" in
   -h|--help) usage; exit 0 ;;
   "") usage >&2; exit 2 ;;
   apply|doctor|publish|pull|capture)
-    [ -x "$DIR/preen-$verb" ] || { echo "preen: $verb is not shipped in this copy" >&2; exit 2; }
+    [ -e "$DIR/preen-$verb" ] || { echo "preen: $verb is not shipped in this copy" >&2; exit 2; }
+    [ -x "$DIR/preen-$verb" ] || { echo "preen: bin/preen-$verb is not executable" >&2; exit 2; }
     shift; exec "$DIR/preen-$verb" "$@" ;;
-  *) echo "preen: unknown verb: $verb (apply, doctor, publish, pull, capture)" >&2; exit 2 ;;
+  *) echo "preen: unknown verb: $verb" >&2; usage >&2; exit 2 ;;
 esac
