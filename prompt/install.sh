@@ -22,7 +22,12 @@ defaults — starship.toml left alone, the account module hidden:
 
 Nothing is overwritten without a timestamped backup beside it. A statusLine
 entry that runs anything but cship is left alone. A re-run with nothing
-changed rewrites nothing. Every refusal comes before the first write.
+changed rewrites nothing. Every refusal comes before the first write; a
+symlinked ~/.config is one. A symlinked ~/.claude or settings.json is written
+through, as Claude Code writes through it, and the plan names where. After the
+whole setup, whose configs are links into its clone, this leaves those links
+as they are, so the account module can be labelled but not hidden, and wires
+settings.json, which the setup does not.
 Refuses to run as root.
 EOF
 }
@@ -155,14 +160,34 @@ fi
 # in a home the dry run had promised to leave alone (found by
 # tests/test-readme.sh, 22-09-2026). Off, for every python this script runs.
 export PYTHONDONTWRITEBYTECODE=1
-# python3 is probed by running it: on a Mac without the Command Line Tools,
-# /usr/bin/python3 is a stub that exists, so `command -v` alone would say yes
-# and the first real call would abort.
+# bare_shim sees the Command Line Tools stub without running it. A python3
+# that passes is still run once: one with developer tools behind it fails too
+# while their licence is unaccepted.
 python3_bin="$(command -v python3 2>/dev/null || true)"
+no_python="no working python3"
+if [ -n "$python3_bin" ] && bare_shim python3; then
+  python3_bin=""
+  no_python="python3 needs the Command Line Tools here (xcode-select --install)"
+fi
 if [ -n "$python3_bin" ] && ! "$python3_bin" -c 'import json' >/dev/null 2>&1; then python3_bin=""; fi
+if [ -z "$python3_bin" ]; then echo "$no_python — the statusLine entry will be printed for you to add, not written"; fi
 if [ -e "$CLAUDE_DIR" ] && [ ! -d "$CLAUDE_DIR" ]; then die "$(short "$CLAUDE_DIR") is not a directory"; fi
 if [ -L "$SETTINGS" ] && [ ! -e "$SETTINGS" ]; then die "$(short "$SETTINGS") is a symlink to nothing — fix it, then re-run; nothing was changed"; fi
 if [ -d "$SETTINGS" ]; then die "$(short "$SETTINGS") is a directory"; fi
+# A linked ~/.claude or settings.json is followed, as Claude Code follows it
+# (see wire below), and the plan names where the write lands.
+one_hop() { # one_hop <link> → where it points, as an absolute path resolved against the link's real directory
+  local t
+  t="$(readlink "$1")"
+  case "$t" in /*) ;; *) t="$(cd "$(dirname "$1")" && pwd -P)/$t" ;; esac
+  printf '%s' "$t"
+}
+settings_through=""
+if [ -L "$SETTINGS" ]; then
+  settings_through=" — written through a symlink to $(short "$(one_hop "$SETTINGS")")"
+elif [ -L "$CLAUDE_DIR" ]; then
+  settings_through=" — written through a symlink to $(short "$(one_hop "$CLAUDE_DIR")/settings.json")"
+fi
 # States: nodir (no Claude Code yet) · nopython · absent (no file, or no
 # statusLine in it) · cship (any entry that runs cship — its installer's bare
 # `cship`, or a lone cship path with at most a CSHIP_ACCOUNT prefix, this
@@ -215,10 +240,28 @@ case "$settings_state" in absent|cship)   # the rewrite and its backup both need
   ;;
 esac
 
+# ── ~/.config, refused before a question is asked ────────────────────────────
+refuse_linked_dir "$CONFIG_DIR"
+if [ -e "$CONFIG_DIR" ]; then
+  [ -d "$CONFIG_DIR" ] || die "$(short "$CONFIG_DIR") is not a directory"
+  [ -w "$CONFIG_DIR" ] || die "$(short "$CONFIG_DIR") is not writable — nothing was changed"
+else
+  [ -w "$HOME" ] || die "$(short "$HOME") is not writable, so $(short "$CONFIG_DIR") cannot be created"
+fi
+
+# After the whole setup these are links into its clone: replacing one would
+# turn preen doctor red, and settings.json, which the setup never wires, is
+# what is left to do. Known before the questions, so they offer only what the
+# run will do.
+cship_linked=no
+starship_linked=no
+if links_into_clone "$CONFIG_DIR/cship.toml"; then cship_linked=yes; fi
+if links_into_clone "$CONFIG_DIR/starship.toml"; then starship_linked=yes; fi
+
 # ── the two questions ────────────────────────────────────────────────────────
 if [ -z "$with_starship" ]; then
   with_starship=no
-  if [ "$INTERACTIVE" = yes ]; then
+  if [ "$INTERACTIVE" = yes ] && [ "$starship_linked" = no ]; then
     echo
     echo "== starship =="
     echo "starship.toml here styles line 1 — and, because starship reads one file, your shell prompt."
@@ -227,37 +270,41 @@ if [ -z "$with_starship" ]; then
   fi
 fi
 if [ -z "$account_mode" ]; then
+  # Hiding is a line in cship.toml, and the setup's is not this run's to edit.
   account_mode=hide
+  blank="Blank hides the module in your copy."
+  blank_prompt="hide"
+  blank_instead="hiding the module instead"
+  if [ "$cship_linked" = yes ]; then
+    account_mode=leave
+    blank="Blank leaves the module as the setup's $(short "$CONFIG_DIR/cship.toml") has it."
+    blank_prompt="leave it as it is"
+    blank_instead="leaving the module as it is"
+  fi
   if [ "$INTERACTIVE" = yes ]; then
     echo
     echo "== account label =="
     echo "Line 2 names the account a session runs under. Left to itself the module shows the"
     echo "organisation name cship fetches, and on a personal account that is your email address."
-    echo "A label here is shown instead, fetched from nowhere. Blank hides the module in your copy."
-    reply="$(ask 'Label (blank = hide): ')"
+    echo "A label here is shown instead, fetched from nowhere."
+    echo "$blank"
+    reply="$(ask "Label (blank = $blank_prompt): ")"
     if label_ok "$reply"; then
       account_mode=label
       account_label="$reply"
     elif [ -n "$reply" ]; then
-      echo "letters, digits, space, '.', '_', '-' only — hiding the module instead"
+      echo "letters, digits, space, '.', '_', '-' only — $blank_instead"
     fi
   fi
 fi
 
 # ── the last refusals, before the first write ────────────────────────────────
-if [ -L "$CONFIG_DIR" ] && [ ! -e "$CONFIG_DIR" ]; then die "$(short "$CONFIG_DIR") is a symlink to nothing"; fi
-if [ -e "$CONFIG_DIR" ]; then
-  [ -d "$CONFIG_DIR" ] || die "$(short "$CONFIG_DIR") is not a directory"
-  [ -w "$CONFIG_DIR" ] || die "$(short "$CONFIG_DIR") is not writable — nothing was changed"
-else
-  [ -w "$HOME" ] || die "$(short "$HOME") is not writable, so $(short "$CONFIG_DIR") cannot be created"
-fi
 wanted="cship.toml"
 if [ "$with_starship" = yes ]; then wanted="cship.toml starship.toml"; fi
 for f in $wanted; do
   if [ -d "$CONFIG_DIR/$f" ] && [ ! -L "$CONFIG_DIR/$f" ]; then die "$(short "$CONFIG_DIR/$f") is a directory"; fi
 done
-if [ "$with_starship" = yes ] && [ "$SRC" = "$WORK/src" ]; then fetch starship.toml; fi
+if [ "$with_starship" = yes ] && [ "$starship_linked" = no ] && [ "$SRC" = "$WORK/src" ]; then fetch starship.toml; fi
 
 # ── the copies ───────────────────────────────────────────────────────────────
 # The copy is the source byte for byte, or with the account hidden: cship's
@@ -275,9 +322,17 @@ prepare_copy() { # prepare_copy <source> <copy> hide|keep
 }
 
 # ── what this run will touch, said before the first write ────────────────────
-touching "$CONFIG_DIR/cship.toml" "the statusline's config"
-if [ "$with_starship" = yes ]; then touching "$CONFIG_DIR/starship.toml" "line 1, and your shell prompt with it"; fi
-case "$settings_state" in absent|cship) touching "$SETTINGS" "the statusLine entry" ;; esac
+if [ "$cship_linked" = yes ]; then
+  echo "$(short "$CONFIG_DIR/cship.toml") is linked by the setup — left as it is"
+else
+  touching "$CONFIG_DIR/cship.toml" "the statusline's config"
+fi
+if [ "$starship_linked" = yes ]; then
+  echo "$(short "$CONFIG_DIR/starship.toml") is linked by the setup — left as it is"
+elif [ "$with_starship" = yes ]; then
+  touching "$CONFIG_DIR/starship.toml" "line 1, and your shell prompt with it"
+fi
+case "$settings_state" in absent|cship) touching "$SETTINGS" "the statusLine entry$settings_through" ;; esac
 show_plan
 if [ "$dry_run" = yes ]; then
   echo
@@ -287,13 +342,20 @@ fi
 
 echo
 echo "== copying =="
-if [ "$account_mode" = hide ]; then prepare_copy "$SRC/cship.toml" "$WORK/cship.toml" hide; else prepare_copy "$SRC/cship.toml" "$WORK/cship.toml" keep; fi
-[ -d "$CONFIG_DIR" ] || { mkdir -p "$CONFIG_DIR"; echo "created         $(short "$CONFIG_DIR")"; }
-place "$WORK/cship.toml" "$CONFIG_DIR/cship.toml"
-if [ "$with_starship" = yes ]; then
-  place "$SRC/starship.toml" "$CONFIG_DIR/starship.toml"
-else
-  echo "left alone      $(short "$CONFIG_DIR/starship.toml")   (say --with-starship to take it)"
+if [ "$cship_linked" = yes ] && [ "$starship_linked" = yes ]; then
+  echo "nothing to copy — cship.toml and starship.toml are the setup's links into its clone, left as they are"
+fi
+if [ "$cship_linked" = no ]; then
+  if [ "$account_mode" = hide ]; then prepare_copy "$SRC/cship.toml" "$WORK/cship.toml" hide; else prepare_copy "$SRC/cship.toml" "$WORK/cship.toml" keep; fi
+  [ -d "$CONFIG_DIR" ] || { mkdir -p "$CONFIG_DIR"; echo "created         $(short "$CONFIG_DIR")"; }
+  place "$WORK/cship.toml" "$CONFIG_DIR/cship.toml"
+fi
+if [ "$starship_linked" = no ]; then
+  if [ "$with_starship" = yes ]; then
+    place "$SRC/starship.toml" "$CONFIG_DIR/starship.toml"
+  else
+    echo "left alone      $(short "$CONFIG_DIR/starship.toml")   (say --with-starship to take it)"
+  fi
 fi
 
 # ── settings.json ────────────────────────────────────────────────────────────
@@ -307,10 +369,11 @@ if [ "$account_mode" = label ]; then
 fi
 manual_entry="\"statusLine\": { \"type\": \"command\", \"command\": \"${command//\"/\\\"}\", \"refreshInterval\": $REFRESH_SECONDS }"
 # settings.json is not placed the way the configs are: it is one key merged into
-# a file Claude Code itself rewrites in place, so a symlink here is written
-# through and its backup is a copy beside the link.
+# a file Claude Code itself writes through a symlink — one hop, a temp file
+# renamed onto the link's target (2.1.280) — so a symlink here is written
+# through as well, and its backup is a copy beside the link.
 wire() { # back up the file if there is one, set statusLine, keep every other key
-  local bak through=""
+  local bak
   if [ -f "$SETTINGS" ]; then
     bak="$(backup_name "$SETTINGS")"
     cp "$SETTINGS" "$bak"
@@ -332,8 +395,7 @@ with open(path, "w", encoding="utf-8") as fh:
     json.dump(data, fh, indent=2, ensure_ascii=False)
     fh.write("\n")
 PY
-  if [ -L "$SETTINGS" ]; then through=" — a symlink, written through to $(readlink "$SETTINGS")"; fi
-  echo "wired           $(short "$SETTINGS")$through"
+  echo "wired           $(short "$SETTINGS")$settings_through"
   wired="wired — statusLine runs $(short "$cship_bin") every $REFRESH_SECONDS s"
   label_applied=yes
 }
@@ -362,8 +424,8 @@ case "$settings_state" in
     echo "  $manual_entry"
     ;;
   nopython)
-    wired="not wired — no working python3"
-    echo "no working python3, so $(short "$SETTINGS") was not edited. Add this by hand:"
+    wired="not wired — $no_python"
+    echo "$no_python, so $(short "$SETTINGS") was not edited. Add this by hand:"
     echo "  $manual_entry"
     ;;
   nodir)
@@ -376,16 +438,25 @@ esac
 # ── what happened ────────────────────────────────────────────────────────────
 echo
 echo "== summary =="
-echo "cship.toml      $(short "$CONFIG_DIR/cship.toml")"
-case "$with_starship:${STARSHIP_CONFIG:-}" in
-  yes:)  echo "starship.toml   $(short "$CONFIG_DIR/starship.toml") — your shell prompt too, from the next shell" ;;
-  yes:*) echo "starship.toml   $(short "$CONFIG_DIR/starship.toml") — but \$STARSHIP_CONFIG is set, and starship reads that for your prompt and for line 1, so the copy serves nothing until it is unset" ;;
-  *)     echo "starship.toml   left alone" ;;
+if [ "$cship_linked" = yes ]; then
+  echo "cship.toml      $(short "$CONFIG_DIR/cship.toml") — linked by the setup, left as it is"
+else
+  echo "cship.toml      $(short "$CONFIG_DIR/cship.toml")"
+fi
+case "$with_starship:$starship_linked:${STARSHIP_CONFIG:-}" in
+  *:yes:*)   echo "starship.toml   $(short "$CONFIG_DIR/starship.toml") — linked by the setup, left as it is" ;;
+  yes:no:)   echo "starship.toml   $(short "$CONFIG_DIR/starship.toml") — your shell prompt too, from the next shell" ;;
+  yes:no:*)  echo "starship.toml   $(short "$CONFIG_DIR/starship.toml") — but \$STARSHIP_CONFIG is set, and starship reads that for your prompt and for line 1, so the copy serves nothing until it is unset" ;;
+  *)         echo "starship.toml   left alone" ;;
 esac
-case "$account_mode:$label_applied" in
-  hide:*)    echo "account         hidden in your copy — disabled = true under [cship.account], its slot dropped from line 2" ;;
-  label:yes) echo "account         \"$account_label\", via CSHIP_ACCOUNT in the statusLine command" ;;
-  label:no)  echo "account         \"$account_label\" NOT applied — it rides the statusLine command, which was not written (see above)" ;;
+# Hiding the module is a line in cship.toml, and the setup's is not this run's
+# to edit; the label rides the statusLine command instead.
+case "$account_mode:$label_applied:$cship_linked" in
+  hide:*:yes)  echo "account         NOT hidden — $(short "$CONFIG_DIR/cship.toml") is the setup's, not a copy of yours; --account-label NAME labels it instead" ;;
+  leave:*)     echo "account         left as the setup's $(short "$CONFIG_DIR/cship.toml") has it — --account-label NAME labels it instead" ;;
+  hide:*)      echo "account         hidden in your copy — disabled = true under [cship.account], its slot dropped from line 2" ;;
+  label:yes:*) echo "account         \"$account_label\", via CSHIP_ACCOUNT in the statusLine command" ;;
+  label:no:*)  echo "account         \"$account_label\" NOT applied — it rides the statusLine command, which was not written (see above)" ;;
 esac
 echo "settings.json   $wired"
 echo

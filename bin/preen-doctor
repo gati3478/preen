@@ -32,7 +32,26 @@ ok()   { [ "$QUIET" = yes ] || printf '  \033[32mok\033[0m    %s\n' "$1"; }
 bad()  { printf '  \033[31mFAIL\033[0m  %s\n' "$1"; FAILED=1; }
 warn() { printf '  \033[33mwarn\033[0m  %s\n' "$1"; }
 
+# A Mac without the Command Line Tools still has /usr/bin/git and
+# /usr/bin/python3: stubs that raise an install dialog when run. So the tool
+# behind the stub is looked for, never run; `xcode-select -p` alone is not
+# enough, it prints a stale selection and exits 0.
+bare_shim() { # bare_shim <tool> → true when <tool> is macOS's /usr/bin stub with no developer tools behind it
+  local dir
+  [ "$(command -v "$1" 2>/dev/null)" = "/usr/bin/$1" ] && [ -x /usr/bin/xcode-select ] || return 1
+  dir="$(/usr/bin/xcode-select -p 2>/dev/null)" && [ -x "$dir/usr/bin/$1" ] && return 1
+  return 0
+}
+
 expand() { printf '%s' "${1/#\~/$HOME}"; }
+# The other direction, for printing. `${1/#$HOME/\~}` keeps the backslash in
+# bash, the trap preen apply's own short() names.
+short() {
+  case "$1" in
+    "$HOME"|"$HOME"/*) printf '~%s' "${1#"$HOME"}" ;;
+    *) printf '%s' "$1" ;;
+  esac
+}
 
 # The public mirror ships bin/ and the configs, but never docs/, publish/,
 # hosts/ or private/. Checks that assert a PREFERENCE of this machine's owner
@@ -127,7 +146,52 @@ done < "$MANIFEST"
 # silently see fewer rows than the manifest actually has.
 expected_rows=$(awk -F'\t' '$1 !~ /^($|#)/ { c++ } END { print c+0 }' "$MANIFEST")
 if [ "$rows_seen" -ne "$expected_rows" ]; then
-  bad "processed $rows_seen manifest row(s) but the file has $expected_rows — a row was silently skipped"
+  bad "a row of manifest.tsv was silently skipped (missing trailing newline?)"
+fi
+
+# preen apply, bootstrap and the drop-ins move an adopter's file aside as
+# <file>.unpreened[.N|.<stamp>] and say so once, so a copy row an application
+# keeps rewriting piles them up unseen. Every directory a row deploys into is
+# searched rather than each row's own name, so a backup outlives the row that
+# made it; the prompt drop-in's ~/.claude and the kitty drop-in's
+# ~/.config/kitty/preen, which no row names, are added here. A function, not
+# inline: bash 3.2 reads a `case` pattern's `)` inside $( ) as the end of the
+# substitution.
+backups_beside_rows() {
+  local src tgt abs dir
+  {
+    while IFS=$'\t' read -r src tgt _; do
+      case "$src" in ''|'#'*) continue ;; esac
+      abs="${tgt/#\~/$HOME}"   # expand(), inlined: $( ) forks, and this runs for every row
+      printf '%s\n' "${abs%/*}"
+    done < "$MANIFEST"
+    printf '%s\n' "${CLAUDE_CONFIG_DIR:-$HOME/.claude}" "$HOME/.config/kitty/preen"
+  } | sort -u | while IFS= read -r dir; do
+    # -H: find does not descend a starting point that is a symlink, and HOME
+    # or ~/.claude may be one.
+    if [ -d "$dir" ]; then
+      find -H "$dir" -maxdepth 1 -name '*.unpreened*' 2>/dev/null
+    fi
+  done | LC_ALL=C sort
+}
+
+echo "== backups =="
+# Byte order keeps each original's backups adjacent: they share its name as a
+# prefix. One warn per original, its backups listed, never counted.
+backups="$(backups_beside_rows)"
+if [ -z "$backups" ]; then
+  ok "nothing moved aside beside a deployed file"
+else
+  orig="" names=""
+  while IFS= read -r b; do
+    if [ -n "$orig" ] && [ "${b%%.unpreened*}" != "$orig" ]; then
+      warn "$(short "$orig") — moved aside as:$names; diff, keep what you need, delete"
+      names=""
+    fi
+    orig="${b%%.unpreened*}"
+    names="$names ${b##*/}"
+  done <<< "$backups"
+  warn "$(short "$orig") — moved aside as:$names; diff, keep what you need, delete"
 fi
 
 echo "== semantic checks =="
@@ -187,7 +251,14 @@ fi
 # deliberately avoids (brightblack -> 38;5;8), so the strict grep doubles
 # as a guard against reintroducing one. Control: the fixture guarantees
 # changed lines exist.
-if command -v delta >/dev/null 2>&1 && command -v git >/dev/null 2>&1; then
+if ! command -v git >/dev/null 2>&1; then
+  warn "git not installed — skipping the delta ANSI-rider check"
+elif bare_shim git; then
+  warn "git needs the Command Line Tools here (xcode-select --install) — skipping the delta ANSI-rider check"
+elif ! command -v delta >/dev/null 2>&1; then
+  # The shipped gitconfig falls back to less when delta is absent, so git works.
+  warn "delta not installed — git pages through less; skipping the delta ANSI-rider check"
+else
   delta_fixture="$(mktemp -d)"
   printf 'line one\nline two\n' > "$delta_fixture/a"
   printf 'line one\nline TWO\n' > "$delta_fixture/b"
@@ -200,8 +271,6 @@ if command -v delta >/dev/null 2>&1 && command -v git >/dev/null 2>&1; then
   else
     ok "delta rides the 16 ANSI colours (4-bit output on a fixture diff)"
   fi
-else
-  warn "delta or git not installed — skipping the delta ANSI-rider check"
 fi
 
 # rg rides the terminal's 16 ANSI colours BY DEFAULT, the eza shape
@@ -233,7 +302,9 @@ fi
 # deployed file while every text read stayed green. Negative control: a
 # name the file does not list must NOT be ignored, or the probe proved
 # nothing about the two that were.
-if command -v git >/dev/null 2>&1; then
+if bare_shim git; then
+  warn "git needs the Command Line Tools here (xcode-select --install) — skipping the global-excludes check"
+elif command -v git >/dev/null 2>&1; then
   ign_fixture="$(mktemp -d)"
   git -C "$ign_fixture" init -q 2>/dev/null
   mkdir -p "$ign_fixture/.claude"
@@ -323,17 +394,69 @@ if [ "$SOURCE_REPO" = yes ]; then
   fi
 fi
 
-# Three states, not two. An unsuffixed dump is the defect; NO dump is a
-# machine where zsh has not started under this config yet — the state a
-# fresh clone is in the moment bootstrap finishes, and the run the mirror's
-# README invites next. Failing there told an adopter their correct install
-# was broken (found 14-09-2026 from a fresh clone; one zsh makes it green).
-if ls "$HOME"/.zcompdump-* >/dev/null 2>&1; then
-  ok "zcompdump is version-suffixed"
-elif [ -e "$HOME/.zcompdump" ]; then
-  bad "~/.zcompdump is not version-suffixed — a zsh upgrade can serve a stale dump"
+# compinit must name its dump for the zsh that wrote it: `compinit -C` skips
+# the staleness check, so an unversioned dump serves stale completions after a
+# zsh upgrade. Read off the managed zshrc, like the z-sy-h check, because a
+# dump on disk cannot say which config wrote it: the adopter's old zsh leaves
+# an unsuffixed one, and the README runs this before any new zsh has started.
+# A -d path passes when it names ZSH_VERSION itself, or is a variable whose
+# latest assignment above the call names it — read in line order, as zsh runs
+# the file. A call is compinit where a command starts, behind any precommand
+# modifier that still runs a function — noglob, nocorrect, exec, `-`; zsh's
+# `command` and `builtin` skip functions, so compinit is not called there. An
+# assignment is plain or by export, typeset, local, declare or readonly, and
+# its value is one word: `a=~/.zcompdump b=$ZSH_VERSION` does not version a.
+compinit_calls() { # compinit_calls <zshrc> → "ok|bad<TAB><line>: <code>" per compinit call
+  awk '
+    function unquote(s) { gsub(/["'\''{};)]/, "", s); return s }
+    function word(s,    i, c, q, d) {   # s up to its first unquoted blank, ; & | or ) outside ${…} and $(…)
+      q = ""; d = 0
+      for (i = 1; i <= length(s); i++) {
+        c = substr(s, i, 1)
+        if (q != "") { if (c == q) q = ""; else if (c == "\\" && q == "\"") i++; continue }
+        if (c == "\\") { i++; continue }
+        if (c == "\"" || c == "'\''") q = c
+        else if (c == "(" || c == "{") d++
+        else if (d > 0 && (c == ")" || c == "}")) d--
+        else if (d == 0 && (c == " " || c == "\t" || c == ";" || c == "&" || c == "|" || c == ")")) break
+      }
+      return substr(s, 1, i - 1)
+    }
+    {
+      line = $0; sub(/(^|[[:space:]])#.*$/, "", line)
+      if (match(line, /^[[:space:]]*((export|typeset|local|declare|readonly)[[:space:]]+(-[a-zA-Z]+[[:space:]]+)*)?[A-Za-z_][A-Za-z_0-9]*=/)) {
+        a = substr(line, 1, RLENGTH - 1); sub(/.*[[:space:]]/, "", a)
+        if (word(substr(line, RLENGTH + 1)) ~ /ZSH_VERSION/) v[a] = 1; else delete v[a]
+      }
+      if (!match(line, /(^|[;&|{(]|(^|[[:space:];])(if|elif|then|else|while|until|do|time|!)[[:space:]])[[:space:]]*((noglob|nocorrect|exec|-)[[:space:]]+)*compinit([[:space:];&|)}]|$)/)) next
+      rest = substr(line, RSTART); rest = substr(rest, index(rest, "compinit") + 8); sub(/[;&|].*$/, "", rest)
+      arg = ""; n = split(rest, w, /[[:space:]]+/)
+      for (i = 1; i < n; i++) if (w[i] == "-d") { arg = unquote(w[i + 1]); break }
+      ok = (arg ~ /ZSH_VERSION/) || (arg ~ /^\$[A-Za-z_][A-Za-z_0-9]*$/ && (substr(arg, 2) in v))
+      code = $0; sub(/^[[:space:]]+/, "", code)
+      print (ok ? "ok" : "bad") "\t" NR ": " code
+    }
+  ' "$1"
+}
+if [ -n "$zshrc_src" ] && [ -f "$REPO/$zshrc_src" ]; then
+  calls="$(compinit_calls "$REPO/$zshrc_src")"
+  if [ -z "$calls" ]; then
+    warn "found no compinit call in $zshrc_src — the dump-name check read nothing"
+  elif grep -q '^bad' <<< "$calls"; then
+    while IFS=$'\t' read -r verdict call; do
+      if [ "$verdict" = bad ]; then
+        bad "$zshrc_src:$call — its dump is not named for \$ZSH_VERSION, so a zsh upgrade can serve stale completions"
+      fi
+    done <<< "$calls"
+  else
+    ok "every compinit call names its dump for \$ZSH_VERSION"
+  fi
 else
-  warn "no zcompdump yet — open a zsh once, then re-run (compinit writes ~/.zcompdump-\$ZSH_VERSION)"
+  warn "zshrc not found via manifest (~/.zshrc) — skipping the dump-name check"
+fi
+# Never a FAIL: nothing in this setup reads that file.
+if [ -e "$HOME/.zcompdump" ]; then
+  warn "~/.zcompdump is not this setup's dump — left by an earlier zsh config (rm ~/.zcompdump), or something outside the managed zshrc still calls compinit without -d"
 fi
 
 # kitty starts every tab through /usr/bin/login (`login -f -l -p $USER …`,

@@ -5,14 +5,35 @@
 # tool bolted on. Defines run_pref_checks(), which expects ok()/bad()/warn() to
 # already exist in the caller.
 #
-# Degrades politely rather than failing the run: an absent python3 or a python
-# older than 3.11 (no tomllib) produces one warn line, not a FAIL. The
+# Degrades politely rather than failing the run: an absent python3, macOS's
+# python3 stub with no Command Line Tools behind it, or a python older than
+# 3.11 (no tomllib) produces one warn line, not a FAIL. The
 # assertions are a layer on top of preen doctor, and losing them should not make
 # the manifest verification look broken.
 
 run_pref_checks() {
   local repo="$1"
   local script="$repo/bin/lib/pref-check.py"
+
+  # Before any python3 runs: on a Mac without the Command Line Tools it is a
+  # stub that raises an install dialog. bare_shim is the caller's (preen
+  # doctor defines it); a shell that sources this file without it skips the
+  # question.
+  if declare -f bare_shim >/dev/null 2>&1 && bare_shim python3; then
+    echo "== preference SSOT =="
+    warn "preference checks skipped — python3 needs the Command Line Tools here (xcode-select --install)"
+    return 0
+  fi
+  # Of the tools the checker runs (git, gh, ssh, defaults), git alone is such a
+  # stub. Named in PREEN_BARE_STUBS, its rows skip rather than run it.
+  local stubs=""
+  if declare -f bare_shim >/dev/null 2>&1 && bare_shim git; then
+    stubs="git"
+  fi
+
+  # macOS's python3 writes the bytecode of every module it imports into the
+  # adopter's ~/Library/Caches/com.apple.python.
+  export PYTHONDONTWRITEBYTECODE=1
 
   # Guard on the spec. preen publish copies a short NAMED list of files into the
   # mirror rather than staging bin/ wholesale, and this script is on that list
@@ -52,7 +73,7 @@ run_pref_checks() {
   # test the degradation path below. Found 14-08-2026.
   local out err rc errfile
   errfile="$(mktemp)"
-  out="$(python3 "$script" 2>"$errfile")"
+  out="$(PREEN_BARE_STUBS="$stubs" python3 "$script" 2>"$errfile")"
   rc=$?
   err="$(cat "$errfile" 2>/dev/null)"
   rm -f "$errfile"

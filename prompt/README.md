@@ -66,21 +66,27 @@ read it first if that is your habit. It
 3. copies `cship.toml` to `~/.config/cship.toml` — a copy, never a symlink,
    backed up beside it as `cship.toml.unpreened.<timestamp>` if one was
    there, left untouched if identical. A symlink there is moved aside even
-   to identical content: the copy is yours to tune;
+   to identical content: the copy is yours to tune. A link into a clone of
+   the whole setup is the exception, left as it is (below);
 4. wires `statusLine` in `~/.claude/settings.json` (or under
    `CLAUDE_CONFIG_DIR`, if you set it): added when absent; taken over, after
    the same kind of backup, when it already runs a bare cship — the
    `"command": "cship"` its installer leaves, or a lone cship path with at
    most the label this script puts before it; left alone, and said so, when
    it runs anything else. Every other key is kept; the file comes back
-   re-serialised with two-space indentation. When the entry is not written
-   — no `~/.claude`, no working python3, another tool's entry — the exact
-   entry to paste is printed.
+   re-serialised with two-space indentation. A `settings.json` or `~/.claude`
+   that is a symlink is written through, the way Claude Code writes through
+   it, and the plan names the file the entry lands in before anything is
+   written. When the entry is not written — no `~/.claude`, no working
+   python3 (on a Mac, python3 needs the Command Line Tools:
+   `xcode-select --install`), another tool's entry — the exact entry to paste
+   is printed.
 
 Every refusal — no cship, or one below the floor; a `settings.json` that is
 not a JSON object, not writable, or a symlink to nothing; a directory or a
-read-only `~/.config` in the way — comes before the first write, so a
-stopped run has changed nothing.
+read-only `~/.config` in the way; a `~/.config` that is a symlink, dangling
+or not, which would put the copies in whatever it points at — comes before
+the first write, so a stopped run has changed nothing.
 
 Under a pipe the questions still reach you through the terminal. Each flag
 answers one; with both answered nothing is asked, and with no terminal the
@@ -111,8 +117,13 @@ recognises the bare entry and takes it over.
 entry from `settings.json`, or run `cship uninstall`, which removes the entry,
 the binary and its caches and leaves `cship.toml` where it is.
 
-Took the whole repository through `bin/bootstrap`? Both files are already
-symlinked into place and none of this applies.
+Took the whole repository through `bin/bootstrap`? `cship.toml` and
+`starship.toml` are links into your clone, but `settings.json` is not wired.
+Run this installer afterwards: it leaves the linked configs as they are, asks
+nothing about `starship.toml`, and wires the entry. Hiding the account module
+takes a line in the setup's own `cship.toml`, so blank, or no answer, leaves
+the module as that file has it; name the account with `--account-label`
+instead.
 
 ## The account module, and your email
 

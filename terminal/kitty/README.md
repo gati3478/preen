@@ -81,7 +81,7 @@ without writing:
 ~/.config/kitty/preen                      this config's own directory, created
 ~/.config/kitty/preen/kitty.conf           the config
 ~/.config/kitty/preen/current-theme.conf   the palette it includes
-~/.config/kitty/preen/local.conf           your overrides, read last — one line of ours: the tab title for this home
+~/.config/kitty/preen/tab-title.conf       the tab title for this home — ours; local.conf stays yours
 ~/.config/kitty/kitty.conf                 one line appended: include preen/kitty.conf
 ~/.config/kitty/open-actions.conf          what a click on a link does — kept if you have one
 ~/.config/kitty/mime.types                 the file types behind it — kept if you have one
@@ -96,14 +96,16 @@ It
    `~/.config/kitty/preen/` — copies, never symlinks, each backed up beside
    itself as `<file>.unpreened.<timestamp>` if a different one was there,
    left untouched if identical;
-3. makes sure `~/.config/kitty/preen/local.conf` holds one line: the tab
-   title, rewritten for your home directory. kitty's config language expands
-   no environment variable in that option, so the home to collapse to `~` has
-   to be a literal, and the shipped one is the author's. The file is **yours**
-   — the line is appended if you already have one, the file is created holding
-   it if you do not, and nothing there is replaced or backed up. On the machine
-   the title was authored for it is not written at all, and the run says
-   `this is the home the tab title was authored for — no local.conf needed`;
+3. writes `~/.config/kitty/preen/tab-title.conf`: the tab title, rewritten
+   for your home directory. kitty's config language expands no environment
+   variable in that option, so the home to collapse to `~` has to be a
+   literal, and the shipped one is the author's. The file is **the
+   installer's**, replaced whole, so the line follows a change of home or of
+   the shipped title: a file holding one title line is replaced with no
+   backup, and anything else there — more lines, or a symlink — is backed up
+   first. On the machine the title was authored for it is not written at
+   all, and the run says
+   `this is the home the tab title was authored for — no tab-title.conf needed`;
 4. copies `open-actions.conf`, `mime.types` and `choose-files.conf` into
    `~/.config/kitty` itself, because kitty reads those three from the config
    directory root under those exact names — a copy under `preen/` is ignored.
@@ -118,26 +120,27 @@ A re-run with nothing changed rewrites nothing and takes no backup: the copies
 come back `unchanged` and the include line `already there`.
 
 **Refusals**, all of them before the first write, so a stopped run has changed
-nothing: `~/.config/kitty` or `~/.config/kitty/kitty.conf` is a symlink —
-everything here would land in, or be appended to, whatever it points at, which
-something else manages, so it belongs there instead;
-`~/.config/kitty/preen/local.conf` is a symlink, for the same reason;
-`kitty.conf` or `preen/local.conf` is there and cannot be appended to, or
-`~/.config/kitty` or `preen/` cannot be written into — root-owned after a
-`sudo` edit, say; `~/.config` is not a directory, is not writable, or is a
-symlink to nothing; a source file that is missing, empty, or not the file it
-claims to be.
+nothing: `~/.config`, `~/.config/kitty` or `~/.config/kitty/preen` is a
+symlink, dangling or not — everything here would land in whatever it points
+at, which something else manages; `~/.config/kitty/kitty.conf` is a symlink —
+the append would land in its target, so the include line belongs there
+instead; `kitty.conf` is there and cannot be appended to, or `~/.config/kitty`
+or `preen/` cannot be written into — root-owned after a `sudo` edit, say;
+`~/.config` is not a directory or is not writable; a source file that is
+missing, empty, or not the file it claims to be.
 
 ## Your overrides
 
-`~/.config/kitty/preen/local.conf` is read after everything else, so any line
-in it wins. That is where a setting of yours belongs.
+`~/.config/kitty/preen/local.conf` is read after everything else in this
+config, so a line in it wins over this config's. That is where a setting of
+yours belongs.
 
-The file is yours. The installer owns one line of it — the tab title, which
-cannot be anything but a literal — and never the file: it appends that line if
-it is missing, leaves the file exactly as it is once the line is there, and
-takes no backup, because it replaces nothing. Add what you like above or below
-it.
+The file is yours: nothing here creates it, writes it or backs it up.
+`tab-title.conf` beside it is the installer's and is read just before it, so a
+tab title in `local.conf` wins over ours, and the run names its line rather
+than claim its own title applies. When that line is
+`active_wd.replace('<path>', '~')` for a path other than your home, the run
+names the path too.
 
 One more thing follows from kitty's last-include-wins rule, and it is worth
 knowing before you wonder why a setting of yours stopped working: **lines in
@@ -168,8 +171,8 @@ cost nothing.
 
 1. Delete the `include preen/kitty.conf` line from
    `~/.config/kitty/kitty.conf` — or the file, if that line is all it holds.
-2. Delete `~/.config/kitty/preen/` — `local.conf` lives in there and is yours,
-   so keep it if you have put anything of your own in it.
+2. Delete `~/.config/kitty/preen/` — keep `local.conf` from it first if you
+   made one; that file is yours.
 3. For `open-actions.conf`, `mime.types` and `choose-files.conf`, read the
    run's summary: a `copied` line means the file is this config's and can go;
    a `left alone` line means it was already yours and was never touched.
@@ -178,10 +181,10 @@ Where a backup was taken it sits beside the file it replaced, as
 `<file>.unpreened.<timestamp>`; move it back.
 
 Took the whole repository through `bin/bootstrap`? Then `~/.config/kitty/kitty.conf`
-is a symlink into your clone, this installer refuses to append to it, and none
-of this applies. The same refusal meets a `~/.config/kitty` that is itself a
-symlink into a dotfiles repository of your own: install into that repository
-from there, or replace the link.
+is a link into your clone, which already carries this config: the installer
+says so and writes nothing. A `~/.config`, `~/.config/kitty` or `preen/` that
+is a symlink into a dotfiles repository of your own is refused instead: replace
+the link, or copy the files into that repository yourself.
 
 ## License
 

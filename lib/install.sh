@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # The half the drop-in installers here share: where a piece's files come from,
-# how they are placed, and what the run says before and after. It is sourced by
-# a piece's install.sh and never run on its own; everything particular to a
-# piece — what it probes for, what it asks, what it wires — stays there, and
-# nothing below knows what is being installed.
+# what stops a run, how the files are placed, and what the run says before and
+# after. It is sourced by a piece's install.sh and never run on its own;
+# everything particular to a piece — what it probes for, what it asks, what it
+# wires — stays there, and nothing below knows what is being installed.
 #
 # The caller sets before sourcing:
 #   SOURCE_URL  where this piece's files are, mirror or local tree
@@ -50,6 +50,40 @@ sq() { # sq <word> → the word as one shell word, quoted only when it needs it
 }
 version_ge() { # version_ge <a> <b> → true when version a is not older than b
   [ "$(printf '%s\n%s\n' "$1" "$2" | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)" = "$1" ]
+}
+
+# A Mac without the Command Line Tools still has /usr/bin/git and
+# /usr/bin/python3: stubs that raise an install dialog when run. So the tool
+# behind the stub is looked for, never run; `xcode-select -p` alone is not
+# enough, it prints a stale selection and exits 0.
+bare_shim() { # bare_shim <tool> → true when <tool> is macOS's /usr/bin stub with no developer tools behind it
+  local dir
+  [ "$(command -v "$1" 2>/dev/null)" = "/usr/bin/$1" ] && [ -x /usr/bin/xcode-select ] || return 1
+  dir="$(/usr/bin/xcode-select -p 2>/dev/null)" && [ -x "$dir/usr/bin/$1" ] && return 1
+  return 0
+}
+
+# A directory something else manages — a dotfiles repo linked in whole — would
+# receive every file written under it, so a link there stops the run.
+refuse_linked_dir() { # refuse_linked_dir <dir> — stop the run when <dir> is a symlink, dangling or not; call it before the first write
+  if [ -L "$1" ]; then
+    die "$(short "$1") is a symlink to $(readlink "$1") — what this run writes under it would land in that directory, which something else manages. Replace the link with a directory of its own, or put the files there yourself. Nothing was changed."
+  fi
+}
+# The whole setup links its files into a clone of itself, and a clone's root
+# holds bin/preen and manifest.tsv. The link is read one hop, so a link that
+# points at itself cannot loop, and the walk up ends at /.
+links_into_clone() { # links_into_clone <path> → true when <path> is a symlink into a clone of this setup
+  local target dir
+  [ -L "$1" ] || return 1
+  target="$(readlink "$1")"
+  case "$target" in /*) ;; *) target="$(dirname "$1")/$target" ;; esac
+  dir="$(cd "$(dirname "$target")" 2>/dev/null && pwd -P)" || return 1
+  while :; do
+    if [ -f "$dir/bin/preen" ] && [ -f "$dir/manifest.tsv" ]; then return 0; fi
+    [ -n "$dir" ] || return 1
+    dir="${dir%/*}"
+  done
 }
 
 fetch() { # fetch <file> — one of this piece's files from SOURCE_URL into SRC, or stop

@@ -1,14 +1,38 @@
 #!/usr/bin/env bash
 # Adopt this setup on a fresh machine.
 #
-# Asks for the handful of values that are personal, writes them to a local
+# Asks for the values that are personal, sets them in a local
 # overlay, symlinks everything in the manifest into place (preen apply owns
 # that, backups included), and finally writes the one value kitty's config
-# language cannot template into ~/.config/kitty/local.conf. Nothing it does
+# language cannot template into ~/.config/kitty/tab-title.conf. Nothing it does
 # touches this clone. Never runs as root.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+usage() { cat <<'EOF'
+usage: ./bin/bootstrap
+
+Takes the whole setup from this clone: names what is missing, asks your name
+and email for git and sets them in ~/.gitconfig.local, deploys every row of
+manifest.tsv through preen apply, and writes kitty's tab title for your home.
+Before the deploy, a plain ~/.gitconfig of yours moves to ~/.gitconfig.local
+and ~/.ssh/config to ~/.ssh/config.local, unless that .local is there or the
+file names it: the shipped files include those overlays, so every line of
+yours still wins. Every refusal, its own or preen apply's, comes before the
+first write. It ends by naming the overlays the shipped files read and every
+file this run set aside.
+EOF
+}
+for arg in "$@"; do
+  case "$arg" in
+    -h|--help) usage; exit 0 ;;
+    *) echo "bootstrap: unknown argument: $arg (see --help)" >&2; exit 2 ;;
+  esac
+done
+
+# Apple silicon's Homebrew prefix, then Intel's: shell/zprofile's order.
+BREW_PREFIXES="/opt/homebrew /usr/local"
 
 if [ "$(id -u)" -eq 0 ]; then
   echo "bootstrap: refusing to run as root — this installs user files" >&2
@@ -43,40 +67,246 @@ ask_required() { # ask_required <prompt> <variable> — re-asks rather than acce
   done
 }
 
+# A Mac without the Command Line Tools still has /usr/bin/git and
+# /usr/bin/python3: stubs that raise an install dialog when run. So the tool
+# behind the stub is looked for, never run; `xcode-select -p` alone is not
+# enough, it prints a stale selection and exits 0.
+bare_shim() { # bare_shim <tool> → true when <tool> is macOS's /usr/bin stub with no developer tools behind it
+  local dir
+  [ "$(command -v "$1" 2>/dev/null)" = "/usr/bin/$1" ] && [ -x /usr/bin/xcode-select ] || return 1
+  dir="$(/usr/bin/xcode-select -p 2>/dev/null)" && [ -x "$dir/usr/bin/$1" ] && return 1
+  return 0
+}
+
+# preen apply refuses before its first write, but this run writes before it
+# calls preen apply — the identity, the ssh move — and after it, the tab title.
+# So its own refusals and preen apply's all come first, and a refused run has
+# changed nothing. The identity is set by key in ~/.gitconfig.local, and a key
+# set through a symlink lands in the file it points at.
+GITCONFIG_LOCAL="$HOME/.gitconfig.local"
+GITCONFIG="$HOME/.gitconfig"
+# The tab title is written for any home but the one kitty.conf's line names.
+AUTHORED_HOME="/Users/gati3478"
+KITTY_CONF="$REPO/terminal/kitty/kitty.conf"
+TAB_TITLE_CONF="$HOME/.config/kitty/tab-title.conf"
+refused=no
+if [ -L "$GITCONFIG_LOCAL" ]; then
+  echo "bootstrap: ~/.gitconfig.local is a symlink to $(readlink "$GITCONFIG_LOCAL") — set user.name and user.email in that file yourself, or replace the link with a file" >&2
+  refused=yes
+elif [ -e "$GITCONFIG_LOCAL" ] && [ ! -f "$GITCONFIG_LOCAL" ]; then
+  echo "bootstrap: ~/.gitconfig.local is not a file — the identity is set in it, and the shipped ~/.gitconfig includes it" >&2
+  refused=yes
+elif [ -e "$GITCONFIG_LOCAL" ] && [ ! -r "$GITCONFIG_LOCAL" ]; then
+  echo "bootstrap: ~/.gitconfig.local is not readable — the identity is set in it, and the shipped ~/.gitconfig includes it" >&2
+  refused=yes
+elif [ -e "$GITCONFIG_LOCAL" ]; then
+  # The shipped ~/.gitconfig includes ~/.gitconfig.local, so an include of
+  # ~/.gitconfig there is a loop, and git stops every command on it. Read as
+  # text: git may be the Command Line Tools stub. awk prints each include and
+  # includeIf path as git reads the value — quotes dropped, a comment cut — and
+  # an includeIf is a loop the moment its condition holds. The path is then
+  # resolved as git resolves it: a leading ~ or ~<this user> expanded, a
+  # relative path taken against this file's directory, which is ~, no variable
+  # expanded, and any spelling of the directory followed to the real one, a
+  # `..` after a link taken from where the link points. A link is followed by
+  # name, each relative target taken against the link's own directory, for a
+  # bounded number of hops, so a cycle of links ends. A link to ~/.gitconfig
+  # is the same loop even while it dangles, since the deploy writes that name,
+  # and so is the clone's git/gitconfig, which ~/.gitconfig becomes a link to.
+  # What ~/.gitconfig is before the run is not compared: the deploy replaces
+  # it, so in a stow home, where it links to ~/dotfiles/gitconfig, an include
+  # of that file is kept.
+  tab="$(printf '\t')"
+  home_gitconfig="$(cd -P "$HOME" && pwd -P)/.gitconfig"
+  me="$(id -un 2>/dev/null)" || me=""
+  loop=""
+  while IFS= read -r inc; do
+    [ -n "$inc" ] || continue
+    n="${inc%%"$tab"*}"; p="${inc#*"$tab"}"
+    case "$p" in
+      "~/"*) p="$HOME/${p#"~/"}" ;;
+      "~$me/"*) p="$HOME/${p#"~$me/"}" ;;
+      /*) ;;
+      *) p="$HOME/$p" ;;
+    esac
+    hops_left=40
+    while [ -z "$loop" ] && [ "$hops_left" -gt 0 ]; do
+      dir="${p%/*}"
+      dir="$(cd -P "${dir:-/}" 2>/dev/null && pwd -P)" || break
+      p="$dir/${p##*/}"
+      if [ "$p" = "$home_gitconfig" ] || [ "$p" -ef "$REPO/git/gitconfig" ]; then
+        loop="line $n includes ~/.gitconfig ($(sed -n "${n}{s/^[[:space:]]*//;p;}" "$GITCONFIG_LOCAL"))"
+      elif [ -L "$p" ]; then
+        target="$(readlink "$p")"
+        case "$target" in
+          /*) p="$target" ;;
+          *) p="$dir/$target" ;;
+        esac
+        hops_left=$((hops_left - 1))
+      else
+        break
+      fi
+    done
+    [ -z "$loop" ] || break
+  done <<< "$(awk '
+    function gitval(s,    v, q, c, i, sp) {
+      v = ""; q = 0; sp = 0
+      for (i = 1; i <= length(s); i++) {
+        c = substr(s, i, 1)
+        if (!q && (c == " " || c == "\t")) { if (v != "") sp++; continue }
+        if (!q && (c == "#" || c == ";")) break
+        for (; sp > 0; sp--) v = v " "
+        if (c == "\"") { q = !q; continue }
+        if (c == "\\") { c = substr(s, ++i, 1); if (c == "t") c = "\t" }
+        v = v c
+      }
+      return v
+    }
+    /^[ \t]*\[/ {
+      e = index($0, "]"); hdr = tolower(substr($0, 1, e)); rest = substr($0, e + 1)
+      inc = (hdr ~ /^[ \t]*\[[ \t]*include[ \t]*\]$/ || hdr ~ /^[ \t]*\[[ \t]*includeif[ \t]/)
+    }
+    !/^[ \t]*\[/ { rest = $0 }
+    inc && tolower(rest) ~ /^[ \t]*path[ \t]*=/ { v = rest; sub(/^[^=]*=/, "", v); print NR "\t" gitval(v) }
+  ' "$GITCONFIG_LOCAL")"
+  if [ -n "$loop" ]; then
+    echo "bootstrap: ~/.gitconfig.local $loop, and the shipped ~/.gitconfig includes ~/.gitconfig.local — git would stop every command on that loop; remove the line" >&2
+    refused=yes
+  fi
+fi
+# git sets the identity after ~/.gitconfig has moved onto ~/.gitconfig.local,
+# and sets nothing while its lock is there or in a file it cannot parse. Only
+# the identity's file is read: git parses its global and system configs before
+# any command, and the deploy replaces ~/.gitconfig anyway.
+git_local() { GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git config -f "$@"; }   # git_local <file> <git config args…>
+if [ -e "$GITCONFIG_LOCAL.lock" ] || [ -L "$GITCONFIG_LOCAL.lock" ]; then
+  echo "bootstrap: ~/.gitconfig.local.lock is there — git's lock on ~/.gitconfig.local, held while a git writes that file and left behind by one that stopped mid-write; git sets no key while it is there. If no git is running, delete it" >&2
+  refused=yes
+fi
+if command -v git >/dev/null 2>&1 && ! bare_shim git; then
+  if [ -f "$GITCONFIG_LOCAL" ] && [ ! -L "$GITCONFIG_LOCAL" ] && [ -r "$GITCONFIG_LOCAL" ] \
+    && ! err="$(git_local "$GITCONFIG_LOCAL" --list 2>&1 >/dev/null)"; then
+    echo "bootstrap: git cannot read ~/.gitconfig.local, where the identity is set — $(sed -n 1p <<< "$err")" >&2
+    refused=yes
+  fi
+  # The move below, in == git ==: a plain ~/.gitconfig, no ~/.gitconfig.local,
+  # and no mention of it in the file.
+  if [ -f "$GITCONFIG" ] && [ ! -L "$GITCONFIG" ] && [ ! -e "$GITCONFIG_LOCAL" ] && [ ! -L "$GITCONFIG_LOCAL" ] \
+    && ! grep -q 'gitconfig\.local' "$GITCONFIG" && ! err="$(git_local "$GITCONFIG" --list 2>&1 >/dev/null)"; then
+    echo "bootstrap: git cannot read ~/.gitconfig, which this run moves to ~/.gitconfig.local to set the identity there — $(sed -n 1p <<< "$err")" >&2
+    refused=yes
+  fi
+fi
+if [ "$HOME" != "$AUTHORED_HOME" ] && grep -q '^tab_title_template ' "$KITTY_CONF" 2>/dev/null \
+  && [ -e "$TAB_TITLE_CONF" ] && [ ! -L "$TAB_TITLE_CONF" ] && [ ! -f "$TAB_TITLE_CONF" ]; then
+  echo "bootstrap: ~/.config/kitty/tab-title.conf is not a file — this run writes the tab title there" >&2
+  refused=yes
+fi
+# Shown as it happens and kept: preen apply's own lines are the one record of
+# what it set aside, and the closing lines name each of those files. Made
+# here, so a TMPDIR that cannot hold it stops the run before the moves.
+if deploy_log="$(mktemp "${TMPDIR:-/tmp}/bootstrap.XXXXXX" 2>/dev/null)"; then
+  trap 'rm -f "$deploy_log"' EXIT
+else
+  echo "bootstrap: could not create the deploy log in ${TMPDIR:-/tmp} — point TMPDIR at a directory you can write" >&2
+  refused=yes
+fi
+"$REPO/bin/preen" apply --dry-run >/dev/null || refused=yes
+if [ "$refused" = yes ]; then
+  echo "bootstrap: stopped — nothing was changed" >&2
+  exit 1
+fi
+
 echo "== dependencies =="
+# A tool in a Homebrew prefix counts as installed, on this shell's PATH or not:
+# the setup's zprofile puts Homebrew on PATH in every login shell.
+in_brew() { # in_brew <tool> → true when a Homebrew prefix's bin/ holds <tool>
+  local prefix
+  # shellcheck disable=SC2086  # BREW_PREFIXES is a list, meant to split
+  for prefix in $BREW_PREFIXES; do
+    if [ -x "$prefix/bin/$1" ]; then return 0; fi
+  done
+  return 1
+}
+# The gate: without one of these the setup is broken, not just smaller. git
+# on a Mac without the Command Line Tools is the stub, so it counts as missing.
 missing=""
-for tool in kitty zsh starship fzf zoxide eza bat git; do
-  command -v "$tool" >/dev/null 2>&1 || missing="$missing $tool"
+for tool in kitty zsh git starship fzf zoxide eza bat delta; do
+  if { ! command -v "$tool" >/dev/null 2>&1 || bare_shim "$tool"; } && ! in_brew "$tool"; then missing="$missing $tool"; fi
 done
 # These two are Homebrew formulae, not commands on PATH, so `command -v`
-# cannot see them. Test the exact files shell/zshrc sources — that is the
-# question being asked ("will the shell find it?"), and it answers correctly
-# on a machine whose Homebrew lives elsewhere, where the zshrc would not
-# find it either. `brew list` was asked until 14-09-2026: it reports an
-# installed formula as missing whenever it fails for an unrelated reason (a
-# read-only HOME, say), and it populates a ~35 MB API cache in the adopter's
-# ~/Library that nothing here announced.
-brew_missing=""
+# cannot see them. Test the files shell/zshrc sources, under the prefixes it
+# looks in — that is the question being asked ("will the shell find it?").
+# `brew list` is not asked: it reports an installed formula as missing
+# whenever it fails for an unrelated reason (a read-only HOME, say), and it
+# populates a ~35 MB API cache in the adopter's ~/Library that nothing here
+# announces.
 for plugin in zsh-syntax-highlighting zsh-autosuggestions; do
-  [ -f "/opt/homebrew/share/$plugin/$plugin.zsh" ] && continue
+  found=no
+  # shellcheck disable=SC2086  # BREW_PREFIXES is a list, meant to split
+  for prefix in "${HOMEBREW_PREFIX:-}" $BREW_PREFIXES; do
+    if [ -n "$prefix" ] && [ -f "$prefix/share/$plugin/$plugin.zsh" ]; then found=yes; break; fi
+  done
   # shell/zshrc also takes the highlighter from a clone, for a host without root.
-  [ "$plugin" = zsh-syntax-highlighting ] && [ -f "$HOME/.zsh/$plugin/$plugin.zsh" ] && continue
-  brew_missing="$brew_missing $plugin"
+  if [ "$plugin" = zsh-syntax-highlighting ] && [ -f "$HOME/.zsh/$plugin/$plugin.zsh" ]; then found=yes; fi
+  [ "$found" = yes ] || missing="$missing $plugin"
 done
-if [ -n "$missing$brew_missing" ]; then
-  echo "Missing:$missing$brew_missing"
-  echo "On macOS:  brew install${missing}${brew_missing}"
-  echo "The font is separate:  brew install --cask font-fira-code-nerd-font"
-  if [ -n "$brew_missing" ]; then
-    # Say this or the remedy loops: shell/zshrc looks for the two plugins
-    # under /opt/homebrew/share by absolute path (the highlighter also under
-    # ~/.zsh), so a Homebrew anywhere else installs them somewhere the shell
-    # will not look, and this reports them missing again after a successful
-    # install.
-    echo "Note: shell/zshrc looks for those two under /opt/homebrew/share by absolute path"
-    echo "      (the highlighter also as a clone at ~/.zsh/zsh-syntax-highlighting)."
-    echo "      On a Homebrew with another prefix, edit those lines to match it."
-  fi
+# kitty.conf asks for this face; its cask names the files so, and the kitty
+# drop-in looks in these same places.
+font=no
+for f in "$HOME/Library/Fonts/FiraCodeNerdFontMono"* /Library/Fonts/FiraCodeNerdFontMono*; do
+  if [ -e "$f" ]; then font=yes; break; fi
+done
+[ "$font" = yes ] || missing="$missing font-fira-code-nerd-font"
+
+# Everything the shipped files guard: each one's absence costs what it says.
+without() { # without <tool> → what goes missing when it is not installed
+  case "$1" in
+    fd)      echo "the fzf finder falls back to its own walker, which ignores .gitignore" ;;
+    rg)      echo "nothing else here needs it — the setup ships only its config" ;;
+    atuin)   echo "Ctrl+R stays fzf's history search" ;;
+    mise)    echo "no per-directory node or python" ;;
+    gh)      echo "nothing else here needs it — the setup ships only its config" ;;
+    git-lfs) echo "repositories that use LFS fail to check out" ;;
+    tmux)    echo "no tmux over ssh" ;;
+    zed)     echo "EDITOR falls back to nano, and kitty's click-to-open does nothing" ;;
+  esac
+}
+optional=""
+for tool in fd rg atuin mise gh git-lfs tmux zed; do
+  command -v "$tool" >/dev/null 2>&1 || in_brew "$tool" || optional="$optional $tool"
+done
+# tmux.conf runs tpm from this path, where no package manager puts it.
+tpm=yes
+[ -x "$HOME/.config/tmux/plugins/tpm/tpm" ] || tpm=no
+
+brew=""
+if command -v brew >/dev/null 2>&1; then brew=brew; fi
+# shellcheck disable=SC2086
+for prefix in $BREW_PREFIXES; do
+  if [ -z "$brew" ] && [ -x "$prefix/bin/brew" ]; then brew="$prefix/bin/brew"; fi
+done
+if [ -n "$brew" ] && [ "$brew" != brew ]; then
+  echo "Homebrew is installed ($brew) but not on this shell's PATH; the setup's zprofile puts it there in every new terminal window."
+fi
+case "${SHELL:-}" in
+  ""|*/zsh) ;;
+  *) echo "Your login shell is $SHELL, and this setup's shell config is zsh's: chsh -s /bin/zsh" ;;
+esac
+if [ -z "$brew" ] && [ -n "$missing$optional" ]; then
+  brew=brew
+  echo "No Homebrew here — install it first, from https://brew.sh; it brings the Command Line Tools too. Then:"
+fi
+if [ -n "$optional" ] || [ "$tpm" = no ]; then
+  echo "Optional, not installed — what goes without each:"
+  # shellcheck disable=SC2086
+  for tool in $optional; do printf '  %-8s %s\n' "$tool" "$(without "$tool")"; done
+  [ "$tpm" = yes ] || printf '  %-8s %s\n' tpm "tmux's plugins: git clone https://github.com/tmux-plugins/tpm ~/.config/tmux/plugins/tpm"
+  [ -z "$optional" ] || echo "  $brew install$optional"
+fi
+if [ -n "$missing" ]; then
+  echo "Missing:$missing"
+  echo "  $brew install$missing"
   ask 'Continue anyway? [y/N] ' reply
   # `y` alone was the only accepted answer, and anything else left without a
   # word: a capital Y installed nothing and said nothing (14-09-2026).
@@ -91,31 +321,59 @@ echo "== your details =="
 ask_required 'Full name for git commits: ' git_name
 ask_required 'Email for git commits: '     git_email
 
-# ~/.gitconfig.local is not a manifest row, so neither of preen apply's backup
-# rules covers it — and it is a conventional name across dotfiles setups,
-# which made an unconditional `cat >` the likeliest way for this repo to
-# destroy something of an adopter's (a signing key, a work identity). Backed
-# up like a manifest row now, and only when it would actually change.
-GITCONFIG_LOCAL="$HOME/.gitconfig.local"
-new_identity="$(printf '[user]\n\tname = %s\n\temail = %s\n' "$git_name" "$git_email")"
-if [ -e "$GITCONFIG_LOCAL" ] && [ "$(cat "$GITCONFIG_LOCAL")" = "$new_identity" ]; then
-  echo "unchanged ~/.gitconfig.local"
-else
-  if [ -e "$GITCONFIG_LOCAL" ] || [ -L "$GITCONFIG_LOCAL" ]; then
-    backup="$GITCONFIG_LOCAL.unpreened.$(date +%Y%m%d-%H%M%S)"
-    n=1
-    while [ -e "$backup" ] || [ -L "$backup" ]; do backup="$GITCONFIG_LOCAL.unpreened.$(date +%Y%m%d-%H%M%S).$n"; n=$((n + 1)); done
-    mv "$GITCONFIG_LOCAL" "$backup"
-    echo "backed up ~/.gitconfig.local -> $(basename "$backup")"
+echo
+echo "== git =="
+# The shipped gitconfig includes ~/.gitconfig.local last, and git keeps the
+# last value it reads, so a gitconfig of the adopter's own belongs there whole —
+# ssh's rule below. Left to preen apply it would be kept as .gitconfig.unpreened,
+# and its credential helpers, signing and includeIf would go quiet. One that
+# names gitconfig.local would, moved there, include itself, and git stops every
+# command on that ("exceeded maximum include depth").
+if [ -f "$GITCONFIG" ] && [ ! -L "$GITCONFIG" ]; then
+  if [ -e "$GITCONFIG_LOCAL" ]; then
+    echo "~/.gitconfig.local is there, so ~/.gitconfig is not moved onto it — the deploy below keeps it as ~/.gitconfig.unpreened"
+  elif grep -q 'gitconfig\.local' "$GITCONFIG"; then
+    echo "~/.gitconfig names gitconfig.local itself — the deploy below keeps it as ~/.gitconfig.unpreened"
+  else
+    mv "$GITCONFIG" "$GITCONFIG_LOCAL"
+    echo "moved ~/.gitconfig -> ~/.gitconfig.local — the shipped gitconfig includes it last, so every line of it still wins"
   fi
-  printf '%s\n' "$new_identity" > "$GITCONFIG_LOCAL"
-  echo "wrote ~/.gitconfig.local"
 fi
 
-# The shell overlays are optional: the guards in zshenv/zprofile make an
-# absent file a no-op, so an adopter with no work split needs neither.
-touch "$HOME/.zshenv.local" "$HOME/.zprofile.local"
-echo "wrote empty ~/.zshenv.local and ~/.zprofile.local (fill in if needed)"
+# The identity is set by key, so the rest of an adopter's file stays as it is,
+# and git quotes the value as it needs: written bare, a '#' in a name would
+# start a comment. --replace-all collapses a key the file repeats.
+if command -v git >/dev/null 2>&1 && ! bare_shim git; then
+  created=no
+  [ -e "$GITCONFIG_LOCAL" ] || created=yes
+  set_keys=""
+  for key in user.name user.email; do
+    if [ "$key" = user.name ]; then value="$git_name"; else value="$git_email"; fi
+    current="$(git_local "$GITCONFIG_LOCAL" --get-all "$key" 2>/dev/null)" || current=""
+    [ "$current" = "$value" ] && continue
+    git_local "$GITCONFIG_LOCAL" --replace-all -- "$key" "$value"
+    set_keys="${set_keys:+$set_keys and }$key"
+  done
+  if [ "$created" = yes ]; then
+    echo "wrote ~/.gitconfig.local"
+  elif [ -z "$set_keys" ]; then
+    echo "unchanged ~/.gitconfig.local"
+  else
+    echo "set $set_keys in ~/.gitconfig.local — the rest of it is as it was"
+  fi
+else
+  # No git to set a key with: a file of the adopter's is not rewritten by hand.
+  # In git's quoting, '\' and '"' take a backslash.
+  q_name="${git_name//\\/\\\\}"; q_name="${q_name//\"/\\\"}"
+  q_email="${git_email//\\/\\\\}"; q_email="${q_email//\"/\\\"}"
+  if [ ! -e "$GITCONFIG_LOCAL" ]; then
+    printf '[user]\n\tname = "%s"\n\temail = "%s"\n' "$q_name" "$q_email" > "$GITCONFIG_LOCAL"
+    echo "wrote ~/.gitconfig.local"
+  else
+    echo "~/.gitconfig.local is there, and git cannot run here to set keys in it — under [user] there, set:"
+    printf '  name = "%s"\n  email = "%s"\n' "$q_name" "$q_email"
+  fi
+fi
 
 echo
 echo "== ssh =="
@@ -123,15 +381,35 @@ echo "== ssh =="
 # ssh keeps the first value it reads, so a config of the adopter's own belongs
 # there whole — the drop-ins' rule: their file becomes the overlay when none
 # exists. Left to preen apply it would be kept as config.unpreened, and every
-# host in it would go dark until someone moved it by hand.
+# host in it would go dark until someone moved it by hand. A symlink of theirs
+# (a dotfiles repo's) moves as a link: it keeps pointing where it did, and
+# nothing is written through it.
 SSH_CONF="$HOME/.ssh/config"
 SSH_LOCAL="$HOME/.ssh/config.local"
-if [ -e "$SSH_LOCAL" ] || [ -L "$SSH_LOCAL" ]; then
-  echo "~/.ssh/config.local is there — left as it is"
-elif [ -f "$SSH_CONF" ] && [ ! -L "$SSH_CONF" ]; then
+if [ -L "$SSH_CONF" ]; then
+  ssh_aside="replaces the link, and the file it points at stays as it is"
+else
+  ssh_aside="keeps it as ~/.ssh/config.unpreened"
+fi
+if [ -L "$SSH_CONF" ] && [ "$SSH_CONF" -ef "$REPO/ssh/config" ]; then
+  echo "~/.ssh/config is already this setup's"
+elif [ -e "$SSH_LOCAL" ] || [ -L "$SSH_LOCAL" ]; then
+  if [ -e "$SSH_CONF" ] || [ -L "$SSH_CONF" ]; then
+    echo "~/.ssh/config.local is there, so ~/.ssh/config is not moved onto it — the deploy below $ssh_aside"
+  else
+    echo "~/.ssh/config.local is there — left as it is"
+  fi
+elif [ -f "$SSH_CONF" ] || [ -L "$SSH_CONF" ]; then
   # A config that names config.local itself would, moved there, include itself.
-  if grep -q 'config\.local' "$SSH_CONF"; then
-    echo "~/.ssh/config names config.local itself — the deploy below keeps it as ~/.ssh/config.unpreened; merge it by hand"
+  if grep -q 'config\.local' "$SSH_CONF" 2>/dev/null; then
+    echo "~/.ssh/config names config.local itself — the deploy below $ssh_aside; merge it by hand"
+  elif [ -L "$SSH_CONF" ]; then
+    mv "$SSH_CONF" "$SSH_LOCAL"
+    if [ -e "$SSH_LOCAL" ]; then
+      echo "moved ~/.ssh/config -> ~/.ssh/config.local (a symlink -> $(readlink "$SSH_LOCAL")) — the shipped config includes it first, so every line of it still wins"
+    else
+      echo "moved ~/.ssh/config -> ~/.ssh/config.local (a symlink -> $(readlink "$SSH_LOCAL"), which points at nothing)"
+    fi
   else
     mv "$SSH_CONF" "$SSH_LOCAL"
     echo "moved ~/.ssh/config -> ~/.ssh/config.local — the shipped config includes it first, so every line of it still wins"
@@ -142,27 +420,26 @@ fi
 
 echo
 echo "== deploying =="
-"$REPO/bin/preen" apply
+"$REPO/bin/preen" apply | tee "$deploy_log"
 
 echo
-echo "== tab-title path =="
+echo "== tab title =="
 # kitty.conf's tab_title_template collapses the working directory to '~' with
 # a Python .replace() inside kitty's own config language, which expands no
 # environment variable in this setting — measured against kitty 0.48.2, where
 # `${HOME}` in that option comes back verbatim. So the home to collapse must
-# be a literal, authored for one machine.
+# be a literal, authored for one machine: AUTHORED_HOME, above.
 #
 # It is NOT rewritten in the clone. Doing that left the clone permanently
 # dirty, and the deployed gitconfig sets pull.rebase, so `git pull` then
 # refused every upstream change with "cannot pull with rebase: You have
 # unstaged changes" — found 14-09-2026. kitty.conf ends with
-# `globinclude local.conf`, which is silent when the file does not exist and
-# last-wins when it does, so the adopter's line goes to ~/.config instead.
-AUTHORED_HOME="/Users/gati3478"
-KITTY_CONF="$REPO/terminal/kitty/kitty.conf"
-LOCAL_CONF="$HOME/.config/kitty/local.conf"
+# `globinclude tab-title.conf` then `globinclude local.conf`, each silent when
+# the file does not exist and last-wins when it does. tab-title.conf is this
+# run's, written whole; local.conf is the adopter's, read after it, and never
+# written here.
 if [ "$HOME" = "$AUTHORED_HOME" ]; then
-  echo "this is the machine the tab title was authored for — nothing to write"
+  echo "this is the home the tab title was authored for — no tab-title.conf needed"
 elif [ ! -f "$KITTY_CONF" ]; then
   echo "kitty.conf not found — skipped"
 else
@@ -170,36 +447,148 @@ else
   # of a taste value is the drift this repo exists to close. awk's index and
   # substr match no pattern at all — `sed "s|$AUTHORED_HOME|$HOME|"` built its
   # expression out of $HOME, so a `|` in it became a different command and an
-  # `&` became the whole match, silently.
-  title_line="$(awk -v old="$AUTHORED_HOME" -v new="$HOME" '
+  # `&` became the whole match, silently. HOME is read from ENVIRON: `awk -v`
+  # turns a `\t` in it into a tab. kitty compiles the title as a Python
+  # f-string, where `\t` is a tab too, so each backslash is written doubled.
+  title_line="$(awk -v old="$AUTHORED_HOME" '
     /^tab_title_template / {
+      lit = ""; r = ENVIRON["HOME"]
+      while ((k = index(r, "\\")) > 0) {
+        lit = lit substr(r, 1, k - 1) "\\\\"
+        r = substr(r, k + 1)
+      }
+      lit = lit r
       out = ""; rest = $0
       while ((i = index(rest, old)) > 0) {
-        out = out substr(rest, 1, i - 1) new
+        out = out substr(rest, 1, i - 1) lit
         rest = substr(rest, i + length(old))
       }
       print out rest
       exit
     }' "$KITTY_CONF")"
   if [ -z "$title_line" ]; then
-    echo "kitty.conf has no tab_title_template line — nothing to write" >&2
+    echo "kitty.conf has no tab_title_template line — no tab-title.conf needed" >&2
   else
-    mkdir -p "$(dirname "$LOCAL_CONF")"
-    {
-      echo "# Written by bootstrap. kitty.conf globincludes this file last, so"
-      echo "# the line below overrides the one authored for another machine."
-      printf '%s\n' "$title_line"
-    } > "$LOCAL_CONF"
-    # Report what is true, not what was attempted: the sed this replaced
-    # printed "patched …" and exited 0 having changed nothing at all.
-    if grep -qF "$HOME" "$LOCAL_CONF"; then
-      echo "wrote ~/.config/kitty/local.conf — tab titles collapse this HOME to '~'"
+    mkdir -p "$(dirname "$TAB_TITLE_CONF")"
+    # A file replaced whole is never written through: a symlink here is moved
+    # aside, link and all, as preen apply moves one at a copy row. A plain file
+    # of one tab_title_template line is this run's own, for another home or an
+    # older kitty.conf, and is replaced with no backup, which the doctor would
+    # otherwise warn about on every run after. Any other differing file is
+    # kept beside itself, as the kitty drop-in keeps one, and the write is
+    # then a new file. The lines go to the deploy log too, so the closing lines
+    # name the file set aside.
+    if [ -L "$TAB_TITLE_CONF" ] || { [ -e "$TAB_TITLE_CONF" ] && ! cmp -s - "$TAB_TITLE_CONF" <<< "$title_line"; }; then
+      if [ ! -L "$TAB_TITLE_CONF" ] && [ -f "$TAB_TITLE_CONF" ] \
+        && awk 'NR == 1 { ok = /^tab_title_template / } END { exit !(NR == 1 && ok) }' "$TAB_TITLE_CONF" 2>/dev/null; then
+        rm -f "$TAB_TITLE_CONF"
+      else
+        bak="$TAB_TITLE_CONF.unpreened"; n=1
+        while [ -e "$bak" ] || [ -L "$bak" ]; do bak="$TAB_TITLE_CONF.unpreened.$n"; n=$((n + 1)); done
+        mv "$TAB_TITLE_CONF" "$bak"
+        if [ -L "$bak" ]; then
+          echo "moved aside     ~/.config/kitty/tab-title.conf (a symlink -> $(readlink "$bak"))" | tee -a "$deploy_log"
+        else
+          echo "backed up       ~/.config/kitty/tab-title.conf -> ~/.config/kitty/tab-title.conf${bak#"$TAB_TITLE_CONF"}" | tee -a "$deploy_log"
+        fi
+      fi
+    fi
+    title_state=wrote
+    if [ -f "$TAB_TITLE_CONF" ]; then
+      title_state=unchanged
     else
-      echo "bootstrap: could not write the tab title for this HOME; tabs will show full paths" >&2
+      printf '%s\n' "$title_line" > "$TAB_TITLE_CONF"
+    fi
+    # local.conf is read after tab-title.conf. Of its tab_title_template lines,
+    # awk takes the last with a value and prints its line number and, when it
+    # is `active_wd.replace('<path>', '~')` for a path other than this home,
+    # that path. Their file: named, never written. A line has a value when
+    # kitty's whitespace follows the key — spaces, tabs, \v, \f, \x1c-\x1f; it
+    # ends a line at a lone \r — and then a byte that is not whitespace. kitty
+    # also counts multibyte spaces as whitespace; a line led or split by one,
+    # or with one for its value, is not modelled. LC_ALL=C: under a UTF-8
+    # locale, macOS awk stops at a byte that is not UTF-8.
+    local_title="$(LC_ALL=C awk '
+      /^[[:space:]\034-\037]*tab_title_template[ \t\v\f\034-\037]+[^[:space:]\034-\037]/ { n = NR; t = $0 }
+      END {
+        if (!n) exit
+        p = ""; i = index(t, "active_wd.replace(")
+        if (i) {
+          s = substr(t, i + 18); q = substr(s, 1, 1); s = substr(s, 2); j = index(s, q)
+          if ((q == "\"" || q == "'\''") && j && substr(s, 1, j - 1) != ENVIRON["HOME"] && substr(s, j + 1) ~ /^, *.~.\)/) p = substr(s, 1, j - 1)
+        }
+        print n, p
+      }' "$HOME/.config/kitty/local.conf" 2>/dev/null)" || local_title=""
+    local_line="${local_title%% *}"; local_path="${local_title#* }"
+    # What tab-title.conf's title does is read back off the file, not assumed.
+    home_lit="${HOME//\\/\\\\}"
+    if [ -n "$local_path" ]; then
+      echo "$title_state ~/.config/kitty/tab-title.conf; ~/.config/kitty/local.conf line $local_line, read after it, sets a tab title that collapses $local_path"
+    elif [ -n "$local_title" ]; then
+      echo "$title_state ~/.config/kitty/tab-title.conf; ~/.config/kitty/local.conf line $local_line, read after it, sets a tab title"
+    elif grep -qF -e "'$home_lit'" -e "\"$home_lit\"" "$TAB_TITLE_CONF"; then
+      echo "$title_state ~/.config/kitty/tab-title.conf, whose tab title collapses this home to '~'"
+    else
+      echo "$title_state ~/.config/kitty/tab-title.conf, whose tab title does not collapse this home"
     fi
   fi
 fi
 
+# ── what is the adopter's now ────────────────────────────────────────────────
+# Every overlay the shipped files read, beside the file that reads it. None is
+# created: each reader skips an absent one without a word.
+OVERLAID="~/.zshenv ~/.zprofile ~/.zshrc ~/.gitconfig ~/.ssh/config ~/.config/tmux/tmux.conf ~/.config/kitty/kitty.conf"
+overlay_of() { # overlay_of <~path> → the overlay the shipped file at that path reads, if it reads one
+  case "$1" in
+    "~/.zshenv"|"~/.zprofile"|"~/.zshrc"|"~/.gitconfig"|"~/.ssh/config") echo "$1.local" ;;
+    "~/.config/tmux/tmux.conf"|"~/.config/kitty/kitty.conf") echo "${1%/*}/local.conf" ;;
+  esac
+}
+echo
+echo "== overlays =="
+echo "Each is read by a shipped file, and a line of yours there wins over it:"
+# shellcheck disable=SC2086  # OVERLAID is a list of ~ paths, meant to split and never expanded
+for t in $OVERLAID; do
+  ov="$(overlay_of "$t")"
+  ov_abs="${ov/#\~/$HOME}"
+  if [ -e "$ov_abs" ] || [ -L "$ov_abs" ]; then
+    printf '  %-28s yours\n' "$ov"
+  else
+    printf '  %-28s absent — create it for lines of your own\n' "$ov"
+  fi
+done
+
+# The files this run set aside, in preen apply's words (bootstrap's own lines
+# use them too). A shell file's lines go in its overlay, and never a line that
+# sources that overlay: from inside it, it sources itself until zsh gives up.
+aside=""
+while IFS= read -r line; do
+  case "$line" in
+    "backed up       "*)
+      rest="${line#backed up       }"; orig="${rest%% -> *}"
+      what=" -> ${rest#* -> }, which nothing reads now" ;;
+    "moved aside     "*)
+      rest="${line#moved aside     }"; orig="${rest%% (a symlink -> *}"; target="${rest#* (a symlink -> }"
+      what=" was a symlink to ${target%)}, set aside beside it; nothing reads it now" ;;
+    "replaced link   "*)
+      rest="${line#replaced link   }"; orig="${rest%% (was -> *}"; target="${rest#* (was -> }"
+      what=" was a symlink to ${target%)}; nothing reads that file now" ;;
+    *) continue ;;
+  esac
+  ov="$(overlay_of "$orig")"
+  where=""
+  if [ -n "$ov" ]; then where=": lines you want back go in $ov"; fi
+  case "$orig" in "~/.zshenv"|"~/.zprofile"|"~/.zshrc") where="$where, never one that sources it" ;; esac
+  aside="$aside  $orig$what$where"$'\n'
+done < "$deploy_log"
+if [ -n "$aside" ]; then
+  echo
+  echo "== set aside by this run =="
+  printf '%s' "$aside"
+fi
+
+echo
+echo "Claude Code's statusline: ~/.config/cship.toml is linked, not wired. ./prompt/install.sh, run from this clone, wires ~/.claude/settings.json and leaves the linked configs alone."
 echo
 echo "Done. Open a new terminal window."
 echo "Verify with: $REPO/bin/preen doctor"

@@ -2,9 +2,9 @@
 usage() { cat <<'EOF'
 Take this kitty configuration alone.
 
-Copies the config and its palette into ~/.config/kitty/preen, copies the three
-files kitty insists on reading from ~/.config/kitty itself, and appends ONE
-line to your own kitty.conf:
+Copies the config, its palette and the tab title for your home into
+~/.config/kitty/preen, copies the files kitty insists on reading from
+~/.config/kitty itself, and appends ONE line to your own kitty.conf:
 
   include preen/kitty.conf
 
@@ -23,14 +23,21 @@ There is nothing to ask, so nothing is asked. Two flags:
 kitty reads includes last-wins, so the appended line beats everything above it
 in your kitty.conf. Keep a line of your own by moving it BELOW that line, or
 into ~/.config/kitty/preen/local.conf, which this config reads after
-everything else. That file is yours too: this installer owns one line of it,
-the tab title, and appends that line rather than replacing the file.
+everything else. That file is yours: nothing here writes it. A tab title in
+it wins over ours; a run names its line, with the path it collapses when that
+is not your home. tab-title.conf beside it is this installer's: a run
+replaces its one line with no backup, and anything else there is backed up
+first.
 
 open-actions.conf, mime.types and choose-files.conf are read by kitty from
 ~/.config/kitty itself, under those names and no others, so a file of yours at
 one of them is left exactly as it is and said so. Nothing else is overwritten
 without a timestamped backup beside it, and a re-run with nothing changed
-rewrites nothing. Every refusal comes before the first write.
+rewrites nothing. Every refusal comes before the first write: a symlinked
+~/.config, ~/.config/kitty or preen/ is refused, and so is a symlinked
+kitty.conf, whose target should carry the line instead. A kitty.conf linked
+into a clone of the whole setup already has this config, and the run says so
+and writes nothing.
 EOF
 }
 set -euo pipefail
@@ -103,6 +110,14 @@ while [ $# -gt 0 ]; do
   shift
 done
 
+# ── a home that took the whole setup ─────────────────────────────────────────
+# Its kitty.conf is a link into the setup's clone, which already carries this
+# config; the include line appended there would dirty that clone.
+if links_into_clone "$KITTY_CONF"; then
+  echo "$(short "$KITTY_CONF") links into a clone of the whole setup, which already carries this config. Nothing was changed."
+  exit 0
+fi
+
 # ── where the configs come from ──────────────────────────────────────────────
 locate_sources kitty.conf
 if [ "$SRC" = "$WORK/src" ]; then
@@ -114,19 +129,22 @@ for f in kitty.conf current-theme.conf $ROOT_FILES; do
   [ -s "$SRC/$f" ] || die "$ORIGIN/$f is missing or empty"
 done
 # curl -f already refuses a 404; these refuse a 200 that is not the file, and a
-# foreign file beside a clone. Both lines are load-bearing rather than
-# decorative: the overlay below rides on the globinclude, and kitty.conf's
-# `include current-theme.conf` resolves to a file that has to be a palette.
+# foreign file beside a clone. Each line is load-bearing rather than
+# decorative: the tab title and the overlay ride on the globincludes, and
+# kitty.conf's `include current-theme.conf` resolves to a file that has to be a
+# palette.
+grep -q '^globinclude tab-title\.conf$' "$SRC/kitty.conf" \
+  || die "$ORIGIN/kitty.conf is not this config — it must end with \`globinclude tab-title.conf\`, which is what the tab title for your home rides on"
 grep -q '^globinclude local\.conf$' "$SRC/kitty.conf" \
   || die "$ORIGIN/kitty.conf is not this config — it must end with \`globinclude local.conf\`, which is what your own overrides ride on"
 grep -q '^background[[:space:]]' "$SRC/current-theme.conf" \
   || die "$ORIGIN/current-theme.conf is not a kitty colour scheme"
 
 # ── dependencies ─────────────────────────────────────────────────────────────
-# Each of the three is a warning and never a refusal: the files are worth having
-# before the thing that reads them, and an adopter may install kitty, the font
-# or bat after this run. Nothing below launches kitty — the binary is located
-# and named, not executed.
+# Each is a warning and never a refusal: the files are worth having before the
+# thing that reads them, and an adopter may install kitty, the font, bat or Zed
+# after this run. Nothing below launches kitty — the binary is located and
+# named, not executed.
 echo "== dependencies =="
 kitty_bin=""
 if [ -x "$KITTY_APP" ]; then
@@ -176,27 +194,67 @@ fi
 # and rewritten with awk's index/substr, which match no pattern at all:
 # `sed "s|$AUTHORED_HOME|$HOME|"` built its expression out of $HOME, so a `|`
 # in it became a different command and an `&` became the whole match, silently
-# (bin/bootstrap, 14-09-2026).
+# (bin/bootstrap, 14-09-2026). HOME is read from ENVIRON: `awk -v` turns a `\t`
+# in it into a tab. kitty compiles the title as a Python f-string, where `\t` is
+# a tab too, so each backslash is written doubled.
 echo
 echo "== tab title =="
 title_line=""
 if [ "$HOME" = "$AUTHORED_HOME" ]; then
-  echo "this is the home the tab title was authored for — no local.conf needed"
+  echo "this is the home the tab title was authored for — no tab-title.conf needed"
 else
-  title_line="$(awk -v old="$AUTHORED_HOME" -v new="$HOME" '
+  title_line="$(awk -v old="$AUTHORED_HOME" '
     /^tab_title_template / {
+      lit = ""; r = ENVIRON["HOME"]
+      while ((k = index(r, "\\")) > 0) {
+        lit = lit substr(r, 1, k - 1) "\\\\"
+        r = substr(r, k + 1)
+      }
+      lit = lit r
       out = ""; rest = $0
       while ((i = index(rest, old)) > 0) {
-        out = out substr(rest, 1, i - 1) new
+        out = out substr(rest, 1, i - 1) lit
         rest = substr(rest, i + length(old))
       }
       print out rest
       exit
     }' "$SRC/kitty.conf")"
-  if [ -n "$title_line" ]; then
-    echo "tab titles collapse this home to '~', from $(short "$PREEN_DIR/local.conf")"
+  # local.conf is read after tab-title.conf. Of its tab_title_template lines,
+  # awk takes the last with a value and prints its line number and, when it is
+  # `active_wd.replace('<path>', '~')` for a path other than this home, that
+  # path. Their file: named, never written. bin/bootstrap reads its local.conf
+  # by the same rule. A line has a value when kitty's whitespace follows the
+  # key — spaces, tabs, \v, \f, \x1c-\x1f; it ends a line at a lone \r — and
+  # then a byte that is not whitespace. kitty also counts multibyte spaces as
+  # whitespace; a line led or split by one, or with one for its value, is not
+  # modelled. LC_ALL=C: under a UTF-8 locale, macOS awk stops at a byte that
+  # is not UTF-8.
+  local_title="$(LC_ALL=C awk '
+    /^[[:space:]\034-\037]*tab_title_template[ \t\v\f\034-\037]+[^[:space:]\034-\037]/ { n = NR; t = $0 }
+    END {
+      if (!n) exit
+      p = ""; i = index(t, "active_wd.replace(")
+      if (i) {
+        s = substr(t, i + 18); q = substr(s, 1, 1); s = substr(s, 2); j = index(s, q)
+        if ((q == "\"" || q == "'\''") && j && substr(s, 1, j - 1) != ENVIRON["HOME"] && substr(s, j + 1) ~ /^, *.~.\)/) p = substr(s, 1, j - 1)
+      }
+      print n, p
+    }' "$PREEN_DIR/local.conf" 2>/dev/null)" || local_title=""
+  local_line="${local_title%% *}"; local_path="${local_title#* }"
+  # Said before the refusals and the write, so it is what a run writes, never
+  # what the file holds.
+  if [ -z "$title_line" ]; then
+    echo "$ORIGIN/kitty.conf has no tab_title_template line — no tab-title.conf needed"
+  elif [ -n "$local_path" ]; then
+    echo "$(short "$PREEN_DIR/local.conf") line $local_line, read after tab-title.conf, sets a tab title that collapses $local_path"
+  elif [ -n "$local_title" ]; then
+    echo "$(short "$PREEN_DIR/local.conf") line $local_line, read after tab-title.conf, sets a tab title"
   else
-    echo "$ORIGIN/kitty.conf has no tab_title_template line — no local.conf needed"
+    home_lit="${HOME//\\/\\\\}"
+    case "$title_line" in
+      *"'$home_lit'"*|*"\"$home_lit\""*) echo "the tab title a run writes to $(short "$PREEN_DIR/tab-title.conf") collapses this home to '~'" ;;
+      *) echo "the tab title a run writes to $(short "$PREEN_DIR/tab-title.conf") does not collapse this home" ;;
+    esac
   fi
 fi
 
@@ -205,7 +263,7 @@ fi
 [ -d "$PREEN_DIR" ] || touching "$PREEN_DIR" "this config's own directory, created"
 touching "$PREEN_DIR/kitty.conf" "the config"
 touching "$PREEN_DIR/current-theme.conf" "the palette it includes"
-if [ -n "$title_line" ]; then touching "$PREEN_DIR/local.conf" "your overrides, read last — one line of ours: the tab title for this home"; fi
+if [ -n "$title_line" ]; then touching "$PREEN_DIR/tab-title.conf" "the tab title for this home — ours; local.conf stays yours"; fi
 touching "$KITTY_CONF" "one line appended: $INCLUDE_LINE"
 touching "$KITTY_DIR/open-actions.conf" "what a click on a link does — kept if you have one"
 touching "$KITTY_DIR/mime.types" "the file types behind it — kept if you have one"
@@ -213,7 +271,7 @@ touching "$KITTY_DIR/choose-files.conf" "the fp picker — kept if you have one"
 show_plan
 
 # ── the last refusals, before the first write ────────────────────────────────
-if [ -L "$CONFIG_HOME" ] && [ ! -e "$CONFIG_HOME" ]; then die "$(short "$CONFIG_HOME") is a symlink to nothing"; fi
+for d in "$CONFIG_HOME" "$KITTY_DIR" "$PREEN_DIR"; do refuse_linked_dir "$d"; done
 if [ -e "$CONFIG_HOME" ]; then
   [ -d "$CONFIG_HOME" ] || die "$(short "$CONFIG_HOME") is not a directory"
   [ -w "$CONFIG_HOME" ] || die "$(short "$CONFIG_HOME") is not writable — nothing was changed"
@@ -223,27 +281,15 @@ fi
 # append_line_once refuses a symlink of its own accord, but it refuses at the
 # END of this run, with the copies already on disk. Asking here keeps the
 # promise that a stopped run has changed nothing.
-# The directory, for the same reason as the file below it: a symlinked
-# ~/.config/kitty is a directory something else manages, and every copy
-# would land in it.
-if [ -L "$KITTY_DIR" ]; then
-  die "$(short "$KITTY_DIR") is a symlink to $(readlink "$KITTY_DIR") — every file here would land in that directory, which something else manages. Install into it from there, or replace the link. Nothing was changed."
-fi
 if [ -L "$KITTY_CONF" ]; then
   die "$(short "$KITTY_CONF") is a symlink to $(readlink "$KITTY_CONF") — appending would write into that file, which something else manages. Add \`$INCLUDE_LINE\` there instead, or replace the link. Nothing was changed."
 fi
-if [ -n "$title_line" ] && [ -L "$PREEN_DIR/local.conf" ]; then
-  die "$(short "$PREEN_DIR/local.conf") is a symlink to $(readlink "$PREEN_DIR/local.conf") — the tab-title line would be appended into that file. Add it there yourself, or replace the link. Nothing was changed."
-fi
-# A kitty.conf or local.conf that cannot be written — root-owned after a sudo
-# edit, or a directory — stopped the run at its last write with the copies
-# already on disk (the audit of 22-09-2026 watched it). Asked here, beside the
-# symlink refusals, so a stopped run has still changed nothing.
+# A kitty.conf that cannot be written — root-owned after a sudo edit, or a
+# directory — would stop the run at its last write, with the copies already on
+# disk. Asked here, beside the symlink refusals, so a stopped run has changed
+# nothing.
 if [ -e "$KITTY_CONF" ] && { [ ! -f "$KITTY_CONF" ] || [ ! -w "$KITTY_CONF" ]; }; then
   die "$(short "$KITTY_CONF") is not a file this run can append to. Nothing was changed."
-fi
-if [ -n "$title_line" ] && [ -e "$PREEN_DIR/local.conf" ] && { [ ! -f "$PREEN_DIR/local.conf" ] || [ ! -w "$PREEN_DIR/local.conf" ]; }; then
-  die "$(short "$PREEN_DIR/local.conf") is not a file this run can append to. Nothing was changed."
 fi
 for d in "$KITTY_DIR" "$PREEN_DIR"; do
   if [ -e "$d" ] && { [ ! -d "$d" ] || [ ! -w "$d" ]; }; then die "$(short "$d") is not a directory this run can write into. Nothing was changed."; fi
@@ -267,11 +313,21 @@ if [ ! -d "$KITTY_DIR" ]; then
 fi
 copy_into "$SRC/kitty.conf" "$PREEN_DIR/kitty.conf"
 copy_into "$SRC/current-theme.conf" "$PREEN_DIR/current-theme.conf"
-# local.conf is the ADOPTER's file, and this installer owns one line of it
-# rather than the file: created holding that line when there is none, appended
-# to when they already have their own, left exactly as it is once the line is
-# there. The two copies above made preen/, which append_line_once does not do.
-if [ -n "$title_line" ]; then append_line_once "$PREEN_DIR/local.conf" "$title_line"; fi
+# tab-title.conf is this installer's, written whole, so the line kitty reads
+# always names this HOME. local.conf, read after it, is the adopter's, and a
+# tab title of theirs there wins. A plain file of one tab_title_template line
+# is this installer's own, for another home or an older kitty.conf: replaced
+# with no backup, which the doctor would otherwise warn about on every run
+# after. Anything else there is backed up by copy_into.
+if [ -n "$title_line" ]; then
+  printf '%s\n' "$title_line" > "$WORK/tab-title.conf"
+  title_conf="$PREEN_DIR/tab-title.conf"
+  if [ ! -L "$title_conf" ] && [ -f "$title_conf" ] && ! cmp -s "$WORK/tab-title.conf" "$title_conf" \
+    && awk 'NR == 1 { ok = /^tab_title_template / } END { exit !(NR == 1 && ok) }' "$title_conf" 2>/dev/null; then
+    rm -f "$title_conf" || die "could not replace $(short "$title_conf")"
+  fi
+  copy_into "$WORK/tab-title.conf" "$title_conf"
+fi
 # shellcheck disable=SC2086
 for f in $ROOT_FILES; do copy_if_absent "$SRC/$f" "$KITTY_DIR/$f"; done
 # Last, so a kitty.conf that includes this config only ever points at files

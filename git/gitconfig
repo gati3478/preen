@@ -18,12 +18,15 @@
 	clean = git-lfs clean -- %f
 [core]
 	autocrlf = input
-	pager = delta
+	# git runs a value with shell syntax through sh, so git log pages through
+	# delta, else less, else cat, instead of dying.
+	pager = "command -v delta >/dev/null 2>&1 && exec delta; command -v less >/dev/null 2>&1 && exec less; exec cat"
 	untrackedCache = true
 [init]
 	defaultBranch = main
 [interactive]
-	diffFilter = delta --color-only
+	# The same fallback: cat keeps add -p's hunks line for line, as git requires.
+	diffFilter = "command -v delta >/dev/null 2>&1 && exec delta --color-only || exec cat"
 [delta]
 	navigate = true
 	side-by-side = true

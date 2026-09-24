@@ -30,56 +30,147 @@ short() {
   esac
 }
 
-# Counted before the loop so the exit trap can report progress against it.
+# Walks from HOME down to a target's directory and stops at the first of:
+#   link        a symlinked directory: a tree something else manages (stow
+#               folds a whole package into one link), and every write under it
+#               lands there, so tracked files in the adopter's dotfiles repo
+#               become links into this clone;
+#   notdir      a file where a directory must be;
+#   unwritable  the deepest directory that exists, where the write, or the
+#               mkdir -p before it, lands.
+# HOME is never tested for a link; a home reached through a link is still the
+# home. Fork-free, the answer in PROBLEM and PROBLEM_AT rather than on stdout,
+# because it runs for every row on every run.
+parent_problem() { # parent_problem <abs target> → PROBLEM (link|notdir|unwritable), PROBLEM_AT
+  local home="${HOME%/}" rel p next
+  PROBLEM="" PROBLEM_AT=""
+  rel="${1#"$home"/}"
+  [ "$rel" != "$1" ] || return 1
+  case "$rel" in */*) rel="${rel%/*}" ;; *) rel="" ;; esac
+  p="$home"
+  while [ -n "$rel" ]; do
+    next="$p/${rel%%/*}"
+    if [ -L "$next" ]; then PROBLEM="link"; PROBLEM_AT="$next"; return 0; fi
+    [ -e "$next" ] || break
+    if [ ! -d "$next" ]; then PROBLEM="notdir"; PROBLEM_AT="$next"; return 0; fi
+    p="$next"
+    case "$rel" in */*) rel="${rel#*/}" ;; *) rel="" ;; esac
+  done
+  if [ ! -w "$p" ] || [ ! -x "$p" ]; then PROBLEM="unwritable"; PROBLEM_AT="$p"; return 0; fi
+  return 1
+}
+
 expected_rows=$(awk -F'\t' '$1 !~ /^($|#)/ { c++ } END { print c+0 }' "$MANIFEST")
 
-# set -e stops this script the moment an ln or cp fails — on a read-only
-# directory, say. The failing command printed its own error, but nothing said
-# that some rows had been deployed and the rest had not, or what to do about
-# it. Every row is idempotent, so the useful thing to say is how far it got
-# and that running it again finishes the job — which is true of a row that
-# failed, and NOT of the structural refusals below, which repeat until the
-# manifest itself is fixed.
-applied=0
+# Every refusal comes before the first write, the promise the drop-ins make: a
+# refusal inside the deploy loop would stop a run with the rows before it
+# deployed and the rest not. A dry run refuses exactly as a real run would.
+refused=no
+named=$'\n'
 rows_seen=0
-stop_advice=yes
+while IFS=$'\t' read -r src tgt mode perms; do
+  case "$src" in ''|'#'*) continue ;; esac
+  rows_seen=$((rows_seen + 1))
+  abs_tgt="${tgt/#\~/$HOME}"   # expand(), inlined: $( ) forks, and this runs for every row
+
+  if [ ! -e "$REPO/$src" ]; then
+    echo "MISSING SOURCE  $src" >&2
+    refused=yes
+  elif [ "$mode" = link ] && [ -n "$perms" ] && [ ! -O "$REPO/$src" ]; then
+    # chmod reaches through the link to the clone's file, which only its owner
+    # may change.
+    echo "REFUSING        $(short "$REPO/$src") is owned by another user, and this row sets its mode to $perms" >&2
+    refused=yes
+  fi
+
+  case "$mode" in
+    link|copy) ;;
+    *) echo "UNKNOWN MODE    $mode for $src" >&2; refused=yes ;;
+  esac
+
+  # Never clobber a real directory. A file we can back up; a populated
+  # directory is someone else's data.
+  if [ -d "$abs_tgt" ] && [ ! -L "$abs_tgt" ]; then
+    echo "REFUSING        $tgt is a real directory" >&2
+    refused=yes
+  elif [ -f "$abs_tgt" ] && [ ! -L "$abs_tgt" ]; then
+    # A plain file is read to be backed up, and a copy row writes it in place.
+    if [ ! -r "$abs_tgt" ]; then
+      echo "REFUSING        $tgt is not readable, so it cannot be backed up" >&2
+      refused=yes
+    elif [ "$mode" = copy ] && [ ! -w "$abs_tgt" ]; then
+      echo "REFUSING        $tgt is not writable, and this copy row writes it in place" >&2
+      refused=yes
+    fi
+  fi
+
+  # Named once, however many rows sit under it: the first write under it would
+  # already land there, or fail.
+  if parent_problem "$abs_tgt"; then
+    case "$named" in
+      *$'\n'"$PROBLEM_AT"$'\n'*) ;;
+      *)
+        named="$named$PROBLEM_AT"$'\n'
+        case "$PROBLEM" in
+          link)       why="is a symlink to $(readlink "$PROBLEM_AT") — the rows under it would land in a directory something else manages" ;;
+          notdir)     why="is not a directory — the rows under it need one there" ;;
+          unwritable) why="is not writable — the rows under it would fail there" ;;
+        esac
+        echo "REFUSING        $(short "$PROBLEM_AT") $why" >&2
+        refused=yes
+        ;;
+    esac
+  fi
+done < "$MANIFEST"
+
+# Guards the classic `while read` gotcha (same fix as preen doctor and preen pull):
+# a manifest missing its trailing newline silently drops its last row from
+# this loop entirely — `read` still populates the row's variables but
+# returns non-zero on that final line, so the loop condition fails before
+# the body runs. preen apply is the tool that actually DEPLOYS the manifest;
+# unlike preen doctor (verifies) and preen pull (reconciles copy-mode files),
+# a silent short-deploy here means a stale symlink or missing file stays
+# live with no error and an "every row applied" that looks correct.
+if [ "$rows_seen" -ne "$expected_rows" ]; then
+  echo "preen apply: refusing — a row of $(short "$MANIFEST") was silently skipped (missing trailing newline?)" >&2
+  refused=yes
+fi
+
+if [ "$refused" = yes ]; then
+  echo "preen apply: nothing was written — fix what is reported above and run it again" >&2
+  exit 1
+fi
+
+# set -e stops this script the moment an ln or cp fails — on a disk that
+# fills, say. The failing command prints its own error, not that the rows
+# before it are deployed and the rest are not. Every row is idempotent, so
+# on_exit names the row it stopped at and says a re-run finishes the job.
+row=""
 on_exit() {
   local rc=$?
-  if [ "$rc" -ne 0 ] && [ "$applied" -gt 0 ] && [ "$stop_advice" = yes ]; then
+  if [ "$rc" -ne 0 ] && [ -n "$row" ]; then
     echo "--" >&2
-    echo "preen apply: stopped after $applied of $expected_rows entries. Fix what is reported above and run it again — every row is idempotent, so a re-run continues rather than repeating." >&2
+    echo "preen apply: stopped at $row; the rows before it are deployed. Fix what is reported above and run it again: every row is idempotent, so a re-run continues." >&2
   fi
   return "$rc"
 }
 trap on_exit EXIT
 while IFS=$'\t' read -r src tgt mode perms; do
   case "$src" in ''|'#'*) continue ;; esac
-  rows_seen=$((rows_seen + 1))
   abs_src="$REPO/$src"
   abs_tgt="$(expand "$tgt")"
-
-  if [ ! -e "$abs_src" ]; then
-    echo "MISSING SOURCE  $src" >&2
-    exit 1
-  fi
-
-  # Never clobber a real directory. A file we can back up; a populated
-  # directory is someone else's data.
-  if [ -d "$abs_tgt" ] && [ ! -L "$abs_tgt" ]; then
-    echo "REFUSING        $tgt is a real directory" >&2
-    exit 1
-  fi
 
   if [ -n "$DRY_RUN" ]; then
     echo "would $mode      $tgt"
     continue
   fi
+  row="$tgt"
 
   # Creating a parent is legitimate on a fresh machine, but it must never be
   # SILENT. Version-pinned targets (the IDEA rows carry `IntelliJIdea2026.2`)
   # would otherwise let a stale path resurrect itself after a major upgrade:
   # mkdir -p happily recreates the dead directory, cp succeeds, the run reports
-  # "N entries applied", and the config the IDE actually reads never receives
+  # every row applied, and the config the IDE actually reads never receives
   # anything. Announcing the creation is what turns that from silent into
   # visible — an unexpected line here means a manifest path has gone stale.
   tgt_dir="$(dirname "$abs_tgt")"
@@ -88,6 +179,9 @@ while IFS=$'\t' read -r src tgt mode perms; do
     mkdir -p "$tgt_dir"
   fi
 
+  # bootstrap reads the "backed up", "moved aside" and "replaced link" lines
+  # below by their padded prefixes: reword one and its closing lines drop the
+  # file it names.
   case "$mode" in
     link)
       # Back up a pre-existing REGULAR file before replacing it with a link.
@@ -132,30 +226,16 @@ while IFS=$'\t' read -r src tgt mode perms; do
       fi
       cp "$abs_src" "$abs_tgt"
       ;;
-    *)
-      echo "UNKNOWN MODE    $mode for $src" >&2
-      exit 1
-      ;;
   esac
 
   [ -n "${perms:-}" ] && chmod "$perms" "$abs_tgt"
   echo "$mode            $tgt"
-  applied=$((applied + 1))
+  row=""
 done < "$MANIFEST"
 
-# Guards the classic `while read` gotcha (same fix as preen doctor and preen pull):
-# a manifest missing its trailing newline silently drops its last row from
-# this loop entirely — `read` still populates the row's variables but
-# returns non-zero on that final line, so the loop condition fails before
-# the body runs. preen apply is the tool that actually DEPLOYS the manifest;
-# unlike preen doctor (verifies) and preen pull (reconciles copy-mode files),
-# a silent short-deploy here means a stale symlink or missing file stays
-# live with no error and an "N entries applied" count that looks correct.
-if [ "$rows_seen" -ne "$expected_rows" ]; then
-  stop_advice=no   # the loop finished; a re-run repeats this, it does not continue
-  echo "preen apply: refusing — processed $rows_seen manifest row(s) but $MANIFEST has $expected_rows — a row was silently skipped (missing trailing newline?)" >&2
-  exit 1
-fi
-
 echo "--"
-echo "$applied entries applied"
+if [ -n "$DRY_RUN" ]; then
+  echo "Nothing was written. Drop --dry-run to do it."
+else
+  echo "every row applied"
+fi

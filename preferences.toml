@@ -2930,7 +2930,7 @@ why = "A diff is a reading surface, so it gets the reading affordances: two pane
 
 [pref.git_diff_reading.targets.gitcfg]
 key = "core.pager"
-want = "delta"
+want_contains = "delta"
 
 [pref.git_diff_reading.targets.gitcfg_sxs]
 target = "gitcfg"

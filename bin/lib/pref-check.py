@@ -252,7 +252,13 @@ def _tool_run(argv, **kw):
     drift: an absent tool is a measurement that could not be taken, the same
     ReadSkip the defaults oracle raises when kitty is not installed. Without
     this, a checkout on a machine with no `gh` went red on every row naming it.
+
+    A tool named in PREEN_BARE_STUBS is absent too: macOS's /usr/bin stub with
+    no Command Line Tools behind it, which raises an install dialog when run.
+    pref-check.sh finds those by a file test.
     """
+    if os.path.basename(argv[0]) in os.environ.get("PREEN_BARE_STUBS", "").split():
+        raise ReadSkip(f"{argv[0]} needs the Command Line Tools here (xcode-select --install)")
     try:
         return subprocess.run(argv, capture_output=True, text=True, **kw)
     except OSError as exc:
@@ -1088,7 +1094,7 @@ def read_tmux(path, key, accumulate=False, host=None, **_opts):
                    `host` target) is refused there, with the measurement.
 
     ⚠️ NOT refused, and this reader's real boundary: `run` / `run-shell`. The
-    deployed tmux.conf's last line is `run '~/.config/tmux/plugins/tpm/tpm'`,
+    deployed tmux.conf's last line runs tpm (`run` inside an `if-shell` guard),
     and a plugin can write options at runtime — tmux-continuum writes
     `status-right` (continuum.tmux:42). Refusing would make the reader useless
     against any config with a plugin manager, so its scope is what the FILE

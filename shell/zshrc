@@ -189,15 +189,6 @@ sdk() {
 }
 
 # ── Modern CLI Tools ─────────────────────────────────────
-# fzf walks with fd so the finder searches what the repo considers real:
-# .gitignore honoured, dotfiles in scope (the GLOB_DOTS agreement), .git
-# never the answer. Deliberately unlike Zed's search.include_ignored — Zed
-# never walks the heavy build directories; fzf here has no such list.
-export FZF_DEFAULT_COMMAND='fd --type f --hidden --exclude .git'
-# A gate, not a mirror: the Ctrl+T widget empties FZF_DEFAULT_COMMAND and
-# reads this alone, so unset it would run fzf's built-in walker.
-export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
-export FZF_ALT_C_COMMAND='fd --type d --hidden --exclude .git'
 # fzf's unconfigured base scheme is a 256-colour palette of its own, so
 # silence does not ride the terminal's colours; zoxide's zi inherits this.
 export FZF_DEFAULT_OPTS='--color=16'
@@ -205,15 +196,27 @@ export FZF_DEFAULT_OPTS='--color=16'
 # stay in-palette.
 export FZF_CTRL_T_OPTS='--preview "bat --color=always --style=numbers --line-range=:200 {}"'
 export FZF_ALT_C_OPTS='--preview "eza -1 --icons=auto --color=always --group-directories-first {}"'
-# `**<TAB>` walks with fd through these hooks, which fzf looks up by name;
-# without them its built-in walker ignores .gitignore. Same scope as the
-# commands above, minus the file/dir split — path completion offers both.
-_fzf_compgen_path() { fd --hidden --exclude .git . "$1"; }
-_fzf_compgen_dir()  { fd --type d --hidden --exclude .git . "$1"; }
+# fzf walks with fd so the finder searches what the repo considers real:
+# .gitignore honoured, dotfiles in scope (the GLOB_DOTS agreement), .git
+# never the answer. Deliberately unlike Zed's search.include_ignored — Zed
+# never walks the heavy build directories; fzf here has no such list.
+# Without fd, fzf keeps its built-in walker.
+if (( $+commands[fd] )); then
+  export FZF_DEFAULT_COMMAND='fd --type f --hidden --exclude .git'
+  # A gate, not a mirror: the Ctrl+T widget empties FZF_DEFAULT_COMMAND and
+  # reads this alone, so unset it would run fzf's built-in walker.
+  export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+  export FZF_ALT_C_COMMAND='fd --type d --hidden --exclude .git'
+  # `**<TAB>` walks with fd through these hooks, which fzf looks up by name;
+  # without them its built-in walker ignores .gitignore. Same scope as the
+  # commands above, minus the file/dir split — path completion offers both.
+  _fzf_compgen_path() { fd --hidden --exclude .git . "$1"; }
+  _fzf_compgen_dir()  { fd --type d --hidden --exclude .git . "$1"; }
+fi
 # `setopt zle` errors in a non-TTY interactive shell (Claude Code's
 # `zsh -i -c`), so the widget init is guarded; the same guard makes
 # `bindkey` under-report there — decisions.md, traps.md.
-if [[ -t 1 ]]; then
+if [[ -t 1 ]] && (( $+commands[fzf] )); then
   source <(fzf --zsh)
 fi
 
@@ -260,9 +263,11 @@ if (( $+commands[zoxide] )); then
 fi
 # Every entry kitty-clickable — =auto is load-bearing, a bare --hyperlink
 # eats the next positional — and directories first, as in the completion menu.
-alias ls="eza --icons=auto --hyperlink=auto --group-directories-first"
-alias ll="eza -la --icons=auto --git --hyperlink=auto --group-directories-first --time-style=long-iso"
-alias lt="eza -T --icons=auto --git-ignore --hyperlink=auto --group-directories-first"
+if (( $+commands[eza] )); then
+  alias ls="eza --icons=auto --hyperlink=auto --group-directories-first"
+  alias ll="eza -la --icons=auto --git --hyperlink=auto --group-directories-first --time-style=long-iso"
+  alias lt="eza -T --icons=auto --git-ignore --hyperlink=auto --group-directories-first"
+fi
 # rg's own --hyperlink-format=kitty (the ripgrep config) is the clickable grep;
 # the hyperlinked-grep kitten it replaced retired 06-09-2026.
 alias fp='kitten choose-files'   # keyboard file picker with previews
@@ -273,8 +278,15 @@ alias fp='kitten choose-files'   # keyboard file picker with previews
 # preen doctor asserts. Guarded so a fresh adopter without the formula gets a
 # silent no-op, not an error on every shell.
 ZSH_AUTOSUGGEST_MANUAL_REBIND=1
-[ -f /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh ] && \
-  source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+[ -f "${HOMEBREW_PREFIX:-/opt/homebrew}/share/zsh-autosuggestions/zsh-autosuggestions.zsh" ] && \
+  source "${HOMEBREW_PREFIX:-/opt/homebrew}/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
+# zsh-syntax-highlighting, sourced last below: brackets colours by nesting
+# level with the cursor's match marked; pattern paints one shape red before
+# Enter. Every style is a named 4-bit colour, which preen doctor re-proves
+# live. Set above the overlay, so a line of its own wins.
+ZSH_HIGHLIGHT_HIGHLIGHTERS=(main brackets pattern)
+typeset -A ZSH_HIGHLIGHT_PATTERNS
+ZSH_HIGHLIGHT_PATTERNS+=('rm -rf *' 'fg=white,bold,bg=red')
 
 # ── Starship Prompt ──────────────────────────────────────
 # A host without it keeps whatever prompt its overlay sets.
@@ -288,15 +300,9 @@ fi
 # ── zsh-syntax-highlighting — MUST BE LAST ───────────────
 # Upstream: source after every `zle -N`, or a later widget stays unwrapped
 # on the fallback path (traps.md). Nothing that creates a widget goes below.
-# brackets colours by nesting level with the cursor's match marked; pattern
-# paints one shape red before Enter. Every style is a named 4-bit colour,
-# which preen doctor re-proves live.
-ZSH_HIGHLIGHT_HIGHLIGHTERS=(main brackets pattern)
-typeset -A ZSH_HIGHLIGHT_PATTERNS
-ZSH_HIGHLIGHT_PATTERNS+=('rm -rf *' 'fg=white,bold,bg=red')
 # Two candidates, first hit wins: the formula, then a clone — the form a
 # host without root has to use. A host with neither keeps its login shell.
-for _zsh_hl_dir in /opt/homebrew/share/zsh-syntax-highlighting ~/.zsh/zsh-syntax-highlighting; do
+for _zsh_hl_dir in "${HOMEBREW_PREFIX:-/opt/homebrew}/share/zsh-syntax-highlighting" ~/.zsh/zsh-syntax-highlighting; do
   if [ -f "$_zsh_hl_dir/zsh-syntax-highlighting.zsh" ]; then
     source "$_zsh_hl_dir/zsh-syntax-highlighting.zsh"
     break
