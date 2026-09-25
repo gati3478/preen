@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# preen <verb> [args…] — apply · doctor · publish · pull · capture, each a
+# preen <verb> [args…] — apply · doctor · publish · pull · capture · ci, each a
 # script beside this one as preen-<verb>. The mirror ships apply and doctor
 # only, so usage lists the verbs that are here and one that is not says so.
 set -euo pipefail
@@ -11,12 +11,13 @@ describe() {
     publish) echo "stage, scan and push the public mirror" ;;
     pull)    echo "reconcile rewritten copy rows back into the repo" ;;
     capture) echo "snapshot the resolved state under a label" ;;
+    ci)      echo "run check.yml under act on HEAD, and note the verdict on it" ;;
   esac
 }
 usage() {
   echo "usage: preen <verb> [args]"
   local v
-  for v in apply doctor publish pull capture; do
+  for v in apply doctor publish pull capture ci; do
     if [ -e "$DIR/preen-$v" ]; then printf '  %-9s %s\n' "$v" "$(describe "$v")"; fi
   done
 }
@@ -24,7 +25,7 @@ verb="${1:-}"
 case "$verb" in
   -h|--help) usage; exit 0 ;;
   "") usage >&2; exit 2 ;;
-  apply|doctor|publish|pull|capture)
+  apply|doctor|publish|pull|capture|ci)
     [ -e "$DIR/preen-$verb" ] || { echo "preen: $verb is not shipped in this copy" >&2; exit 2; }
     [ -x "$DIR/preen-$verb" ] || { echo "preen: bin/preen-$verb is not executable" >&2; exit 2; }
     shift; exec "$DIR/preen-$verb" "$@" ;;

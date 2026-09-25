@@ -25,7 +25,6 @@ for arg in "$@"; do
     *) printf 'preen doctor: unknown argument: %s (--quiet, --taste)\n' "$arg" >&2; exit 2 ;;
   esac
 done
-source "$REPO/bin/lib/publish-fingerprint.sh"
 [ -f "$REPO/bin/lib/pref-check.sh" ] && source "$REPO/bin/lib/pref-check.sh"
 
 ok()   { [ "$QUIET" = yes ] || printf '  \033[32mok\033[0m    %s\n' "$1"; }
@@ -125,8 +124,10 @@ while IFS=$'\t' read -r src tgt mode perms; do
   # still reported ok: the column looked like a guarantee and was only ever an
   # instruction. -L on purpose, because chmod follows symlinks, so the mode that
   # matters for a link row is the resolved file's.
+  # GNU's form first: BSD stat rejects -c and prints nothing, while GNU stat
+  # reads -f as "file system" and prints a dump of it before failing.
   if [ -n "${perms:-}" ] && [ -e "$abs_tgt" ]; then
-    actual="$(stat -Lf '%OLp' "$abs_tgt" 2>/dev/null || stat -Lc '%a' "$abs_tgt" 2>/dev/null)"
+    actual="$(stat -Lc '%a' "$abs_tgt" 2>/dev/null || stat -Lf '%OLp' "$abs_tgt" 2>/dev/null)"
     if [ -z "$actual" ]; then
       warn "$tgt: could not read mode to compare against manifest's $perms"
     elif [ "$actual" != "${perms#0}" ] && [ "$actual" != "$perms" ]; then
@@ -228,9 +229,9 @@ if command -v eza >/dev/null 2>&1; then
   mkdir "$eza_fixture/dir" && touch "$eza_fixture/exec" && chmod +x "$eza_fixture/exec"
   eza_out="$(eza --color=always -la "$eza_fixture" 2>/dev/null)"
   rm -rf "$eza_fixture"
-  if ! printf '%s' "$eza_out" | grep -q $'\x1b\['; then
+  if ! grep -q $'\x1b\[' <<< "$eza_out"; then
     bad "eza emitted no colour at all — the ANSI-rider check has nothing to prove"
-  elif printf '%s' "$eza_out" | grep -qE $'\x1b\[[0-9;]*(38|48);(5|2);'; then
+  elif grep -qE $'\x1b\[[0-9;]*(38|48);(5|2);' <<< "$eza_out"; then
     bad "eza emitted 256-colour/truecolor SGR codes — no longer riding the 16 ANSI colours (version bump? EZA_COLORS/LS_COLORS set?)"
   elif [ "$SOURCE_REPO" = yes ] && [ -f "$HOME/.config/eza/theme.yml" ]; then
     bad "~/.config/eza/theme.yml exists — a palette-carrying override against the rider rule"
@@ -264,9 +265,9 @@ else
   printf 'line one\nline TWO\n' > "$delta_fixture/b"
   delta_out="$(git diff --no-index "$delta_fixture/a" "$delta_fixture/b" 2>/dev/null | delta --width 100 2>/dev/null)"
   rm -rf "$delta_fixture"
-  if ! printf '%s' "$delta_out" | grep -q $'\x1b\['; then
+  if ! grep -q $'\x1b\[' <<< "$delta_out"; then
     bad "delta emitted no colour at all — the ANSI-rider check has nothing to prove"
-  elif printf '%s' "$delta_out" | grep -qE $'\x1b\[[0-9;]*(38|48);(5|2);'; then
+  elif grep -qE $'\x1b\[[0-9;]*(38|48);(5|2);' <<< "$delta_out"; then
     bad "delta emitted 256-colour/truecolor SGR codes — not riding the 16 ANSI colours (deployed [delta] styles changed, or an upgrade grew a truecolor default)"
   else
     ok "delta rides the 16 ANSI colours (4-bit output on a fixture diff)"
@@ -285,9 +286,9 @@ if command -v rg >/dev/null 2>&1; then
   printf 'needle here\n' > "$rg_fixture/f.txt"
   rg_out="$(RIPGREP_CONFIG_PATH="$HOME/.config/ripgrep/config" rg --color=always -n needle "$rg_fixture" 2>/dev/null)"
   rm -rf "$rg_fixture"
-  if ! printf '%s' "$rg_out" | grep -q $'\x1b\['; then
+  if ! grep -q $'\x1b\[' <<< "$rg_out"; then
     bad "rg emitted no colour at all — the ANSI-rider check has nothing to prove"
-  elif printf '%s' "$rg_out" | grep -qE $'\x1b\[[0-9;]*(38|48);(5|2);'; then
+  elif grep -qE $'\x1b\[[0-9;]*(38|48);(5|2);' <<< "$rg_out"; then
     bad "rg emitted 256-colour/truecolor SGR codes — no longer riding the 16 ANSI colours (version bump? a --colors line in the managed config?)"
   else
     ok "rg rides the 16 ANSI colours (4-bit output on a fixture match)"
@@ -367,7 +368,7 @@ manifest_src_for_target() {
 zshrc_src="$(manifest_src_for_target '~/.zshrc')"
 if [ -n "$zshrc_src" ] && [ -f "$REPO/$zshrc_src" ]; then
   last_source=$(grep -nE 'source|eval|zle +-[NC]' "$REPO/$zshrc_src" | tail -1)
-  if printf '%s' "$last_source" | grep -q 'zsh-syntax-highlighting'; then
+  if grep -q 'zsh-syntax-highlighting' <<< "$last_source"; then
     ok "zsh-syntax-highlighting is sourced last"
   else
     bad "something is sourced after zsh-syntax-highlighting: $last_source"
@@ -384,7 +385,7 @@ fi
 # launching an interactive login zsh.
 if [ "$SOURCE_REPO" = yes ]; then
   if [ -d "$HOME/.zsh/completions" ]; then
-    if script -q /dev/null zsh -l -i -c 'print -l $fpath' 2>/dev/null | tr -d '\r' | grep -q '.zsh/completions'; then
+    if grep -q '.zsh/completions' <<< "$(script -q /dev/null zsh -l -i -c 'print -l $fpath' 2>/dev/null | tr -d '\r')"; then
       ok "~/.zsh/completions is in fpath"
     else
       bad "~/.zsh/completions exists but is not in fpath"
@@ -483,24 +484,21 @@ fi
 # The public mirror must not silently fall behind. Honours $PREEN_MIRROR, the
 # same override preen publish accepts — a doctor that checks a different
 # path than the tool that maintains it is its own drift.
-# The next two checks are SOURCE-REPO ONLY.
-# preen publish stages this script verbatim into the public mirror, where
-# `publish/` does not exist and neither does bin/preen-publish itself. Run there,
-# the currency check could never pass (its fingerprint hashes HEAD:public and
-# HEAD:docs/public-README.md, neither of which survives the flattening) and its
-# advice pointed at a script that was never shipped. An adopter got a permanent
-# false warning from a tool published so the repo could receive contributions.
+# The next two checks are SOURCE-REPO ONLY: this script ships, but
+# publish/.last-published and bin/lib/stage-mirror.sh, which it sources below,
+# exist only here.
 # `publish/` is the context signal — same guard style as blocked-upstream.md
-# below. Found by audit 09-08-2026.
+# below.
 if [ -d "$REPO/publish" ]; then
+  source "$REPO/bin/lib/stage-mirror.sh"   # here, not at the top: it does not ship
   MIRROR="${PREEN_MIRROR:-$HOME/Development/preen}"
   if [ -d "$MIRROR/.git" ]; then
-    here=$(publish_fingerprint "$REPO" 2>/dev/null || echo none)
+    here=$(mirror_fingerprint "$REPO" 2>/dev/null || echo none)
     marker=$(cat "$REPO/publish/.last-published" 2>/dev/null || echo none)
     if [ "$here" = "$marker" ]; then
       ok "public mirror is current"
     else
-      warn "public/ has changed since the last publish — run preen publish"
+      warn "what HEAD ships has changed since the last publish — run preen publish"
     fi
   else
     warn "public mirror not cloned at $MIRROR"
@@ -516,7 +514,7 @@ if [ -d "$REPO/publish" ]; then
   expected_owner=$(printf '%s' "$origin_url" | sed -E 's#.*[:/]([^/]+)/[^/]+$#\1#')
   if [ -z "$expected_owner" ] || [ "$expected_owner" = "$origin_url" ]; then
     warn "could not derive the expected gh account from origin ('${origin_url:-unset}') — check manually"
-  elif gh auth status 2>&1 | grep -B1 'Active account: true' | grep -q "$expected_owner"; then
+  elif grep -q "$expected_owner" <<< "$(gh auth status 2>&1 | grep -B1 'Active account: true')"; then
     ok "gh active account is $expected_owner"
   else
     warn "gh active account is NOT $expected_owner — repo operations would hit the wrong account"
