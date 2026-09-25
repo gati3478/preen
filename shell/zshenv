@@ -6,6 +6,12 @@ typeset -U path PATH             # every later prepend is idempotent
 # included; cargo guarded so removing rust cannot break every shell.
 path=("$HOME/.local/bin" $path)
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+# For every zsh that reads this file, each only where it exists: anything
+# the Dock starts, kitty included, runs on /usr/bin:/bin:/usr/sbin:/sbin,
+# and the login files add these only after the editor below is chosen.
+# Appended, so where no login file has run, the system's tools still come
+# first.
+path+=(/opt/homebrew/bin(N-/) /usr/local/bin(N-/))
 
 # ── Editor ─────────────────────────────────────────────────
 # Here, not .zshrc: `git commit`, `git rebase -i` and visudo read $EDITOR

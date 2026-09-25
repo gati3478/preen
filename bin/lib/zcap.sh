@@ -99,10 +99,12 @@
 #   TERMINFO     - required for TERM=xterm-kitty to resolve at all:
 #                  kitty's terminfo entry ships inside kitty.app, not in
 #                  any system terminfo search path.
-# PATH is deliberately NOT seeded — /etc/zprofile's path_helper and
-# .zprofile's own `path=(...)` rebuild it fully from system files no
-# matter the starting value, and starting it genuinely empty is what
-# surfaces caller leakage instead of masking it.
+#   PATH         - what anything the Dock starts runs on, kitty included:
+#                  `getconf PATH`, /usr/bin:/bin:/usr/sbin:/sbin. .zshenv runs
+#                  on it before /etc/zprofile and .zprofile add to it. Left
+#                  unset, zsh falls back to a compiled default with
+#                  /usr/local/bin, which nothing the Dock starts has. See
+#                  traps.md, "`.zshenv` runs on the launcher's PATH".
 #
 # stdin is pinned to /dev/null INSIDE the function (02-09-2026): macOS
 # `script` relays its stdin into the PTY, and with a socket there — the
@@ -115,7 +117,7 @@ zcap() {
   local tmp
   tmp="$(mktemp)"
   script -q /dev/null env -i \
-    HOME="$HOME" USER="$(id -un)" LOGNAME="$(id -un)" \
+    HOME="$HOME" USER="$(id -un)" LOGNAME="$(id -un)" PATH="$(getconf PATH)" \
     TERM=xterm-kitty TERMINFO=/Applications/kitty.app/Contents/Resources/kitty/terminfo \
     zsh -l -i -c "$1" </dev/null 2>/dev/null | tr -d '\r' >| "$tmp"
   if LC_ALL=C grep -q $'\x1b' "$tmp"; then
