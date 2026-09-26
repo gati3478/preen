@@ -7,9 +7,31 @@
 #         reconciled by preen pull rather than linked
 set -euo pipefail
 
+usage() { cat <<'EOF'
+usage: preen apply [--dry-run]
+
+Deploys every manifest.tsv row: a link row as a symlink into this repo, a copy
+row as a copy; a plain file it replaces is backed up beside itself. Every
+refusal comes before the first write. Never runs as root.
+
+  --dry-run   refuse as a real run would, then print each line the real run
+              would, worded "would …"; write nothing
+  -h, --help  print this and exit
+EOF
+}
+for arg in "$@"; do
+  case "$arg" in -h|--help) usage; exit 0 ;; esac
+done
+DRY_RUN=""
+for arg in "$@"; do
+  case "$arg" in
+    --dry-run) DRY_RUN=yes ;;
+    *) echo "preen apply: unknown argument: $arg (see --help)" >&2; exit 2 ;;
+  esac
+done
+
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MANIFEST="$REPO/manifest.tsv"
-DRY_RUN="${1:-}"
 
 # The manifest installs USER files: ~/.zshrc, ~/.config, ~/.local. Running as
 # root would create root-owned files in a user's home, which then fail to be
@@ -155,16 +177,24 @@ on_exit() {
   return "$rc"
 }
 trap on_exit EXIT
+
+# A dry run walks the same branches and writes nothing: every write but the
+# parent mkdir goes through run, and say words each line as what the run
+# would do.
+run() { [ -n "$DRY_RUN" ] || "$@"; }
+say() { # say <real-run words> <dry-run words> <facts>, the words padded to one column
+  if [ -n "$DRY_RUN" ]; then printf '%-15s %s\n' "$2" "$3"; else printf '%-15s %s\n' "$1" "$3"; fi
+}
+# A dry run makes no directory, so it records each mkdir -p it would run: a
+# later row finds that directory, and every one above it, already there.
+made=$'\n'
+dry_made() { case "$made" in *$'\n'"$1"$'\n'*|*$'\n'"$1"/*) return 0 ;; esac; return 1; }
+
 while IFS=$'\t' read -r src tgt mode perms; do
   case "$src" in ''|'#'*) continue ;; esac
   abs_src="$REPO/$src"
   abs_tgt="$(expand "$tgt")"
-
-  if [ -n "$DRY_RUN" ]; then
-    echo "would $mode      $tgt"
-    continue
-  fi
-  row="$tgt"
+  [ -n "$DRY_RUN" ] || row="$tgt"
 
   # Creating a parent is legitimate on a fresh machine, but it must never be
   # SILENT. Version-pinned targets (the IDEA rows carry `IntelliJIdea2026.2`)
@@ -174,14 +204,20 @@ while IFS=$'\t' read -r src tgt mode perms; do
   # anything. Announcing the creation is what turns that from silent into
   # visible — an unexpected line here means a manifest path has gone stale.
   tgt_dir="$(dirname "$abs_tgt")"
-  if [ ! -d "$tgt_dir" ]; then
-    echo "CREATED DIR     $(short "$tgt_dir")" >&2
-    mkdir -p "$tgt_dir"
+  if [ ! -d "$tgt_dir" ] && ! dry_made "$tgt_dir"; then
+    if [ -n "$DRY_RUN" ]; then
+      echo "would create dir $(short "$tgt_dir")"
+      made="$made$tgt_dir"$'\n'
+    else
+      echo "CREATED DIR     $(short "$tgt_dir")" >&2
+      mkdir -p "$tgt_dir"
+    fi
   fi
 
   # bootstrap reads the "backed up", "moved aside" and "replaced link" lines
-  # below by their padded prefixes: reword one and its closing lines drop the
-  # file it names.
+  # below by their padded prefixes, and a dry run's "would back up", "would
+  # move aside" and "would replace link": reword one and its closing lines
+  # drop the file it names.
   case "$mode" in
     link)
       # Back up a pre-existing REGULAR file before replacing it with a link.
@@ -190,16 +226,16 @@ while IFS=$'\t' read -r src tgt mode perms; do
         # replaced the link — must not overwrite the first run's backup.
         bak="$abs_tgt.unpreened"; n=1
         while [ -e "$bak" ] || [ -L "$bak" ]; do bak="$abs_tgt.unpreened.$n"; n=$((n + 1)); done
-        cp "$abs_tgt" "$bak"
-        echo "backed up       $tgt -> $tgt${bak#"$abs_tgt"}"
+        run cp "$abs_tgt" "$bak"
+        say 'backed up' 'would back up' "$tgt -> $tgt${bak#"$abs_tgt"}"
       elif [ -L "$abs_tgt" ] && [ ! "$abs_tgt" -ef "$abs_src" ]; then
         # An adopter coming from stow, chezmoi or yadm has SYMLINKS here, not
         # plain files, and this branch replaced them without a word — the file
         # they pointed at survived, but nothing recorded where that was.
         # Saying it is the whole fix: there is nothing to copy, only to name.
-        echo "replaced link   $tgt (was -> $(readlink "$abs_tgt"))"
+        say 'replaced link' 'would replace link' "$tgt (was -> $(readlink "$abs_tgt"))"
       fi
-      ln -sfn "$abs_src" "$abs_tgt"
+      run ln -sfn "$abs_src" "$abs_tgt"
       ;;
     copy)
       # `cp` FOLLOWS a symlink, so a link already sitting here was written
@@ -211,8 +247,9 @@ while IFS=$'\t' read -r src tgt mode perms; do
       if [ -L "$abs_tgt" ]; then
         bak="$abs_tgt.unpreened"; n=1
         while [ -e "$bak" ] || [ -L "$bak" ]; do bak="$abs_tgt.unpreened.$n"; n=$((n + 1)); done
-        mv "$abs_tgt" "$bak"
-        echo "moved aside     $tgt (a symlink -> $(readlink "$bak"))"
+        was="$(readlink "$abs_tgt")"
+        run mv "$abs_tgt" "$bak"
+        say 'moved aside' 'would move aside' "$tgt (a symlink -> $was)"
       elif [ -f "$abs_tgt" ] && ! cmp -s "$abs_src" "$abs_tgt"; then
         # A plain file here is the adopter's own, or the application's rewrite
         # of an earlier copy, and it was overwritten with no backup — a cold
@@ -221,15 +258,15 @@ while IFS=$'\t' read -r src tgt mode perms; do
         # identical content is left alone, so a re-run backs up nothing.
         bak="$abs_tgt.unpreened"; n=1
         while [ -e "$bak" ] || [ -L "$bak" ]; do bak="$abs_tgt.unpreened.$n"; n=$((n + 1)); done
-        cp "$abs_tgt" "$bak"
-        echo "backed up       $tgt -> $tgt${bak#"$abs_tgt"}"
+        run cp "$abs_tgt" "$bak"
+        say 'backed up' 'would back up' "$tgt -> $tgt${bak#"$abs_tgt"}"
       fi
-      cp "$abs_src" "$abs_tgt"
+      run cp "$abs_src" "$abs_tgt"
       ;;
   esac
 
-  [ -n "${perms:-}" ] && chmod "$perms" "$abs_tgt"
-  echo "$mode            $tgt"
+  [ -n "${perms:-}" ] && run chmod "$perms" "$abs_tgt"
+  say "$mode" "would $mode" "$tgt"
   row=""
 done < "$MANIFEST"
 

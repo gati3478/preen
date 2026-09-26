@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# preen <verb> [args…] — apply · doctor · publish · pull · capture · ci, each a
-# script beside this one as preen-<verb>. The mirror ships apply and doctor
+# preen VERB [ARG ...] — apply · doctor · publish · pull · capture · ci, each a
+# script beside this one as preen-VERB. The mirror ships apply and doctor
 # only, so usage lists the verbs that are here and one that is not says so.
 set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 describe() {
   case "$1" in
     apply)   echo "deploy every manifest row" ;;
-    doctor)  echo "check every row, then the semantic checks (--quiet, --taste)" ;;
+    doctor)  echo "check every row, then the semantic checks" ;;
     publish) echo "stage, scan and push the public mirror" ;;
     pull)    echo "reconcile rewritten copy rows back into the repo" ;;
     capture) echo "snapshot the resolved state under a label" ;;
@@ -15,19 +15,38 @@ describe() {
   esac
 }
 usage() {
-  echo "usage: preen <verb> [args]"
+  echo "usage: preen VERB [ARG ...]"
+  echo
+  echo "Runs bin/preen-VERB with the arguments; preen VERB --help prints its own."
+  echo
   local v
   for v in apply doctor publish pull capture ci; do
-    if [ -e "$DIR/preen-$v" ]; then printf '  %-9s %s\n' "$v" "$(describe "$v")"; fi
+    if [ -e "$DIR/preen-$v" ]; then printf '  %-10s  %s\n' "$v" "$(describe "$v")"; fi
   done
+  printf '  %-10s  %s\n' "-h, --help" "print this and exit"
 }
-verb="${1:-}"
+if [ "$#" -eq 0 ]; then usage >&2; exit 2; fi
+verb="$1"
 case "$verb" in
-  -h|--help) usage; exit 0 ;;
-  "") usage >&2; exit 2 ;;
-  apply|doctor|publish|pull|capture|ci)
-    [ -e "$DIR/preen-$verb" ] || { echo "preen: $verb is not shipped in this copy" >&2; exit 2; }
-    [ -x "$DIR/preen-$verb" ] || { echo "preen: bin/preen-$verb is not executable" >&2; exit 2; }
-    shift; exec "$DIR/preen-$verb" "$@" ;;
-  *) echo "preen: unknown verb: $verb" >&2; usage >&2; exit 2 ;;
+  apply|doctor|publish|pull|capture|ci) known=yes ;;
+  *) known=no ;;
 esac
+if [ "$known" = yes ] && [ -x "$DIR/preen-$verb" ]; then
+  shift
+  exec "$DIR/preen-$verb" "$@"
+fi
+# Not a verb this copy can run, so every argument is the dispatcher's own.
+for arg in "$@"; do
+  case "$arg" in -h|--help) usage; exit 0 ;; esac
+done
+if [ "$known" = no ]; then
+  case "$verb" in
+    -*) echo "preen: unknown argument: $verb (see --help)" >&2 ;;
+    *)  echo "preen: unknown verb: $verb (see --help)" >&2 ;;
+  esac
+elif [ -e "$DIR/preen-$verb" ]; then
+  echo "preen: bin/preen-$verb is not executable" >&2
+else
+  echo "preen: $verb is not shipped in this copy (see --help)" >&2
+fi
+exit 2

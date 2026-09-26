@@ -1,17 +1,22 @@
 #!/usr/bin/env python3
-"""Assert the preference spec against LIVE application config.
+"""usage: python3 bin/lib/pref-check.py [--spec-files | --validate-spec | --prove | --read TARGET KEY]
+
+Assert the preference spec against LIVE application config. With no argument,
+run every assertion.
+
+  --spec-files       print the spec files it reads; exit 3 when there are none
+  --validate-spec    check the spec's structure only, never live config
+  --prove            empty a COPY of each text-read target and require every
+                     row it feeds to go red
+  --read TARGET KEY  read one live value (debugging)
+  -h, --help         print this and exit
 
 The spec is public/preferences.toml plus one hosts/<name>/preferences.toml per
-machine, read as one document (see spec_files); `--spec-files` prints the list.
+machine, read as one document (see spec_files).
 
 Emits one TAB-separated `status<TAB>message` line per assertion, for
 bin/lib/pref-check.sh to colour the same way preen doctor colours everything else.
 Statuses: ok | fail | warn, plus `section` for a heading the wrapper prints bare.
-
-    pref-check.py                     run every assertion
-    pref-check.py --read TARGET KEY   read one live value (debugging)
-    pref-check.py --prove             empty a COPY of each text-read target and
-                                      require every row it feeds to go red
 
 Reads the DEPLOYED path, never this repo's copy: a `copy`-mode entry can be
 legitimately stale between preen pull runs, and the question this asks is what the
@@ -19,8 +24,9 @@ application actually renders. Ends with the surfaces section: each closed
 surface's tools, installed version against closed-at, read without launching
 an application.
 
-Exit status is 1 if any assertion failed, else 0. Never prints a tally — a count
-drifts between the checker and the checked and nobody notices.
+Exit status is 1 if any assertion failed or --read could not read, else 0; 2 is
+an argument error; 3 is --spec-files finding no spec. Never prints a tally — a
+count drifts between the checker and the checked and nobody notices.
 """
 
 import copy
@@ -37,6 +43,37 @@ import tempfile
 import xml.etree.ElementTree as ET
 import zipfile
 from xml.parsers.expat import ExpatError
+
+READ = "--read"
+MODES = ("--spec-files", "--validate-spec", "--prove", READ)
+
+
+def argv_problem(argv):
+    """The argument error in argv, or None for an invocation the usage allows."""
+    for arg in argv:
+        if arg.startswith("-") and arg not in MODES:
+            return f"unknown argument: {arg}"
+    modes = [arg for arg in argv if arg in MODES]
+    if len(modes) > 1:
+        return f"one mode at a time: {' '.join(modes)}"
+    if argv and argv[0] not in MODES:
+        return f"unknown argument: {argv[0]}"
+    if argv[:1] == [READ]:
+        return None if len(argv) == 3 else f"{READ} takes TARGET KEY"
+    if len(argv) > 1:
+        return f"unknown argument: {argv[1]}"
+    return None
+
+
+# Ahead of the tomllib gate so both answer on any python. Only when run:
+# obsidian-gaps.py and the tests import this file, and their argv is not ours.
+if __name__ == "__main__":
+    if "-h" in sys.argv[1:] or "--help" in sys.argv[1:]:
+        print(__doc__, end="")
+        sys.exit(0)
+    if problem := argv_problem(sys.argv[1:]):
+        print(f"pref-check: {problem} (see --help)", file=sys.stderr)
+        sys.exit(2)
 
 try:
     import tomllib
@@ -3662,11 +3699,12 @@ def main():
 
     if argv and argv[0] == "--spec-files":
         # The shell half can no longer know where a spec lives — there are three
-        # layouts — so it asks. rc 2 is "this checkout has none", the one answer
+        # layouts — so it asks. rc 3 is "this checkout has none", the one answer
         # that keeps its section silent; the list itself is what it guards on.
+        # Not 2: that is an argument error, which must not silence it.
         for path in SPEC_FILES:
             print(spec_name(path))
-        return 0 if SPEC_FILES else 2
+        return 0 if SPEC_FILES else 3
 
     spec, origin, load_problems = merge_specs(SPEC_FILES)
     read = ", ".join(spec_name(p) for p in SPEC_FILES) or "no spec file was found"
@@ -3713,9 +3751,7 @@ def main():
     if argv and argv[0] == "--prove":
         return prove(spec, targets, came_from)
 
-    if argv and argv[0] == "--read":
-        if len(argv) < 3:
-            sys.exit("usage: pref-check.py --read TARGET KEY")
+    if argv and argv[0] == READ:
         tname, key = argv[1], argv[2]
         t = targets.get(tname)
         if not isinstance(t, dict):

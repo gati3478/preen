@@ -51,13 +51,13 @@ run_pref_checks() {
   # a shipped half, one per host — and the shipped one sits at a different depth
   # in the mirror, so this half ASKS rather than carrying a second copy of the
   # discovery rule that would drift from the Python's the first time a layout
-  # moved. rc 2 is the checker saying
+  # moved. rc 3 is the checker saying
   # "this checkout has no spec at all", the one answer that keeps the section
   # silent. Every other failure — no python3, a python too old for tomllib, a
   # crash — falls through to the degradation lines below, which is their job.
   local specrc=0
   python3 "$script" --spec-files >/dev/null 2>&1 || specrc=$?
-  [ "$specrc" -eq 2 ] && return 0
+  [ "$specrc" -eq 3 ] && return 0
 
   echo "== preference SSOT =="
 

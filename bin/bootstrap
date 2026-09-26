@@ -8,14 +8,16 @@
 # touches this clone. Never runs as root.
 set -euo pipefail
 
-REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-
 usage() { cat <<'EOF'
-usage: ./bin/bootstrap
+usage: ./bin/bootstrap [--dry-run]
 
 Takes the whole setup from this clone: names what is missing, asks your name
 and email for git and sets them in ~/.gitconfig.local, deploys every row of
 manifest.tsv through preen apply, and writes kitty's tab title for your home.
+
+  --dry-run   print the whole plan; asks nothing and writes nothing
+  -h, --help  print this and exit
+
 Before the deploy, a plain ~/.gitconfig of yours moves to ~/.gitconfig.local
 and ~/.ssh/config to ~/.ssh/config.local, unless that .local is there or the
 file names it: the shipped files include those overlays, so every line of
@@ -24,12 +26,23 @@ first write. It ends by naming the overlays the shipped files read and every
 file this run set aside.
 EOF
 }
+# --help anywhere wins, even after an argument that is not one.
+for arg in "$@"; do
+  case "$arg" in -h|--help) usage; exit 0 ;; esac
+done
+dry_run=no
 for arg in "$@"; do
   case "$arg" in
-    -h|--help) usage; exit 0 ;;
+    --dry-run) dry_run=yes ;;
     *) echo "bootstrap: unknown argument: $arg (see --help)" >&2; exit 2 ;;
   esac
 done
+# A dry run makes no write and says what each step would do: run makes a
+# write, and tell picks a line's words, as done or as planned.
+run() { [ "$dry_run" = yes ] || "$@"; }
+tell() { if [ "$dry_run" = yes ]; then printf '%s' "$2"; else printf '%s' "$1"; fi; }
+
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Apple silicon's Homebrew prefix, then Intel's: shell/zprofile's order.
 BREW_PREFIXES="/opt/homebrew /usr/local"
@@ -204,14 +217,21 @@ if [ "$HOME" != "$AUTHORED_HOME" ] && grep -q '^tab_title_template ' "$KITTY_CON
 fi
 # Shown as it happens and kept: preen apply's own lines are the one record of
 # what it set aside, and the closing lines name each of those files. Made
-# here, so a TMPDIR that cannot hold it stops the run before the moves.
-if deploy_log="$(mktemp "${TMPDIR:-/tmp}/bootstrap.XXXXXX" 2>/dev/null)"; then
+# here, so a TMPDIR that cannot hold it stops the run before the moves. A dry
+# run sets nothing aside and keeps no log: it asks the directory instead.
+log_dir="${TMPDIR:-/tmp}"
+if [ "$dry_run" = yes ]; then
+  deploy_log=/dev/null
+  [ -d "$log_dir" ] && [ -w "$log_dir" ] && [ -x "$log_dir" ] || deploy_log=""
+elif deploy_log="$(mktemp "$log_dir/bootstrap.XXXXXX" 2>/dev/null)"; then
   trap 'rm -f "$deploy_log"' EXIT
-else
-  echo "bootstrap: could not create the deploy log in ${TMPDIR:-/tmp} — point TMPDIR at a directory you can write" >&2
+fi
+if [ -z "$deploy_log" ]; then
+  echo "bootstrap: could not create the deploy log in $log_dir — point TMPDIR at a directory you can write" >&2
   refused=yes
 fi
-"$REPO/bin/preen" apply --dry-run >/dev/null || refused=yes
+# Its plan is what a dry run shows under == deploying ==.
+apply_plan="$("$REPO/bin/preen" apply --dry-run)" || refused=yes
 if [ "$refused" = yes ]; then
   echo "bootstrap: stopped — nothing was changed" >&2
   exit 1
@@ -307,19 +327,27 @@ fi
 if [ -n "$missing" ]; then
   echo "Missing:$missing"
   echo "  $brew install$missing"
-  ask 'Continue anyway? [y/N] ' reply
-  # `y` alone was the only accepted answer, and anything else left without a
-  # word: a capital Y installed nothing and said nothing (14-09-2026).
-  case "$reply" in
-    [yY]|[yY][eE][sS]) ;;
-    *) echo "bootstrap: stopped — nothing was changed. Install what is missing, then run this again." >&2; exit 1 ;;
-  esac
+  if [ "$dry_run" = yes ]; then
+    echo "would ask: Continue anyway? [y/N] — any answer but y or yes stops the run there, nothing changed"
+  else
+    ask 'Continue anyway? [y/N] ' reply
+    # `y` alone was the only accepted answer, and anything else left without a
+    # word: a capital Y installed nothing and said nothing (14-09-2026).
+    case "$reply" in
+      [yY]|[yY][eE][sS]) ;;
+      *) echo "bootstrap: stopped — nothing was changed. Install what is missing, then run this again." >&2; exit 1 ;;
+    esac
+  fi
 fi
 
 echo
 echo "== your details =="
-ask_required 'Full name for git commits: ' git_name
-ask_required 'Email for git commits: '     git_email
+if [ "$dry_run" = yes ]; then
+  echo "would ask your full name and email for git commits"
+else
+  ask_required 'Full name for git commits: ' git_name
+  ask_required 'Email for git commits: '     git_email
+fi
 
 echo
 echo "== git =="
@@ -329,21 +357,41 @@ echo "== git =="
 # and its credential helpers, signing and includeIf would go quiet. One that
 # names gitconfig.local would, moved there, include itself, and git stops every
 # command on that ("exceeded maximum include depth").
+moved=""   # what moves onto its overlay, as ~ paths
 if [ -f "$GITCONFIG" ] && [ ! -L "$GITCONFIG" ]; then
   if [ -e "$GITCONFIG_LOCAL" ]; then
     echo "~/.gitconfig.local is there, so ~/.gitconfig is not moved onto it — the deploy below keeps it as ~/.gitconfig.unpreened"
   elif grep -q 'gitconfig\.local' "$GITCONFIG"; then
     echo "~/.gitconfig names gitconfig.local itself — the deploy below keeps it as ~/.gitconfig.unpreened"
   else
-    mv "$GITCONFIG" "$GITCONFIG_LOCAL"
-    echo "moved ~/.gitconfig -> ~/.gitconfig.local — the shipped gitconfig includes it last, so every line of it still wins"
+    run mv "$GITCONFIG" "$GITCONFIG_LOCAL"
+    moved="~/.gitconfig"
+    echo "$(tell moved 'would move') ~/.gitconfig -> ~/.gitconfig.local — the shipped gitconfig includes it last, so every line of it still wins"
   fi
 fi
 
 # The identity is set by key, so the rest of an adopter's file stays as it is,
 # and git quotes the value as it needs: written bare, a '#' in a name would
 # start a comment. --replace-all collapses a key the file repeats.
-if command -v git >/dev/null 2>&1 && ! bare_shim git; then
+if [ "$dry_run" = yes ]; then
+  # Nothing moved, so the keys are read where they are now.
+  id_file="$GITCONFIG_LOCAL"
+  [ -z "$moved" ] || id_file="$GITCONFIG"
+  if [ ! -e "$id_file" ]; then
+    echo "would write ~/.gitconfig.local, your answers as user.name and user.email"
+  elif command -v git >/dev/null 2>&1 && ! bare_shim git; then
+    for key in user.name user.email; do
+      current="$(git_local "$id_file" --get-all "$key" 2>/dev/null)" || current=""
+      case "$current" in
+        "")      echo "would set $key in ~/.gitconfig.local to your answer — not set there now" ;;
+        *$'\n'*) echo "would set $key in ~/.gitconfig.local to your answer — set there more than once now, each replaced by it" ;;
+        *)       echo "would set $key in ~/.gitconfig.local to your answer — now $current, kept if you answer the same" ;;
+      esac
+    done
+  else
+    echo "~/.gitconfig.local is there, and git cannot run here to set keys in it — the real run prints the lines to set under [user] there"
+  fi
+elif command -v git >/dev/null 2>&1 && ! bare_shim git; then
   created=no
   [ -e "$GITCONFIG_LOCAL" ] || created=yes
   set_keys=""
@@ -403,16 +451,17 @@ elif [ -f "$SSH_CONF" ] || [ -L "$SSH_CONF" ]; then
   # A config that names config.local itself would, moved there, include itself.
   if grep -q 'config\.local' "$SSH_CONF" 2>/dev/null; then
     echo "~/.ssh/config names config.local itself — the deploy below $ssh_aside; merge it by hand"
-  elif [ -L "$SSH_CONF" ]; then
-    mv "$SSH_CONF" "$SSH_LOCAL"
-    if [ -e "$SSH_LOCAL" ]; then
-      echo "moved ~/.ssh/config -> ~/.ssh/config.local (a symlink -> $(readlink "$SSH_LOCAL")) — the shipped config includes it first, so every line of it still wins"
-    else
-      echo "moved ~/.ssh/config -> ~/.ssh/config.local (a symlink -> $(readlink "$SSH_LOCAL"), which points at nothing)"
-    fi
   else
-    mv "$SSH_CONF" "$SSH_LOCAL"
-    echo "moved ~/.ssh/config -> ~/.ssh/config.local — the shipped config includes it first, so every line of it still wins"
+    # A link is read before it moves: within ~/.ssh it points the same after.
+    what="— the shipped config includes it first, so every line of it still wins"
+    if [ -L "$SSH_CONF" ] && [ -e "$SSH_CONF" ]; then
+      what="(a symlink -> $(readlink "$SSH_CONF")) $what"
+    elif [ -L "$SSH_CONF" ]; then
+      what="(a symlink -> $(readlink "$SSH_CONF"), which points at nothing)"
+    fi
+    run mv "$SSH_CONF" "$SSH_LOCAL"
+    moved="${moved:+$moved }~/.ssh/config"
+    echo "$(tell moved 'would move') ~/.ssh/config -> ~/.ssh/config.local $what"
   fi
 else
   echo "no ~/.ssh/config of yours — nothing to move"
@@ -420,7 +469,24 @@ fi
 
 echo
 echo "== deploying =="
-"$REPO/bin/preen" apply | tee "$deploy_log"
+if [ "$dry_run" = yes ]; then
+  # Its plan is read against the home as it is now, so it would set aside
+  # what the moves above take first; the real deploy finds those targets
+  # empty. awk drops that line for each moved target, matched whole. Its last
+  # lines, `--` and the closing line, are this run's to say, at the end.
+  lead="preen apply's plan, read against your home as it is now"
+  [ -z "$moved" ] || lead="$lead — less what it would set aside at ${moved// / and }, which the moves above take first"
+  echo "$lead:"
+  deploy_plan="$(sed '/^--$/,$d' <<< "$apply_plan" | awk -v moved=" $moved " '
+    /^would (back up|replace link|move aside) / {
+      t = $0; sub(/^would [a-z]+ [a-z]+ +/, "", t); sub(/ (->|\(was ->|\(a symlink ->) .*/, "", t)
+      if (index(moved, " " t " ")) next
+    }
+    { print }')"
+  printf '%s\n' "$deploy_plan"
+else
+  "$REPO/bin/preen" apply | tee "$deploy_log"
+fi
 
 echo
 echo "== tab title =="
@@ -469,7 +535,7 @@ else
   if [ -z "$title_line" ]; then
     echo "kitty.conf has no tab_title_template line — no tab-title.conf needed" >&2
   else
-    mkdir -p "$(dirname "$TAB_TITLE_CONF")"
+    run mkdir -p "$(dirname "$TAB_TITLE_CONF")"
     # A file replaced whole is never written through: a symlink here is moved
     # aside, link and all, as preen apply moves one at a copy row. A plain file
     # of one tab_title_template line is this run's own, for another home or an
@@ -478,25 +544,26 @@ else
     # kept beside itself, as the kitty drop-in keeps one, and the write is
     # then a new file. The lines go to the deploy log too, so the closing lines
     # name the file set aside.
+    title_state="$(tell wrote 'would write')"
     if [ -L "$TAB_TITLE_CONF" ] || { [ -e "$TAB_TITLE_CONF" ] && ! cmp -s - "$TAB_TITLE_CONF" <<< "$title_line"; }; then
       if [ ! -L "$TAB_TITLE_CONF" ] && [ -f "$TAB_TITLE_CONF" ] \
         && awk 'NR == 1 { ok = /^tab_title_template / } END { exit !(NR == 1 && ok) }' "$TAB_TITLE_CONF" 2>/dev/null; then
-        rm -f "$TAB_TITLE_CONF"
+        run rm -f "$TAB_TITLE_CONF"
       else
         bak="$TAB_TITLE_CONF.unpreened"; n=1
         while [ -e "$bak" ] || [ -L "$bak" ]; do bak="$TAB_TITLE_CONF.unpreened.$n"; n=$((n + 1)); done
-        mv "$TAB_TITLE_CONF" "$bak"
-        if [ -L "$bak" ]; then
-          echo "moved aside     ~/.config/kitty/tab-title.conf (a symlink -> $(readlink "$bak"))" | tee -a "$deploy_log"
+        if [ -L "$TAB_TITLE_CONF" ]; then
+          aside_line="$(tell 'moved aside     ' 'would move aside ')~/.config/kitty/tab-title.conf (a symlink -> $(readlink "$TAB_TITLE_CONF"))"
         else
-          echo "backed up       ~/.config/kitty/tab-title.conf -> ~/.config/kitty/tab-title.conf${bak#"$TAB_TITLE_CONF"}" | tee -a "$deploy_log"
+          aside_line="$(tell 'backed up       ' 'would back up ')~/.config/kitty/tab-title.conf -> ~/.config/kitty/tab-title.conf${bak#"$TAB_TITLE_CONF"}"
         fi
+        run mv "$TAB_TITLE_CONF" "$bak"
+        echo "$aside_line" | tee -a "$deploy_log"
       fi
-    fi
-    title_state=wrote
-    if [ -f "$TAB_TITLE_CONF" ]; then
+    elif [ -f "$TAB_TITLE_CONF" ]; then
       title_state=unchanged
-    else
+    fi
+    if [ "$title_state" != unchanged ] && [ "$dry_run" = no ]; then
       printf '%s\n' "$title_line" > "$TAB_TITLE_CONF"
     fi
     # local.conf is read after tab-title.conf. Of its tab_title_template lines,
@@ -520,13 +587,16 @@ else
         print n, p
       }' "$HOME/.config/kitty/local.conf" 2>/dev/null)" || local_title=""
     local_line="${local_title%% *}"; local_path="${local_title#* }"
-    # What tab-title.conf's title does is read back off the file, not assumed.
+    # What tab-title.conf's title does is read back off the file, not assumed;
+    # a dry run reads the line it would write.
+    title_now="$title_line"
+    [ "$dry_run" = yes ] || title_now="$(cat "$TAB_TITLE_CONF")"
     home_lit="${HOME//\\/\\\\}"
     if [ -n "$local_path" ]; then
       echo "$title_state ~/.config/kitty/tab-title.conf; ~/.config/kitty/local.conf line $local_line, read after it, sets a tab title that collapses $local_path"
     elif [ -n "$local_title" ]; then
       echo "$title_state ~/.config/kitty/tab-title.conf; ~/.config/kitty/local.conf line $local_line, read after it, sets a tab title"
-    elif grep -qF -e "'$home_lit'" -e "\"$home_lit\"" "$TAB_TITLE_CONF"; then
+    elif grep -qF -e "'$home_lit'" -e "\"$home_lit\"" <<< "$title_now"; then
       echo "$title_state ~/.config/kitty/tab-title.conf, whose tab title collapses this home to '~'"
     else
       echo "$title_state ~/.config/kitty/tab-title.conf, whose tab title does not collapse this home"
@@ -554,13 +624,26 @@ for t in $OVERLAID; do
   if [ -e "$ov_abs" ] || [ -L "$ov_abs" ]; then
     printf '  %-28s yours\n' "$ov"
   else
-    printf '  %-28s absent — create it for lines of your own\n' "$ov"
+    # Absent here only in a dry run: the identity writes ~/.gitconfig.local,
+    # and a move writes the overlay of what moved.
+    case " ~/.gitconfig $moved " in
+      *" $t "*) printf '  %-28s yours after the run\n' "$ov" ;;
+      *) printf '  %-28s absent — create it for lines of your own\n' "$ov" ;;
+    esac
   fi
 done
 
 # The files this run set aside, in preen apply's words (bootstrap's own lines
 # use them too). A shell file's lines go in its overlay, and never a line that
 # sources that overlay: from inside it, it sources itself until zsh gives up.
+# A dry run has no log: it reads the lines it planned, preen apply's and the
+# tab title's, worded as done so the same parse reads them.
+if [ "$dry_run" = yes ]; then
+  log_lines="$(printf '%s\n%s\n' "$deploy_plan" "${aside_line:-}" | sed -e 's/^would back up  */backed up       /' \
+    -e 's/^would move aside  */moved aside     /' -e 's/^would replace link  */replaced link   /')"
+else
+  log_lines="$(cat "$deploy_log")"
+fi
 aside=""
 while IFS= read -r line; do
   case "$line" in
@@ -580,15 +663,19 @@ while IFS= read -r line; do
   if [ -n "$ov" ]; then where=": lines you want back go in $ov"; fi
   case "$orig" in "~/.zshenv"|"~/.zprofile"|"~/.zshrc") where="$where, never one that sources it" ;; esac
   aside="$aside  $orig$what$where"$'\n'
-done < "$deploy_log"
+done <<< "$log_lines"
 if [ -n "$aside" ]; then
   echo
-  echo "== set aside by this run =="
+  echo "== set aside by $(tell 'this run' 'the real run') =="
   printf '%s' "$aside"
 fi
 
 echo
-echo "Claude Code's statusline: ~/.config/cship.toml is linked, not wired. ./prompt/install.sh, run from this clone, wires ~/.claude/settings.json and leaves the linked configs alone."
+echo "Claude Code's statusline: ~/.config/cship.toml $(tell 'is linked' 'would be linked'), not wired. ./prompt/install.sh, run from this clone, wires ~/.claude/settings.json and leaves the linked configs alone."
 echo
-echo "Done. Open a new terminal window."
-echo "Verify with: $REPO/bin/preen doctor"
+if [ "$dry_run" = yes ]; then
+  echo "Nothing was written. Drop --dry-run to do it."
+else
+  echo "Done. Open a new terminal window."
+  echo "Verify with: $REPO/bin/preen doctor"
+fi

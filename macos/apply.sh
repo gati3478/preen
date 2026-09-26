@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 usage() { cat <<'EOF'
-Apply the macOS half of this setup: the settings System Settings owns.
+usage: ./macos/apply.sh [--dry-run]
 
-  ./macos/apply.sh [--dry-run]
+Apply the macOS half of this setup: the settings System Settings owns.
 
 Sets, for the user running it, the appearance, the Dock and its hot corners,
 Finder, the trackpad, spelling correction, screenshots, the menu-bar clock,
@@ -16,6 +16,7 @@ that is set). `sh` it to put them back. A symlinked directory on the way
 there stops the run before it writes anything.
 
   --dry-run   list each setting that differs, from → to, and stop, having written nothing
+  -h, --help  print this and exit
 
 Refuses to run as root, and anywhere but macOS.
 EOF

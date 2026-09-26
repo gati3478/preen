@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 usage() { cat <<'EOF'
+usage: ./prompt/install.sh [--with-starship | --no-starship]
+                           [--account-label NAME | --no-account] [--dry-run]
+
 Take this statusline alone.
 
 Copies cship.toml — and starship.toml if you say so — into ~/.config, wires
@@ -10,15 +13,10 @@ here points back at this repo afterwards.
   from a clone:    ./prompt/install.sh [flags]
   from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/prompt/install.sh | bash -s -- [flags]
 
-It asks two questions when it has a terminal to ask on. Each flag answers
-one; with both answered it asks nothing, and with no terminal it takes the
-defaults — starship.toml left alone, the account module hidden:
-  --with-starship | --no-starship       take starship.toml too — this REPLACES
-                                        your shell prompt, not only line 1
-  --account-label NAME | --no-account   what line 2 calls your account, or
-                                        hide the module in your copy
-
---dry-run prints what the run would touch and stops, having written nothing.
+It asks two questions when it has a terminal to ask on. The first two flag
+pairs below answer one each; with both answered it asks nothing, and with no
+terminal it takes the defaults — starship.toml left alone, the account module
+hidden.
 
 Nothing is overwritten without a timestamped backup beside it. A statusLine
 entry that runs anything but cship is left alone. A re-run with nothing
@@ -29,12 +27,54 @@ whole setup, whose configs are links into its clone, this leaves those links
 as they are, so the account module can be labelled but not hidden, and wires
 settings.json, which the setup does not.
 Refuses to run as root.
+
+  --with-starship | --no-starship       take starship.toml too — this REPLACES
+                                        your shell prompt, not only line 1
+  --account-label NAME | --no-account   what line 2 calls your account, or
+                                        hide the module in your copy
+  --dry-run                             print what the run would touch and
+                                        stop, having written nothing
+  -h, --help                            print this and exit
 EOF
 }
 set -euo pipefail
 
-# --help answers with no network, so it is read before the helper is fetched.
+# Every argument is answered before the temp directory and the helper's fetch,
+# so --help and an argument error write nothing and need no network. The
+# helper's die is not loaded yet, and exits 1 where an argument error is 2.
 for arg in "$@"; do case "$arg" in -h|--help) usage; exit 0 ;; esac; done
+bad_arg() { echo "install.sh: $* (see --help)" >&2; exit 2; }
+# The label lands inside a JSON string inside a shell command line. Letters,
+# digits, space, dot, underscore, dash — at least one not a space — and
+# nothing else: byte-wise, so a newline or a non-ASCII letter is refused too.
+label_ok() {
+  [ -n "${1// /}" ] && [ "$(printf '%s' "$1" | LC_ALL=C tr -d 'A-Za-z0-9._ -' | wc -c)" -eq 0 ]
+}
+with_starship=""
+account_mode=""
+account_label=""
+dry_run=no
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --with-starship) with_starship=yes ;;
+    --no-starship)   with_starship=no ;;
+    --no-account)    account_mode=hide ;;
+    --dry-run)       dry_run=yes ;;
+    --account-label)
+      # `-*`, not `--*`: the guard exists to catch a forgotten name followed
+      # by a flag, and reading only long flags let `--account-label -x` take
+      # `-x` as the label. A label that genuinely starts with a dash is the
+      # price, and nobody has one.
+      case "${2:-}" in ''|-*) bad_arg "--account-label needs a name after it, or say --no-account" ;; esac
+      shift
+      label_ok "$1" || bad_arg "--account-label: a name of letters, digits, space, '.', '_', '-', or say --no-account"
+      account_label="$1"
+      account_mode=label
+      ;;
+    *) bad_arg "unknown argument: $1" ;;
+  esac
+  shift
+done
 
 # ── the shared helper ────────────────────────────────────────────────────────
 # The generic half of every drop-in installer here: the questions, the source
@@ -77,41 +117,7 @@ CONFIG_DIR="$HOME/.config"
 CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"   # Claude Code's own override for where settings.json lives
 SETTINGS="$CLAUDE_DIR/settings.json"
 
-with_starship=""
-account_mode=""
-account_label=""
-dry_run=no
-while [ $# -gt 0 ]; do
-  case "$1" in
-    --with-starship) with_starship=yes ;;
-    --no-starship)   with_starship=no ;;
-    --no-account)    account_mode=hide ;;
-    --dry-run)       dry_run=yes ;;
-    --account-label)
-      # `-*`, not `--*`: the guard exists to catch a forgotten name followed
-      # by a flag, and reading only long flags let `--account-label -x` take
-      # `-x` as the label. A label that genuinely starts with a dash is the
-      # price, and nobody has one.
-      case "${2:-}" in ''|-*) die "--account-label needs a name after it (or say --no-account)" ;; esac
-      shift
-      account_label="$1"
-      account_mode=label
-      ;;
-    *) die "unknown argument: $1 (see --help)" ;;
-  esac
-  shift
-done
 [ "$(id -u)" -eq 0 ] && die "refusing to run as root — this installs user files"
-
-# The label lands inside a JSON string inside a shell command line. Letters,
-# digits, space, dot, underscore, dash — at least one not a space — and
-# nothing else: byte-wise, so a newline or a non-ASCII letter is refused too.
-label_ok() {
-  [ -n "${1// /}" ] && [ "$(printf '%s' "$1" | LC_ALL=C tr -d 'A-Za-z0-9._ -' | wc -c)" -eq 0 ]
-}
-if [ "$account_mode" = label ] && ! label_ok "$account_label"; then
-  die "--account-label: a name of letters, digits, space, '.', '_', '-' (or say --no-account)"
-fi
 
 # ── where the configs come from ──────────────────────────────────────────────
 locate_sources cship.toml

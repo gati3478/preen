@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 usage() { cat <<'EOF'
+usage: ./terminal/kitty/install.sh [--dry-run]
+
 Take this kitty configuration alone.
 
 Copies the config, its palette and the tab title for your home into
@@ -16,9 +18,7 @@ repo afterwards.
   from a clone:    ./terminal/kitty/install.sh [flags]
   from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/terminal/kitty/install.sh | bash
 
-There is nothing to ask, so nothing is asked. Two flags:
-  --dry-run   print what the run would touch and stop, having written nothing
-  --help      this
+There is nothing to ask, so nothing is asked.
 
 kitty reads includes last-wins, so the appended line beats everything above it
 in your kitty.conf. Keep a line of your own by moving it BELOW that line, or
@@ -38,12 +38,25 @@ rewrites nothing. Every refusal comes before the first write: a symlinked
 kitty.conf, whose target should carry the line instead. A kitty.conf linked
 into a clone of the whole setup already has this config, and the run says so
 and writes nothing.
+
+  --dry-run   print what the run would touch and stop, having written nothing
+  -h, --help  print this and exit
 EOF
 }
 set -euo pipefail
 
-# --help answers with no network, so it is read before the helper is fetched.
+# Every argument is answered before the temp directory and the helper's fetch,
+# so --help and an argument error write nothing and need no network. The
+# helper's die is not loaded yet, and exits 1 where an argument error is 2.
 for arg in "$@"; do case "$arg" in -h|--help) usage; exit 0 ;; esac; done
+dry_run=no
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --dry-run) dry_run=yes ;;
+    *) echo "install.sh: unknown argument: $1 (see --help)" >&2; exit 2 ;;
+  esac
+  shift
+done
 
 # ── the shared helper ────────────────────────────────────────────────────────
 # The generic half of every drop-in installer here: the source resolution, the
@@ -100,15 +113,6 @@ FONT_CASK="font-fira-code-nerd-font"
 # The home the shipped tab title collapses to '~'. bin/bootstrap carries the
 # same constant for the same line; kitty expands no variable in that option.
 AUTHORED_HOME="/Users/gati3478"
-
-dry_run=no
-while [ $# -gt 0 ]; do
-  case "$1" in
-    --dry-run) dry_run=yes ;;
-    *) die "unknown argument: $1 (see --help)" ;;
-  esac
-  shift
-done
 
 # ── a home that took the whole setup ─────────────────────────────────────────
 # Its kitty.conf is a link into the setup's clone, which already carries this

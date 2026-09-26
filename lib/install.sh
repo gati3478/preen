@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 # The half the drop-in installers here share: where a piece's files come from,
 # what stops a run, how the files are placed, and what the run says before and
 # after. It is sourced by a piece's install.sh and never run on its own;

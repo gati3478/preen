@@ -13,18 +13,35 @@
 #                         default: outside the source repo (see SOURCE_REPO)
 set -uo pipefail
 
-REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-MANIFEST="$REPO/manifest.tsv"
-FAILED=0
+usage() { cat <<'EOF'
+usage: preen doctor [--quiet] [--taste]
+
+Verifies the deployed state against manifest.tsv, then the semantic checks:
+every unit, one line each, and never a tally. Exit 0 with no FAIL, 1 with one.
+
+  --quiet     the headings, every warn and FAIL, the verdict; an ok line
+              prints nothing, and still nothing is counted
+  --taste     also assert the preference spec outside the source repo, where
+              it is off by default
+  -h, --help  print this and exit
+EOF
+}
+for arg in "$@"; do
+  case "$arg" in -h|--help) usage; exit 0 ;; esac
+done
 QUIET=no
 TASTE=no
 for arg in "$@"; do
   case "$arg" in
     --quiet) QUIET=yes ;;
     --taste) TASTE=yes ;;
-    *) printf 'preen doctor: unknown argument: %s (--quiet, --taste)\n' "$arg" >&2; exit 2 ;;
+    *) echo "preen doctor: unknown argument: $arg (see --help)" >&2; exit 2 ;;
   esac
 done
+
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+MANIFEST="$REPO/manifest.tsv"
+FAILED=0
 [ -f "$REPO/bin/lib/pref-check.sh" ] && source "$REPO/bin/lib/pref-check.sh"
 
 ok()   { [ "$QUIET" = yes ] || printf '  \033[32mok\033[0m    %s\n' "$1"; }
