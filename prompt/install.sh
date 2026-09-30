@@ -365,9 +365,9 @@ show_plan
 if [ "$dry_run" = yes ]; then
   echo
   case "$starship_unasked:$account_unasked" in
-    yes:yes) echo "A real run asks first whether to take starship.toml, and what line 2 calls your account." ;;
-    yes:no)  echo "A real run asks first whether to take starship.toml." ;;
-    no:yes)  echo "A real run asks first what line 2 calls your account." ;;
+    yes:yes) echo "With cship $CSHIP_FLOOR or newer, a real run asks first whether to take starship.toml, and what line 2 calls your account." ;;
+    yes:no)  echo "With cship $CSHIP_FLOOR or newer, a real run asks first whether to take starship.toml." ;;
+    no:yes)  echo "With cship $CSHIP_FLOOR or newer, a real run asks first what line 2 calls your account." ;;
   esac
   echo "Nothing was written. Drop --dry-run to do it."
   exit 0

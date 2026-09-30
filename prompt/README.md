@@ -61,7 +61,8 @@ read it first if that is your habit. It
 
 1. finds cship — on `PATH`, or at `~/.local/bin/cship` or `~/.cargo/bin/cship`
    where its two installers put it — and refuses when there is none or it is
-   below 1.8.2; a dry run goes on to the plan either way, asking nothing;
+   below 1.8.2; in either case a dry run skips the questions and prints the
+   plan instead;
 2. asks whether to take `starship.toml` too, and what to call your account
    (next section);
 3. copies `cship.toml` to `~/.config/cship.toml` — a copy, never a symlink,

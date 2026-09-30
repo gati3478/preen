@@ -9,11 +9,11 @@ itself against your live config. _Preen_: to groom to your own standard.
 
 ## Take one piece
 
-The Claude Code statusline, [`prompt/`](prompt/README.md). The first line
-prints the plan, cship or not, and writes nothing; where
-[cship](https://github.com/stephenleo/cship) 1.8.2 or newer is installed, it
-asks its two questions first. The second installs the statusline, and needs
-that cship.
+[`prompt/`](prompt/README.md) is the Claude Code statusline, drawn by cship.
+The first block prints the plan and writes nothing; the second installs. With
+[cship](https://github.com/stephenleo/cship) 1.8.2 or newer, both first ask
+whether to take `starship.toml` too and what to call your account; without
+it, the dry run says how to get it, and the install stops before any write.
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/prompt/install.sh | bash -s -- --dry-run
@@ -185,7 +185,7 @@ ssh/               an Include for your own config, then the agent line; no hosts
 macos/             System Settings, run by hand: --dry-run lists each change, a run saves what it replaces
 bin/               bootstrap, preen — apply and doctor — and what the doctor runs
 lib/               install.sh, the half the installers share
-manifest.tsv       the source's public rows: file → live path → link or copy
+manifest.tsv       the source's public rows: file → live path → link or copy → permissions, where set
 preferences.toml   each preference's value and why, and the rows that check it
 LICENSE            MIT
 ```
