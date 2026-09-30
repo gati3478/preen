@@ -60,10 +60,9 @@ done
 
 # ── the shared helper ────────────────────────────────────────────────────────
 # The generic half of every drop-in installer here: the source resolution, the
-# plan and summary lists, the copies and their backup rule. Beside this script
-# in a clone; otherwise fetched from the mirror exactly as the configs are —
-# same trust, same mechanism — and checked for its marker line before it is
-# sourced.
+# plan, the copies and their backup rule. Beside this script in a clone;
+# otherwise fetched from the mirror exactly as the configs are — same trust,
+# same mechanism — and checked for its marker line before it is sourced.
 PIECE="terminal/kitty"   # this piece's path under the mirror root
 ROOT_URL="${PREEN_SOURCE:-https://raw.githubusercontent.com/gati3478/preen/main}"
 SOURCE_URL="${KITTY_SOURCE:-$ROOT_URL/$PIECE}"
@@ -267,10 +266,15 @@ fi
 touching "$PREEN_DIR/kitty.conf" "the config"
 touching "$PREEN_DIR/current-theme.conf" "the palette it includes"
 if [ -n "$title_line" ]; then touching "$PREEN_DIR/tab-title.conf" "the tab title for this home — ours; local.conf stays yours"; fi
-touching "$KITTY_CONF" "one line appended: $INCLUDE_LINE"
-touching "$KITTY_DIR/open-actions.conf" "what a click on a link does — kept if you have one"
-touching "$KITTY_DIR/mime.types" "the file types behind it — kept if you have one"
-touching "$KITTY_DIR/choose-files.conf" "the fp picker — kept if you have one"
+# The test append_line_once makes, so the plan says what the run will do.
+if [ ! -L "$KITTY_CONF" ] && [ -f "$KITTY_CONF" ] && grep -qxF -- "$INCLUDE_LINE" "$KITTY_CONF" 2>/dev/null; then
+  touching "$KITTY_CONF" "already there: $INCLUDE_LINE"
+else
+  touching "$KITTY_CONF" "one line appended: $INCLUDE_LINE"
+fi
+touching "$KITTY_DIR/open-actions.conf" "what a click on a link does — copied if absent"
+touching "$KITTY_DIR/mime.types" "the file types behind it — copied if absent"
+touching "$KITTY_DIR/choose-files.conf" "kitty's file picker, kitten choose-files — copied if absent"
 show_plan
 
 # ── the last refusals, before the first write ────────────────────────────────
@@ -337,6 +341,5 @@ for f in $ROOT_FILES; do copy_if_absent "$SRC/$f" "$KITTY_DIR/$f"; done
 # already on disk.
 append_line_once "$KITTY_CONF" "$INCLUDE_LINE"
 
-show_summary
 echo
 echo "Next: open a new kitty window, or reload the config with ctrl+cmd+, in the one you have."

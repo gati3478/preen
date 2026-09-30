@@ -65,15 +65,22 @@ There is no light variant.
 
 ## Install
 
-One line, no clone:
+No clone needed. To print the plan and stop, writing nothing — `bash -s --`
+hands the flag to the script:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/terminal/kitty/install.sh | bash -s -- --dry-run
+```
+
+To install:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/terminal/kitty/install.sh | bash
 ```
 
-Or from a clone of this repository, `./terminal/kitty/install.sh`. It asks
-nothing — there is nothing to ask — and `--dry-run` prints the plan and stops
-without writing:
+Or from a clone of this repository, `./terminal/kitty/install.sh`, with
+`--dry-run` for the plan alone. It asks nothing — there is nothing to ask. The
+plan for a home with no kitty config yet:
 
 ```
 == will touch ==
@@ -83,9 +90,9 @@ without writing:
 ~/.config/kitty/preen/current-theme.conf   the palette it includes
 ~/.config/kitty/preen/tab-title.conf       the tab title for this home — ours; local.conf stays yours
 ~/.config/kitty/kitty.conf                 one line appended: include preen/kitty.conf
-~/.config/kitty/open-actions.conf          what a click on a link does — kept if you have one
-~/.config/kitty/mime.types                 the file types behind it — kept if you have one
-~/.config/kitty/choose-files.conf          the fp picker — kept if you have one
+~/.config/kitty/open-actions.conf          what a click on a link does — copied if absent
+~/.config/kitty/mime.types                 the file types behind it — copied if absent
+~/.config/kitty/choose-files.conf          kitty's file picker, kitten choose-files — copied if absent
 ```
 
 It
@@ -109,8 +116,10 @@ It
 4. copies `open-actions.conf`, `mime.types` and `choose-files.conf` into
    `~/.config/kitty` itself, because kitty reads those three from the config
    directory root under those exact names — a copy under `preen/` is ignored.
-   A file of yours at one of them is **left alone** and the run says so; no
-   backup is taken, because nothing was replaced;
+   A file already at one of them stays as it is, with no backup, because
+   nothing is replaced: the run says `unchanged` when it is a file holding
+   this config's bytes, and `left alone` when it is anything else, a symlink
+   included;
 5. appends `include preen/kitty.conf` to `~/.config/kitty/kitty.conf`, once.
    Your file is not otherwise touched, and if you have none it becomes that
    one line. The append is last, so a run that stops earlier never leaves an
@@ -148,6 +157,18 @@ your own `kitty.conf` above the include line lose to this config.** If you had
 `cursor_shape block`, the caret is an underline after this install. Move the
 line below the include line, or into `local.conf`.
 
+## Sessions
+
+cmd+q saves the open windows and tabs to `~/.config/kitty/last-session.kitty`,
+then quits, and kitty opens that session at launch. These two lines in
+`~/.config/kitty/preen/local.conf` undo it — the first stops the session
+opening at launch, the second makes cmd+q quit without saving:
+
+```
+startup_session none
+map cmd+q quit
+```
+
 ## The click seam
 
 `open-actions.conf` and `mime.types` are the kitty half of one behaviour: a
@@ -173,9 +194,12 @@ cost nothing.
    `~/.config/kitty/kitty.conf` — or the file, if that line is all it holds.
 2. Delete `~/.config/kitty/preen/` — keep `local.conf` from it first if you
    made one; that file is yours.
-3. For `open-actions.conf`, `mime.types` and `choose-files.conf`, read the
-   run's summary: a `copied` line means the file is this config's and can go;
-   a `left alone` line means it was already yours and was never touched.
+3. For `open-actions.conf`, `mime.types` and `choose-files.conf`, read what
+   the run said of each: `copied` or `unchanged` means the file held this
+   config's bytes and can go; `left alone` means something else was there, a
+   different file or a symlink, and the run never touched it.
+4. Delete `~/.config/kitty/last-session.kitty`, the session cmd+q saves, if
+   it is there.
 
 Where a backup was taken it sits beside the file it replaced, as
 `<file>.unpreened.<timestamp>`; move it back.

@@ -1,82 +1,94 @@
 # preen
 
-A macOS terminal and editor setup — kitty, zsh, tmux, starship, the cship
-statusline for Claude Code, Zed, Sublime Text — in Gruvbox on Fira Code, and
-the taste behind it, written as assertions a checker runs against live config.
-_Preen_: to groom to your own standard. Generated from a private repository,
-whose files these are, published as they are; what stays there is said under
-The model.
+![A shell prompt above Claude Code's statusline, rendered from prompt/ in the palette terminal/kitty/ sets](prompt/statusline.svg)
+
+Below the prompt is Claude Code's statusline, and one line of shell makes it
+yours. It is [`prompt/`](prompt/README.md), one piece of preen: a macOS
+terminal and editor setup — kitty, zsh, tmux, Zed, Sublime Text — that checks
+itself against your live config. _Preen_: to groom to your own standard.
 
 ## Take one piece
 
-The statusline, [`prompt/`](prompt/README.md), which needs
-[cship](https://github.com/stephenleo/cship) 1.8.2 or newer; or the terminal,
-[`terminal/kitty/`](terminal/kitty/README.md). To see what a script would do
-and stop — the statusline's script asks its two questions first:
+The Claude Code statusline, [`prompt/`](prompt/README.md). The first line
+prints the plan, cship or not, and writes nothing; where
+[cship](https://github.com/stephenleo/cship) 1.8.2 or newer is installed, it
+asks its two questions first. The second installs the statusline, and needs
+that cship.
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/prompt/install.sh | bash -s -- --dry-run
 ```
 
-To do it:
-
 ```sh
 curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/prompt/install.sh | bash
+```
+
+The terminal, [`terminal/kitty/`](terminal/kitty/README.md), the same way:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/terminal/kitty/install.sh | bash -s -- --dry-run
+```
+
+```sh
 curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/terminal/kitty/install.sh | bash
 ```
 
-Each fetches its files and one shared helper from here, copies the files into
-your config — copies, never symlinks — and wires one entry: the `statusLine`
-key of `~/.claude/settings.json`, merged into what is there; one `include`
-line appended to `~/.config/kitty/kitty.conf`. Nothing is written before the
-plan is printed, and a refusal comes before any write; a symlinked directory
-the copies would land under is one. `--help` is each script's manual.
+Each installer prints its plan and makes every refusal before its first
+write. It copies its files into your config — copies, never symlinks, a file
+of yours it replaces backed up beside it — and wires one entry: the
+`statusLine` key of `~/.claude/settings.json`, merged into what is there; one
+`include` line appended to `~/.config/kitty/kitty.conf`. `--help` is each
+script's manual.
 
 ## Take the setup
 
 On a Mac without Homebrew, install it first from [brew.sh](https://brew.sh);
-it also brings the Command Line Tools that `git clone` needs.
+it brings the Command Line Tools `git clone` needs. The first block clones
+this repository and prints bootstrap's plan, which asks nothing and writes
+nothing; the second runs bootstrap and reads the result back.
 
 ```sh
 git clone https://github.com/gati3478/preen ~/preen
-cd ~/preen && ./bin/bootstrap
+cd ~/preen && ./bin/bootstrap --dry-run
+```
+
+```sh
+./bin/bootstrap
 ./bin/preen doctor
 ```
 
-`bootstrap` names what is missing: the tools the setup needs, asking before
-it goes on without them, and the optional ones, each with what goes without
-it. It asks your name and email for git and sets them as `user.name` and
-`user.email` in `~/.gitconfig.local`, leaving the rest of that file as it is;
-deploys every row of `manifest.tsv`; and writes
+`bootstrap` names each missing tool, an optional one with what goes without
+it, and asks before it goes on without one the setup needs. It asks your
+name and email for git and sets them in `~/.gitconfig.local`, leaving the
+rest of that file as it is; deploys every row of `manifest.tsv`; and writes
 `~/.config/kitty/tab-title.conf`, which holds your home, the one path kitty's
 config language cannot template. It ends by naming each overlay the shipped
 files read and everything it set aside. The statusline is linked but not
 wired: its installer, run from the clone, wires it.
 
-`bootstrap` makes every refusal, its own or `preen apply`'s, before its first
-write, and it does not modify your clone. What it finds in the way:
+Every refusal, bootstrap's or `preen apply`'s, comes before the first write,
+and bootstrap never modifies your clone. What it finds in the way:
 
 - a symlinked directory between `~` and a file it deploys, the layout stow
-  leaves, is one such refusal;
+  leaves, is refused;
 - a plain file of yours is kept beside itself as `<file>.unpreened`;
 - a symlink is never written through: at a `link` row it is replaced and its
   old target printed, at a `copy` row it is moved aside;
-- a plain `~/.gitconfig` of yours, or a `~/.ssh/config` plain or linked,
-  becomes the `.local` beside it, unless one is there or yours already names
-  it: git reads that file last and keeps the last value, ssh reads it first
-  and keeps the first, so every line of yours wins;
-- your own `~/.zshenv`, `~/.zprofile` and `~/.zshrc`, set aside as above, go
+- a plain `~/.gitconfig`, or a `~/.ssh/config` plain or linked, becomes the
+  `.local` beside it, unless one is there or yours already names it; git
+  reads that file last and ssh first, so every line of yours wins;
+- your `~/.zshenv`, `~/.zprofile` and `~/.zshrc`, set aside as above, go
   unread: their lines belong in the `.local` beside each, which the shipped
   file sources.
 
-The shipped `ssh/config` then names Proton Pass's agent socket for every
-host. Keys on disk still sign; `IdentityAgent SSH_AUTH_SOCK` under `Host *`
-in `config.local` keeps an agent of your own.
+The shipped `ssh/config` names Proton Pass's agent socket for every host.
+Keys on disk still sign; `IdentityAgent SSH_AUTH_SOCK` under `Host *` in
+`config.local` keeps an agent of your own.
 
-`preen doctor` reads every row back, then runs its own checks of the tools,
-warning rather than failing where one is absent. The author's preferences are
-asserted against your live config only when asked (python 3.11 or newer),
-because they are the author's:
+`preen doctor` reads every row back, then checks the tools, warning rather
+than failing where one is absent. The author's preferences are asserted
+against your live config only when asked (python 3.11 or newer), because
+they are the author's:
 
 ```sh
 ~/preen/bin/preen doctor --taste
@@ -162,7 +174,7 @@ terminal/kitty/    the terminal; its own page and installer
 terminal/tmux/     tmux for SSH: true colour, mouse, a deep history, resurrect
 terminal/bat/      one line: bat in the terminal's palette
 terminal/ncdu/     one line: ncdu in the terminal's palette
-shell/             zsh in three files split by cost, inputrc, hushlogin, atuin
+shell/             zsh in files split by cost, inputrc, hushlogin, atuin
 editor/zed/        settings, a keymap on a JetBrains base, tasks
 editor/sublime/    settings, Terminus to match, a vendored light scheme
 git/               gitconfig, the global ignore; identity asked for, never here
@@ -194,8 +206,8 @@ file the first time it saved.
 **A piece stands alone through the tool's own include.** kitty reads its
 includes last-wins, so `terminal/kitty/` lands under a directory of its own
 plus one `include` line in your `kitty.conf`, never an edit inside it; the
-three files kitty reads by name from its config root are copied only where
-you have none. A tool with one file and no include — the statusline — is
+files kitty reads by name from its config root are copied only where you
+have none. A tool with one file and no include — the statusline — is
 copied and tailored by its installer. Nothing installed either way points
 back here.
 
@@ -205,19 +217,24 @@ Sublime; Fira Code throughout, the Nerd Font build in the terminal.
 kitty's palette is its own included file, so a swap touches one file, and
 each piece's page carries its palette table.
 
-**Not here:** what cannot ship — the IntelliJ IDEA tree (it names an
-employer), the fonts, the Obsidian snippets, the real ssh hosts, the git
-identity, each machine's overlays and its half of `preferences.toml`, the
-personal scripts, the prose that argues every preference and the wiki around
-it, and the tools that publish this mirror and pull rewritten copies back.
-Nothing here reads those and nothing breaks without them:
-`preen doctor --taste` says once that the prose is absent, and carries on.
-
 ## Make it yours
 
 Fork or clone, keep `manifest.tsv`'s format and the two verbs, `preen apply` and
 `preen doctor`, replace the rows with your own files, and delete every directory
 you do not want along with its rows. The checks in `bin/preen-doctor` probe the
 tools the author runs; read them and cut what is not yours.
+
+## Not here
+
+These files are generated from a private repository and published as they
+are, so no pull requests, please: open an issue instead.
+
+What cannot ship stays in that repository: the IntelliJ IDEA tree (it names an
+employer), the fonts, the Obsidian snippets, the real ssh hosts, the git
+identity, each machine's overlays and its half of `preferences.toml`, the
+personal scripts, the prose that argues every preference and the wiki around
+it, and the tools that generate this mirror. Nothing here reads those, and
+nothing breaks without them: `preen doctor --taste` says once that the prose
+is absent, and carries on.
 
 MIT.

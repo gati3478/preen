@@ -7,19 +7,11 @@ is gone, and when the usage windows reset. Take it alone: the installer fetches
 one shared helper from this repository the way it fetches the configs, and
 nothing it installs points back here.
 
-```
-┌──────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│ calliope   main [!?⇡]   24                                                                           │
-│   personal   Fable 5   high ↳ code                                                            30m50s │
-│ █████░░░░░░░ 43%  43%(393k/1000k)    $3.42  +470 -122  5h 34% → Fri 4:00 AM     7d 72% → Tue 1:00 AM │
-└──────────────────────────────────────────────────────────────────────────────────────────────────────┘
-```
+![The shell prompt above the statusline, 104 columns wide](statusline.svg)
 
-Rendered at 104 columns, where the metrics line has no slack left; a wider
-terminal opens the gap before the usage windows. The icons are the blank
-cells a terminal without a Nerd Font shows — the modules under
-[Glyphs](#glyphs) each carry one, and line 1's two are starship's own, for
-the branch and for Node.
+Rendered from this directory's `cship.toml` and `starship.toml` at 104
+columns, in the Gruvbox Dark Hard palette the
+[kitty piece](../terminal/kitty/README.md) sets.
 
 ## What you need
 
@@ -49,7 +41,15 @@ the branch and for Node.
 
 ## Install
 
-One line, no clone:
+First the plan: every file the run would touch, and nothing written. It
+prints without cship too, or with one below the floor, beside the two ways
+to install it.
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/prompt/install.sh | bash -s -- --dry-run
+```
+
+Then the install, one line, no clone:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/prompt/install.sh | bash
@@ -60,7 +60,8 @@ nothing to your files that it does not print, and `--help` is its manual;
 read it first if that is your habit. It
 
 1. finds cship — on `PATH`, or at `~/.local/bin/cship` or `~/.cargo/bin/cship`
-   where its two installers put it — and refuses below 1.8.2;
+   where its two installers put it — and refuses when there is none or it is
+   below 1.8.2; a dry run goes on to the plan either way, asking nothing;
 2. asks whether to take `starship.toml` too, and what to call your account
    (next section);
 3. copies `cship.toml` to `~/.config/cship.toml` — a copy, never a symlink,
@@ -194,10 +195,9 @@ to add (`$cship.usage_limits.per_model` as a fourth line, plus the
 cooldown, never a broken row.
 
 One more thing worth knowing before filing a bug: **the metrics line's
-content alone runs to about 100 cells** — the picture above is exactly that
-case — so in a window narrower than that plus the right margin it overflows
-however `width` is set. Nothing to fix; a reason not to run the statusline
-in a narrow window.
+content alone runs to about 100 cells**, so in a window narrower than that
+plus the right margin it overflows however `width` is set. Nothing to fix; a
+reason not to run the statusline in a narrow window.
 
 ## Tuning
 
@@ -239,7 +239,8 @@ All icons are Nerd Font glyphs: microchip (model), speedometer (effort),
 account (account label), dollar (cost), clock (duration),
 hourglass (5h), calendar (7d).
 
-> [!warning] Some tooling silently flattens these glyphs into spaces
+> [!WARNING]
+> **Some tooling silently flattens these glyphs into spaces.**
 > Private-use-area codepoints (U+E000–F8FF, and the supplementary plane at
 > U+F0000+) get replaced with spaces by some editors and formatters on rewrite.
 > The file still _renders_ with correct widths, because a space fills the same

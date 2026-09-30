@@ -1,9 +1,10 @@
 # shellcheck shell=bash
 # The half the drop-in installers here share: where a piece's files come from,
-# what stops a run, how the files are placed, and what the run says before and
-# after. It is sourced by a piece's install.sh and never run on its own;
-# everything particular to a piece — what it probes for, what it asks, what it
-# wires — stays there, and nothing below knows what is being installed.
+# what stops a run, how the files are placed, and what the run says before it
+# writes and as it does. It is sourced by a piece's install.sh and never run
+# on its own; everything particular to a piece — what it probes for, what it
+# asks, what it wires — stays there, and nothing below knows what is being
+# installed.
 #
 # The caller sets before sourcing:
 #   SOURCE_URL  where this piece's files are, mirror or local tree
@@ -106,12 +107,10 @@ locate_sources() { # locate_sources <marker file> — set SRC and ORIGIN: beside
   fi
 }
 
-# Two lists, one before and one after: what the run will touch is registered as
-# it is decided and printed while nothing has moved yet, and what each write
-# actually did is kept as it happens. A reader sees the blast radius first and
-# the outcome last, and --dry-run is the plan alone.
+# What the run will touch is registered as it is decided and printed while
+# nothing has moved yet; what each write did is said as it happens. A reader
+# sees the blast radius before the first write, and --dry-run is the plan alone.
 TOUCHING=""
-HAPPENED=""
 touching() { # touching <path> <what it is> — register one destination for the plan
   TOUCHING="$TOUCHING$(printf '%-42s %s' "$(short "$1")" "$2")
 "
@@ -122,15 +121,8 @@ show_plan() { # show_plan — print the registered destinations; nothing has bee
   echo "== will touch =="
   printf '%s' "$TOUCHING"
 }
-record() { # record <line> — say what a write did, and keep it for the summary
+record() { # record <line> — say what a write did
   echo "$1"
-  HAPPENED="$HAPPENED$1
-"
-}
-show_summary() { # show_summary — print what the writes did, in the order they happened
-  echo
-  echo "== summary =="
-  printf '%s' "$HAPPENED"
 }
 
 backup_name() { # backup_name <file> → a name beside it that nothing holds yet
@@ -167,11 +159,12 @@ copy_into() { # copy_into <file> <destination> — place it under a directory th
   place "$1" "$2"
 }
 # For a file the tool reads by a fixed name of its own: a drop-in cannot layer
-# under such a name, so whatever is there is the adopter's and stays, backup or
-# no backup.
-copy_if_absent() { # copy_if_absent <file> <destination> — copy only when nothing is at the destination; anything there is left alone
+# under such a name, so whatever is there stays, backup or no backup. The run
+# says whether its bytes are this file's, never whose the file is; a symlink,
+# as in place(), is never `unchanged`.
+copy_if_absent() { # copy_if_absent <file> <destination> — copy only when nothing is at the destination; anything there stays
   if [ -e "$2" ] || [ -L "$2" ]; then
-    record "left alone      $(short "$2")"
+    if [ ! -L "$2" ] && cmp -s "$1" "$2"; then record "unchanged       $(short "$2")"; else record "left alone      $(short "$2")"; fi
     return 0
   fi
   cp "$1" "$2" || die "could not write $(short "$2")"

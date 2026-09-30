@@ -13,10 +13,10 @@ here points back at this repo afterwards.
   from a clone:    ./prompt/install.sh [flags]
   from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/prompt/install.sh | bash -s -- [flags]
 
-It asks two questions when it has a terminal to ask on. The first two flag
-pairs below answer one each; with both answered it asks nothing, and with no
-terminal it takes the defaults — starship.toml left alone, the account module
-hidden.
+It asks two questions when it has a terminal to ask on and a cship it can
+use. The first two flag pairs below answer one each; with both answered it
+asks nothing, and with no terminal it takes the defaults — starship.toml
+left alone, the account module hidden.
 
 Nothing is overwritten without a timestamped backup beside it. A statusLine
 entry that runs anything but cship is left alone. A re-run with nothing
@@ -33,7 +33,8 @@ Refuses to run as root.
   --account-label NAME | --no-account   what line 2 calls your account, or
                                         hide the module in your copy
   --dry-run                             print what the run would touch and
-                                        stop, having written nothing
+                                        stop, having written nothing — cship
+                                        need not be installed yet
   -h, --help                            print this and exit
 EOF
 }
@@ -132,21 +133,33 @@ cship_bin="$(command -v cship 2>/dev/null || true)"
 for candidate in "$HOME/.local/bin/cship" "$HOME/.cargo/bin/cship"; do
   if [ -z "$cship_bin" ] && [ -x "$candidate" ]; then cship_bin="$candidate"; fi
 done
-if [ -z "$cship_bin" ]; then
-  die "cship not found. Install it first, either way, then re-run this:
-  curl -fsSL https://cship.dev/install.sh | bash     # binary + a starter config + statusLine wiring
+cship_routes="  curl -fsSL https://cship.dev/install.sh | bash     # binary + a starter config + statusLine wiring
   cargo install cship                                 # binary only"
+# Past this check nothing up to the plan runs cship or needs its path, so a
+# dry run whose real run would stop here still prints the plan.
+cship_stops=no
+if [ -z "$cship_bin" ]; then
+  [ "$dry_run" = yes ] || die "cship not found. Install it first, either way, then re-run this:
+$cship_routes"
+  cship_stops=yes
+  echo "cship not found — a real run stops here, before any write. Install it first, either way:"
+  echo "$cship_routes"
+else
+  case "$cship_bin" in /*) ;; *) cship_bin="$(cd "$(dirname "$cship_bin")" && pwd)/${cship_bin##*/}" ;; esac   # a relative PATH entry
+  cship_version="$("$cship_bin" --version 2>/dev/null | awk '{ print $2 }' || true)"   # a failing --version must not end the run
+  # cship 1.8.3 prints a bare `1.8.3`. If upstream ever tags with a `v`, the
+  # comparison below would sort `v1.9.0` under `1.8.2` and refuse every
+  # install — telling an adopter their NEWER cship is too old.
+  cship_version="${cship_version#v}"
+  if [ -z "$cship_version" ] || ! version_ge "$cship_version" "$CSHIP_FLOOR"; then
+    [ "$dry_run" = yes ] || die "cship ${cship_version:-with no version} at $cship_bin — this config needs $CSHIP_FLOOR or newer"
+    cship_stops=yes
+    echo "cship ${cship_version:-with no version} at $(short "$cship_bin") — this config needs $CSHIP_FLOOR or newer, so a real run stops here, before any write. Upgrade it, either way:"
+    echo "$cship_routes"
+  else
+    echo "cship $cship_version at $(short "$cship_bin")"
+  fi
 fi
-case "$cship_bin" in /*) ;; *) cship_bin="$(cd "$(dirname "$cship_bin")" && pwd)/${cship_bin##*/}" ;; esac   # a relative PATH entry
-cship_version="$("$cship_bin" --version 2>/dev/null | awk '{ print $2 }')"
-# cship 1.8.3 prints a bare `1.8.3`. If upstream ever tags with a `v`, the
-# comparison below would sort `v1.9.0` under `1.8.2` and refuse every
-# install — telling an adopter their NEWER cship is too old.
-cship_version="${cship_version#v}"
-if [ -z "$cship_version" ] || ! version_ge "$cship_version" "$CSHIP_FLOOR"; then
-  die "cship $cship_version at $cship_bin — this config needs $CSHIP_FLOOR or newer"
-fi
-echo "cship $cship_version at $(short "$cship_bin")"
 
 # starship 1.26 creates ~/.cache/starship on any invocation, --version
 # included, so its cache goes to this run's temp directory, gone on exit: a
@@ -263,9 +276,16 @@ if links_into_clone "$CONFIG_DIR/cship.toml"; then cship_linked=yes; fi
 if links_into_clone "$CONFIG_DIR/starship.toml"; then starship_linked=yes; fi
 
 # ── the two questions ────────────────────────────────────────────────────────
+# A dry run whose real run would stop at cship asks neither: the answers
+# shape a run that stops before its first write. The plan says what each
+# would add instead.
+starship_unasked=no
+account_unasked=no
 if [ -z "$with_starship" ]; then
   with_starship=no
-  if [ "$INTERACTIVE" = yes ] && [ "$starship_linked" = no ]; then
+  if [ "$INTERACTIVE" = yes ] && [ "$starship_linked" = no ] && [ "$cship_stops" = yes ]; then
+    starship_unasked=yes
+  elif [ "$INTERACTIVE" = yes ] && [ "$starship_linked" = no ]; then
     echo
     echo "== starship =="
     echo "starship.toml here styles line 1 — and, because starship reads one file, your shell prompt."
@@ -285,7 +305,9 @@ if [ -z "$account_mode" ]; then
     blank_prompt="leave it as it is"
     blank_instead="leaving the module as it is"
   fi
-  if [ "$INTERACTIVE" = yes ]; then
+  if [ "$INTERACTIVE" = yes ] && [ "$cship_stops" = yes ]; then
+    account_unasked=yes
+  elif [ "$INTERACTIVE" = yes ]; then
     echo
     echo "== account label =="
     echo "Line 2 names the account a session runs under. Left to itself the module shows the"
@@ -335,11 +357,18 @@ if [ "$starship_linked" = yes ]; then
   echo "$(short "$CONFIG_DIR/starship.toml") is linked by the setup — left as it is"
 elif [ "$with_starship" = yes ]; then
   touching "$CONFIG_DIR/starship.toml" "line 1, and your shell prompt with it"
+elif [ "$starship_unasked" = yes ]; then
+  touching "$CONFIG_DIR/starship.toml" "line 1, and your shell prompt with it — if you take it when asked"
 fi
 case "$settings_state" in absent|cship) touching "$SETTINGS" "the statusLine entry$settings_through" ;; esac
 show_plan
 if [ "$dry_run" = yes ]; then
   echo
+  case "$starship_unasked:$account_unasked" in
+    yes:yes) echo "A real run asks first whether to take starship.toml, and what line 2 calls your account." ;;
+    yes:no)  echo "A real run asks first whether to take starship.toml." ;;
+    no:yes)  echo "A real run asks first what line 2 calls your account." ;;
+  esac
   echo "Nothing was written. Drop --dry-run to do it."
   exit 0
 fi
