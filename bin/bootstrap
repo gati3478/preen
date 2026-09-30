@@ -53,9 +53,8 @@ if [ "$(id -u)" -eq 0 ]; then
 fi
 
 # Answers arrive on plain stdin: this is run from a clone, so stdin is the
-# terminal. At end of input `read` returns non-zero and `set -e` stopped the
-# script with no word said — a pipe, or `</dev/null`, printed a prompt and
-# quit (14-09-2026).
+# terminal. At end of input `read` returns non-zero; a pipe or `</dev/null`
+# gets a stated stop, not a silent `set -e` exit.
 ask() { # ask <prompt> <variable> — the line typed, trimmed, or a stated stop
   local _line
   printf '%s' "$1"
@@ -63,8 +62,7 @@ ask() { # ask <prompt> <variable> — the line typed, trimmed, or a stated stop
     printf '\nbootstrap: no answer on stdin — run it from a terminal, in a clone: ./bin/bootstrap\n' >&2
     exit 1
   fi
-  # Trimmed, because `  y  ` at a [y/N] prompt used to stop the run: the
-  # spaces were kept and the glob missed.
+  # Trimmed, so `  y  ` at a [y/N] prompt still matches the glob.
   _line="${_line#"${_line%%[![:space:]]*}"}"
   _line="${_line%"${_line##*[![:space:]]}"}"
   eval "$2=\$_line"
@@ -73,9 +71,8 @@ ask_required() { # ask_required <prompt> <variable> — re-asks rather than acce
   while :; do
     ask "$1" "$2"
     eval "[ -n \"\$$2\" ]" && return
-    # A blank name or email wrote `name = ` into ~/.gitconfig.local and the
-    # run reported success; the failure surfaced later as git's "empty ident
-    # name (for <>) not allowed", at the adopter's first commit.
+    # git accepts `name = ` in a config file and refuses only at the first
+    # commit ("empty ident name (for <>) not allowed").
     echo "  that cannot be empty — git refuses to commit without it" >&2
   done
 }
@@ -331,8 +328,6 @@ if [ -n "$missing" ]; then
     echo "would ask: Continue anyway? [y/N] — any answer but y or yes stops the run there, nothing changed"
   else
     ask 'Continue anyway? [y/N] ' reply
-    # `y` alone was the only accepted answer, and anything else left without a
-    # word: a capital Y installed nothing and said nothing (14-09-2026).
     case "$reply" in
       [yY]|[yY][eE][sS]) ;;
       *) echo "bootstrap: stopped — nothing was changed. Install what is missing, then run this again." >&2; exit 1 ;;
@@ -496,14 +491,12 @@ echo "== tab title =="
 # `${HOME}` in that option comes back verbatim. So the home to collapse must
 # be a literal, authored for one machine: AUTHORED_HOME, above.
 #
-# It is NOT rewritten in the clone. Doing that left the clone permanently
-# dirty, and the deployed gitconfig sets pull.rebase, so `git pull` then
-# refused every upstream change with "cannot pull with rebase: You have
-# unstaged changes" — found 14-09-2026. kitty.conf ends with
-# `globinclude tab-title.conf` then `globinclude local.conf`, each silent when
-# the file does not exist and last-wins when it does. tab-title.conf is this
-# run's, written whole; local.conf is the adopter's, read after it, and never
-# written here.
+# It is NOT rewritten in the clone: a dirty clone makes `git pull` refuse
+# every upstream change, because the deployed gitconfig sets pull.rebase.
+# kitty.conf ends with `globinclude tab-title.conf` then `globinclude
+# local.conf`, each silent when the file does not exist and last-wins when it
+# does. tab-title.conf is this run's, written whole; local.conf is the
+# adopter's, read after it, and never written here.
 if [ "$HOME" = "$AUTHORED_HOME" ]; then
   echo "this is the home the tab title was authored for — no tab-title.conf needed"
 elif [ ! -f "$KITTY_CONF" ]; then
@@ -511,11 +504,11 @@ elif [ ! -f "$KITTY_CONF" ]; then
 else
   # The line is read out of kitty.conf rather than repeated here: two copies
   # of a taste value is the drift this repo exists to close. awk's index and
-  # substr match no pattern at all — `sed "s|$AUTHORED_HOME|$HOME|"` built its
-  # expression out of $HOME, so a `|` in it became a different command and an
-  # `&` became the whole match, silently. HOME is read from ENVIRON: `awk -v`
-  # turns a `\t` in it into a tab. kitty compiles the title as a Python
-  # f-string, where `\t` is a tab too, so each backslash is written doubled.
+  # substr match no pattern at all: a sed expression built from $HOME would
+  # turn a `|` in it into a different command and an `&` into the whole match.
+  # HOME is read from ENVIRON: `awk -v` turns a `\t` in it into a tab. kitty
+  # compiles the title as a Python f-string, where `\t` is a tab too, so each
+  # backslash is written doubled.
   title_line="$(awk -v old="$AUTHORED_HOME" '
     /^tab_title_template / {
       lit = ""; r = ENVIRON["HOME"]

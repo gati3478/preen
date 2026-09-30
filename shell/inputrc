@@ -7,10 +7,9 @@
 # No bindings: the emacs keymap is readline's shipped default, and the Meta
 # motions arrive as they do for zsh.
 #
-# `colored-stats` is deliberately absent, unlike the box's copy — it paints
-# completions from LS_COLORS, which this machine leaves unset so eza's
-# built-ins are not overridden, and Apple's bash 3.2 readline predates the
-# option entirely.
+# `colored-stats` is deliberately absent — it paints completions from
+# LS_COLORS, which this machine leaves unset so eza's built-ins are not
+# overridden, and Apple's bash 3.2 readline predates the option entirely.
 set bell-style none
 set completion-ignore-case on
 set show-all-if-ambiguous on

@@ -66,9 +66,9 @@
 ## To use workspace mode by default when available, set this to true and
 ## set filter_mode to "workspace" or leave it unspecified and
 ## set search.filters to include "workspace" before other filter modes.
-# Adopted 27-08-2026 (the 18.19 sweep): the workspace filter — the
-# enclosing git tree — joins the filter cycle; the default filter stays
-# global, so repo scoping is one cycle away, not the startup state.
+# The workspace filter — the enclosing git tree — joins the filter cycle;
+# the default filter stays global, so repo scoping is one cycle away, not
+# the startup state.
 workspaces = true
 
 ## which display style to use
@@ -348,8 +348,8 @@ enter_accept = true
 ## Set to false to disable the popup.
 ## This can also be controlled with the ATUIN_TMUX_POPUP environment variable.
 ## Note: The tmux popup is currently supported in zsh, bash, and fish shells. This currently doesn't work with iTerm native tmux integration.
-# Adopted 27-08-2026: search floats in a popup instead of repainting the
-# pane — fires only inside tmux, so SSH-only by construction (3.7c >= 3.2).
+# Search floats in a popup instead of repainting the pane — fires only
+# inside tmux, so SSH-only by construction (3.7c >= 3.2).
 enabled = true
 
 ## Width of the tmux popup window
@@ -382,8 +382,8 @@ enabled = true
 ## column fill remaining space. Only one column should have expand = true.
 ##
 ## Default:
-# Adopted 27-08-2026: the store knows where a command ran and whether it
-# worked — the shipped default displayed neither.
+# The store knows where a command ran and whether it worked; the shipped
+# default displays neither.
 columns = ["exit", "duration", { type = "directory", width = 25 }, "command"]
 ##
 ## Examples:

@@ -3,7 +3,7 @@
 # verbatim: no trailing comments (`--flag # c` is one unrecognised flag),
 # no quotes (a quoted flag is read as the positional PATTERN and poisons
 # the whole invocation), values via `--flag=value` only. Measured against
-# rg 15.2.0 — see docs/traps.md.
+# rg 15.2.0.
 
 # The same world every other searcher sees: GLOB_DOTS for `*`, fd
 # --hidden --exclude .git for fzf. Hidden files yes, .git never.

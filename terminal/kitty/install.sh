@@ -195,10 +195,9 @@ fi
 # Python .replace() inside kitty's own config language, which expands no
 # environment variable in that option — so the home is a literal, authored for
 # one machine. The line is read out of kitty.conf rather than repeated here,
-# and rewritten with awk's index/substr, which match no pattern at all:
-# `sed "s|$AUTHORED_HOME|$HOME|"` built its expression out of $HOME, so a `|`
-# in it became a different command and an `&` became the whole match, silently
-# (bin/bootstrap, 14-09-2026). HOME is read from ENVIRON: `awk -v` turns a `\t`
+# and rewritten with awk's index/substr, which match no pattern at all: a sed
+# expression built from $HOME turns a `|` in it into a different command and
+# an `&` into the whole match. HOME is read from ENVIRON: `awk -v` turns a `\t`
 # in it into a tab. kitty compiles the title as a Python f-string, where `\t` is
 # a tab too, so each backslash is written doubled.
 echo

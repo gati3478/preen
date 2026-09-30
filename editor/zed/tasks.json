@@ -12,13 +12,11 @@
 // Only $ZED_WORKTREE_ROOT / $ZED_FILE / $ZED_DIRNAME are used here — that is a
 // choice, not a limit.
 //
-// ⚠️ Corrected 08-08-2026. This comment previously claimed $ZED_STEM and
-// $ZED_SYMBOL "are not" present in 1.14.2. They are (crates/task/src/task.rs —
-// `VariableName::Stem` / `::Symbol`). The claim came from grepping the Zed
-// binary's string table, which cannot see them: those names are BUILT at
-// runtime by concatenating a prefix constant with "STEM"/"SYMBOL", so no such
-// literal is ever stored. That method proves a string is PRESENT; it can never
-// prove one is ABSENT.
+// $ZED_STEM and $ZED_SYMBOL exist too (1.14.2: crates/task/src/task.rs,
+// `VariableName::Stem` / `::Symbol`), though a grep of the Zed binary's string
+// table cannot find them: the names are BUILT at runtime from a prefix
+// constant plus "STEM"/"SYMBOL", so no such literal is stored. A string-table
+// grep proves a string PRESENT, never ABSENT.
 [
   // ── Rust ────────────────────────────────────────────────
   {

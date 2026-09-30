@@ -10,15 +10,15 @@
 //   cmd-?                  agent::ToggleFocus
 //   cmd-shift-e            project_panel::ToggleFocus
 //
-// ⚠️ Corrected 08-08-2026. This list previously also claimed cmd-shift-b ->
-// outline_panel and ctrl-shift-g -> git_panel. Those hold only while focus is
-// OUTSIDE an editor. The JetBrains layer rebinds both in the `Editor` context
-// (cmd-shift-b -> editor::GoToTypeDefinition, ctrl-shift-g ->
-// editor::UndoSelection), and Zed resolves conflicts by context depth — an
-// `Editor` binding beats a `Workspace` one (docs/src/key-bindings.md,
-// "Precedence"). So while you are typing, those two keys are IDEA's
-// navigation actions, not panel toggles. Use the panel toggles from the
-// project panel / a non-editor focus, or rebind deliberately.
+// ⚠️ Left out of the list: cmd-shift-b -> outline_panel and ctrl-shift-g ->
+// git_panel, which hold only while focus is OUTSIDE an editor. The
+// JetBrains layer rebinds both in the `Editor` context (cmd-shift-b ->
+// editor::GoToTypeDefinition, ctrl-shift-g -> editor::UndoSelection), and Zed
+// resolves conflicts by context depth — an `Editor` binding beats a
+// `Workspace` one (Zed's docs/src/key-bindings.md, "Precedence"). So while you
+// are typing, those two keys are IDEA's navigation actions, not panel toggles.
+// Use the panel toggles from the project panel / a non-editor focus, or rebind
+// deliberately.
 //
 // So this file stays small on purpose — every binding below occupies a key
 // verified free in BOTH the base macOS keymap and the JetBrains layer, and

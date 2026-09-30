@@ -1,9 +1,8 @@
 # ncdu 2.x: one command-line option per line, argument space-separated ON
 # the line; full-line `#` comments. No quotes — a quoted value reaches
 # ncdu verbatim, and any malformed line is FATAL: exit 1 before the UI
-# opens. Measured against ncdu 2.9.2 — see docs/traps.md.
+# opens. Measured against ncdu 2.9.2.
 
 # ncdu ships colourless (--color off is its default). dark renders the
-# usage bars and selection in curses base pairs — the terminal palette,
-# per the rider rule in docs/preferences.md § Colour.
+# usage bars and selection in curses base pairs — the terminal's own palette.
 --color dark

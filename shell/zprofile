@@ -35,16 +35,11 @@ path=(
 )
 export PLAYDATE_SDK_PATH="$HOME/Developer/PlaydateSDK"
 
-# Docker Desktop wrote this into ~/.zprofile on 07-09-2026 — which is this
-# file, since the row is `link` mode. It arrived at the very top, above the
-# header comment. Its marker comments are kept verbatim because they are what
-# the installer greps for; deleted outright, the block returns at the top. The
-# export is parameterised to $HOME, which the installer wrote literally — the
-# practice deny.txt records, where the only literal CONFIG VALUE still in
-# public/ is kitty.conf's, because kitty's config language cannot expand env
-# vars and zsh plainly can. (bootstrap also holds the literal, but as the
-# string it rewrites FROM — deny.txt draws that line and it is worth keeping:
-# a grep here returns more hits than there are exceptions.)
+# Docker Desktop's installer writes this block into ~/.zprofile — this file,
+# since the row is `link` mode. Its marker comments are kept verbatim because
+# they are what the installer greps for; deleted outright, the block returns
+# at the top of the file. The export is parameterised to $HOME where the
+# installer wrote the literal home path.
 # ⚠️ REDUNDANT, and kept anyway: every command ~/.docker/bin puts on PATH is
 # also in /usr/local/bin, which is earlier — measured 07-09-2026, so `docker`
 # resolves to /usr/local/bin/docker with or without this. That is also what
@@ -52,14 +47,6 @@ export PLAYDATE_SDK_PATH="$HOME/Developer/PlaydateSDK"
 # the exact line rather than its comments it re-appends a literal duplicate,
 # which `typeset -U path PATH` folds away and which changed nothing to begin
 # with.
-# ⭐ This line said "all five binaries" until an audit counted six — it dropped
-# kubectl.docker. The claim only ever needed to be "everything here is also
-# there", so it no longer carries a number: a count is a second fact to keep
-# true, in a comment whose point was the resolution order.
-# ⭐ The lesson is not about Docker. A `link` row means the repo file IS the
-# live file, so any third-party installer that edits a well-known dotfile is a
-# writer into this repo that nobody enrolled. Nothing here can prevent it;
-# `git status` is what catches it.
 # The following lines were added by Docker Desktop to add commands to your PATH.
 export PATH="$PATH:$HOME/.docker/bin"
 # End of Docker Desktop section.

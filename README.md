@@ -210,10 +210,8 @@ employer), the fonts, the Obsidian snippets, the real ssh hosts, the git
 identity, each machine's overlays and its half of `preferences.toml`, the
 personal scripts, the prose that argues every preference and the wiki around
 it, and the tools that publish this mirror and pull rewritten copies back.
-Comments in these files cite them — `docs/preferences.md`, `traps.md`,
-`preen publish` — because the files are published as they are. Nothing here
-reads those, nothing breaks without them, and `preen doctor --taste` says so
-once and carries on.
+Nothing here reads those and nothing breaks without them:
+`preen doctor --taste` says once that the prose is absent, and carries on.
 
 ## Make it yours
 

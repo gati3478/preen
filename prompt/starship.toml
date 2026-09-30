@@ -1,17 +1,16 @@
 # Gruvbox Dark Hard — Starship prompt
 # A curated allowlist, not $all — a module absent here can never render.
-# git_state, kotlin, gradle, jobs joined 27-08-2026 (the 1.26 sweep): the
-# prompt was silent mid-rebase, named java but not the Kotlin·Gradle work
-# stack, and hid backgrounded jobs. git_commit joined 09-09-2026 — on a
+# git_state shows a rebase or merge in progress, kotlin and gradle name the
+# work stack beside java, and jobs shows backgrounded work. git_commit: on a
 # detached HEAD git_branch renders the word "HEAD" and never says which
 # commit; only_detached is its default, so it is silent on a branch.
 #
-# Two lines since 16-09-2026: context above, a bare ❯ below, so the width
-# left for typing never depends on the directory or the branch. $fill pushes
-# the toolchain to the right margin — where you are on the left, what you run
-# with on the right. The context line does the blank line's separating job,
-# so add_newline is off and the prompt costs the two rows it always did.
-# preferences.md § Interaction has the measurement and what was declined.
+# Two lines: context above, a bare ❯ below, so the width left for typing
+# never depends on the directory or the branch. $fill pushes the toolchain to
+# the right margin — where you are on the left, what you run with on the
+# right. The context line does the blank line's separating job, so
+# add_newline is off and the prompt costs two rows, the same as one line plus
+# a blank.
 add_newline = false
 format = "$username$directory$git_branch$git_commit$git_state$git_status$fill$python$java$kotlin$gradle$rust$nodejs$jobs$cmd_duration$line_break$character"
 
@@ -33,8 +32,8 @@ show_always = true
 format = "[$path]($style) "
 # false: name the directory the process is IN, not $PWD. cship runs starship
 # with cwd = the session's directory but inherits claude's launch-time $PWD, so
-# a worktree session named the launch directory on line 1 (02-09-2026). No
-# project or vault path here is a symlink, so the shell prompt is unaffected.
+# a worktree session named the launch directory on line 1 (02-09-2026). Where
+# no project path is a symlink, the shell prompt is unaffected.
 use_logical_path = false
 style = "bold #ebdbb2"
 truncation_length = 3

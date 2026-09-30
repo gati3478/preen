@@ -1,8 +1,7 @@
 {
   // ── identity: Gruvbox Light Hard + Fira Code, matching kitty ──
   // The typeface is the one thing unified across every tool (kitty, Zed,
-  // Sublime, IDEA); the colour scheme deliberately is not. See the vault's
-  // "Editor Trio Setup" for that stance.
+  // Sublime, IDEA); the colour scheme deliberately is not.
   "theme": {
     "mode": "light",
     "light": "Gruvbox Light Hard",
@@ -167,8 +166,6 @@
   },
 
   // ── keymap: JetBrains, so IDEA muscle memory transfers unchanged ──
-  // Zed 1.14 changed the *default* base_keymap from VSCode to Zed; this is
-  // pinned explicitly so that change cannot drift underneath us.
   "base_keymap": "JetBrains",
 
   // ── terminal: same face and caret as kitty ──
@@ -193,10 +190,9 @@
 
   // ── extensions ─────────────────────────────────────────
   // Pinned so a fresh machine reproduces the set on first launch.
-  // ⚠️ `false` only prevents auto-INSTALL; it never uninstalls. Kotlin sat
-  // here as `false` while the extension was in fact installed and loading —
-  // corrected to `true` on 08-08-2026 to match reality and intent (Zed reads
-  // Kotlin and Gradle .kts; IDEA still owns builds, refactoring and Spring).
+  // ⚠️ `false` only prevents auto-INSTALL; it never uninstalls. Kotlin is
+  // `true`: Zed reads Kotlin and Gradle .kts; IDEA still owns builds,
+  // refactoring and Spring.
   // Bash, C/C++, CSS, Go, JS/TS, JSON, Markdown, Python, Rust, Tailwind and
   // YAML are built into Zed and correctly absent from this list.
   "auto_install_extensions": {
@@ -260,13 +256,12 @@
       "initialization_options": {
         "check": { "command": "clippy" },
         "cargo": { "allFeatures": true },
-        // Both of these already match rust-analyzer's own defaults as of
-        // 08-08-2026 (chainingHints on, closureReturnTypeHints "never"), so
-        // this block changes nothing today. It is pinned deliberately: these
-        // are the two hint classes worth an opinion — chaining hints earn
-        // their space in iterator-heavy Rust, closure return hints are noise —
-        // and pinning them means an upstream default flip cannot change the
-        // editor underneath us.
+        // Both match rust-analyzer's own defaults (measured 08-08-2026:
+        // chainingHints on, closureReturnTypeHints "never"). Pinned
+        // deliberately: these are the two hint classes worth an opinion —
+        // chaining hints earn their space in iterator-heavy Rust, closure
+        // return hints are noise — and pinning them means an upstream default
+        // flip cannot change the editor.
         "inlayHints": {
           "chainingHints": { "enable": true },
           "closureReturnTypeHints": { "enable": "never" }

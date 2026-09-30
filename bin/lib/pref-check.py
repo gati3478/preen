@@ -11,18 +11,18 @@ run every assertion.
   --read TARGET KEY  read one live value (debugging)
   -h, --help         print this and exit
 
-The spec is public/preferences.toml plus one hosts/<name>/preferences.toml per
-machine, read as one document (see spec_files).
+The spec is one document in one or more files: the shipped preferences.toml,
+plus one file per machine in a checkout that has them (see spec_files).
 
 Emits one TAB-separated `status<TAB>message` line per assertion, for
 bin/lib/pref-check.sh to colour the same way preen doctor colours everything else.
 Statuses: ok | fail | warn, plus `section` for a heading the wrapper prints bare.
 
-Reads the DEPLOYED path, never this repo's copy: a `copy`-mode entry can be
-legitimately stale between preen pull runs, and the question this asks is what the
-application actually renders. Ends with the surfaces section: each closed
-surface's tools, installed version against closed-at, read without launching
-an application.
+Reads the DEPLOYED path, never this repo's copy: a `copy`-mode entry's repo file
+can be legitimately stale once the application rewrites the live one, and the
+question this asks is what the application actually renders. Ends with the
+surfaces section: each closed surface's tools, installed version against
+closed-at, read without launching an application.
 
 Exit status is 1 if any assertion failed or --read could not read, else 0; 2 is
 an argument error; 3 is --spec-files finding no spec. Never prints a tally — a
@@ -65,8 +65,8 @@ def argv_problem(argv):
     return None
 
 
-# Ahead of the tomllib gate so both answer on any python. Only when run:
-# obsidian-gaps.py and the tests import this file, and their argv is not ours.
+# Ahead of the tomllib gate so both answer on any python. Only when run: a
+# script that imports this file has an argv that is not ours.
 if __name__ == "__main__":
     if "-h" in sys.argv[1:] or "--help" in sys.argv[1:]:
         print(__doc__, end="")
@@ -81,7 +81,7 @@ except ImportError:
     sys.exit("pref-check: needs python >= 3.11 (tomllib)")
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-# `public/` is stripped when preen publish builds the mirror, so anything shipped
+# The mirror carries `public/`'s files at its top level, so anything shipped
 # from it sits one directory higher there. Every path this file derives from the
 # repo takes the first of the two that exists — never both, which for the spec
 # would merge one document with itself.
@@ -134,8 +134,8 @@ def spec_name(path):
 def _prose_path():
     """(path, why-there-is-none) — the prose half.
 
-    preferences.md is the authority; the cross-check below is what stops the two
-    halves from disagreeing, which they did in both directions until 14-08-2026.
+    preferences.md is the authority; the cross-check below keeps the two halves
+    from disagreeing.
 
     A spec DISCOVERED in the source layout pairs with docs/preferences.md,
     whatever its files are called. In the FLAT layout there is none and there
@@ -193,8 +193,7 @@ def _record_origin(origin, path, value, fname):
     """Note which file defined a table AND everything under it.
 
     Recording only the table would leave a later conflict two levels down
-    unable to name the first definer — the message said "defined in both ? and
-    …", which is the diagnostic failing at exactly the job it exists for.
+    unable to name the first definer.
     """
     origin[".".join(path)] = fname
     if isinstance(value, dict):
@@ -245,7 +244,7 @@ def merge_specs(paths):
 
     `origin` maps a table path (`pref.x.targets.y`) to the file that defined it,
     so a diagnostic can name the file its offending table came from rather than
-    a filename that is now one of several.
+    a filename that is one of several.
     """
     spec, origin, problems = {}, {}, []
     for path in paths:
@@ -288,7 +287,7 @@ def _tool_run(argv, **kw):
     The cost is the binary, and a machine without it is not a machine with
     drift: an absent tool is a measurement that could not be taken, the same
     ReadSkip the defaults oracle raises when kitty is not installed. Without
-    this, a checkout on a machine with no `gh` went red on every row naming it.
+    this, a machine with no `gh` goes red on every row naming it.
 
     A tool named in PREEN_BARE_STUBS is absent too: macOS's /usr/bin stub with
     no Command Line Tools behind it, which raises an install dialog when run.
@@ -307,14 +306,9 @@ def _tool_run(argv, **kw):
 # JSON carries comments AND trailing commas (jq fails outright on both);
 # kitty.conf is `key value` with no delimiter; tmux.conf is a command script
 # rather than a config format at all (see read_tmux). IDEA is plain XML and uses
-# the stdlib parser — an earlier version of this comment counted it as
-# unparseable, which its own implementation refutes. TOML needs no hand-rolling
-# either: the prompts are written in the same format as this spec, so the
-# tomllib import above already reads them.
-#
-# ⚠️ This block has now been wrong about its own contents twice — once about
-# IDEA, and once when read_tmux was added and the count above it was not
-# updated. Do not reintroduce a number here.
+# the stdlib parser. TOML needs no hand-rolling either: the prompts are written
+# in the same format as this spec, so the tomllib import above already reads
+# them.
 
 
 def _strip_jsonc(text):
@@ -324,11 +318,9 @@ def _strip_jsonc(text):
     a `//` inside a URL must survive, and so must a comma inside a string that
     happens to be followed by whitespace and a brace.
 
-    An earlier version walked the text for comments and then ran
-    `re.sub(r",(\\s*[}\\]])", r"\\1", …)` over the result — a naive regex that did
-    not know about strings, in a function whose own docstring explained why a
-    regex cannot do this correctly. It silently turned `{"a": "x, }"}` into
-    `{"a": "x }"}`: not an error, a wrong value. Corrected 14-08-2026.
+    A regex over the comment-stripped text cannot do the comma half:
+    `re.sub(r",(\\s*[}\\]])", r"\\1", …)` turns `{"a": "x, }"}` into
+    `{"a": "x }"}` — not an error, a wrong value.
     """
     out = []
     i, n = 0, len(text)
@@ -423,8 +415,9 @@ def read_toml(path, key, **_opts):
 # kitty resolves an `include` INLINE, at the point it appears, so the config is
 # one directive stream spanning several files rather than a file plus some
 # appendices. Scanning only the named file therefore reports the parent's value
-# for any key an include also sets — and kitty.conf here ENDS with its theme
-# `include`, so every assertion was one theme edit away from being read wrong.
+# for any key an include also sets — and kitty.conf here includes its theme,
+# then tab-title.conf and local.conf, so a single-file read reports the wrong
+# value for every key those files set.
 #
 # Every rule below was measured against kitty's own parser rather than inferred
 # from its docs (`kitty +runpy` -> kitty.config.load_config, kitty 0.48.2,
@@ -486,8 +479,7 @@ def _kitty_directives(path, seen=None):
     reader that follows the symlink first gets the right answer by luck and the
     wrong file by construction. Control: a symlinked config whose two candidate
     directories hold DIFFERENT leaf files resolves to the one beside the
-    symlink under `kitty.config.load_config`. Using realpath here read the other
-    one; found 14-08-2026.
+    symlink under `kitty.config.load_config`. Realpath here reads the other one.
     """
     if seen is None:
         seen = set()
@@ -539,11 +531,9 @@ def read_kitty(path, key, accumulate=False, **_opts):
     `font_features`, `map`, `symbol_map`, `env` and `modify_font` ACCUMULATE:
     every line stays live, keyed by its first argument.
 
-    Reading only the last of those was a real defect, not a theoretical one.
-    kitty.conf carries `font_features` twice, once per face, and the checker
-    returned only the Bold line — so the ligature assertion was green while
-    reading a line the preference was not about, and deleting `+calt` from the
-    Regular face would not have failed it. Found 14-08-2026.
+    Reading only the last of those is a wrong-line read: kitty.conf carries
+    `font_features` once per face, so it would assert the Bold line alone, and
+    deleting `+calt` from the Regular face would pass.
 
     `accumulate` is opt-in per spec entry rather than inferred: guessing from
     "did this key appear twice?" would silently switch semantics the first time
@@ -571,10 +561,8 @@ def read_kitty(path, key, accumulate=False, **_opts):
 # kitty's own modifier spellings — its `mod_map` (options/utils.py, frozen
 # bytecode, 10-09-2026): ctrl/control/⌃, shift/⇧, alt/opt/option/⌥,
 # super/cmd/command/⌘, and kitty_mod/kitty. Two lines that spell one chord
-# differently are ONE binding to kitty, and were two entries here until an
-# audit planted `map super+t new_tab` over `map cmd+t new_tab_with_cwd` and
-# watched the row stay green; the symbols and the bare `kitty` were the next
-# audit's finding, the same day.
+# differently are ONE binding to kitty: `map super+t new_tab` below
+# `map cmd+t new_tab_with_cwd` replaces it.
 _KITTY_MODS = {
     "control": "ctrl", "⌃": "ctrl", "⇧": "shift",
     "cmd": "super", "command": "super", "⌘": "super",
@@ -603,9 +591,7 @@ _KITTY_CHARACTER_ALIASES = {
 # bytecode, 10-09-2026): each `--` word is partitioned on `=`, and when there
 # is no `=` the NEXT word is the value. So there is no boolean flag to special-
 # case, and a reader that consumes the next token for every bare `--x` is
-# exactly kitty's rule. A four-name allowlist stood here for a day and keyed
-# `--on-unknown end ctrl+x …` on `end`, so a later mode-entering line never
-# overrode the ctrl+x above it: three of kitty's seven options were missing.
+# exactly kitty's rule.
 
 
 def _kitty_keyspec(spec, kitty_mod):
@@ -760,14 +746,11 @@ def read_idea(path, key, **_opts):
     codestyles/Default.xml already carries two `CODE_STYLE_DEFAULTS` options, so
     silently taking the first would be a coin flip presented as a fact.
 
-    The `ELEMENT@ATTR` form was added 07-09-2026 because IDEA's active theme is
-    not an <option> at all: laf.xml carries `<laf themeId="..."/>` and
-    colors.scheme.xml `<global_color_scheme name="..."/>`. That put the one
-    value most likely to be changed by a stray click outside every reader, so
-    `editor_theme / idea_editor` sat `n_a` and NOTHING asserted it — while the
-    name was written out in five living places. All five went stale together
-    when the theme moved to the Soft variant, and the only thing that noticed
-    was a copy-mode byte diff. Same >1 rule as the bare form, same reason.
+    The `ELEMENT@ATTR` form exists because IDEA's active theme, the value a
+    stray click most likely changes, is not an <option> at all: laf.xml carries
+    `<laf themeId="..."/>` and colors.scheme.xml
+    `<global_color_scheme name="..."/>`. Same >1 rule as the bare form, same
+    reason.
 
     No defusedxml dependency. These files are written by IDEA on this machine,
     so anyone able to poison them already has code execution and XXE buys them
@@ -841,22 +824,20 @@ def _tmux_logical_lines(text):
 def _tmux_commands(line):
     r"""Split one logical line into commands and drop any trailing comment.
 
-    Both rules are measured, and the first version of this reader had both
-    wrong:
+    Both rules are measured:
 
       comment    `#` opens a comment only at the start of a WORD. `set -g @k
-                 #fabd2f` leaves the option unset because tmux ate the value as
+                 #fabd2f` leaves the option unset because tmux eats the value as
                  a comment, while unquoted `set -g status-style bg=#1d2021`
-                 resolves fine. Leaving the comment for shlex — the original —
-                 meant one apostrophe in one unrelated comment ("don't") raised
-                 "No closing quotation" and failed EVERY assertion against a
-                 file tmux reads happily. Handing shlex `comments=True` instead
-                 is not the fix: it would cut the unquoted `bg=#1d2021` case
-                 that currently works.
-      separator  `;` ends a command, `\;` does not. Without this a second
-                 command on the same line became value tokens of the first, and
-                 the reader reported the FIRST value where tmux resolves the
-                 second — silently.
+                 resolves fine. Leaving the comment for shlex fails EVERY
+                 assertion on one apostrophe in an unrelated comment ("don't":
+                 "No closing quotation"), against a file tmux reads happily;
+                 shlex `comments=True` is no fix either, since it cuts the
+                 unquoted `bg=#1d2021` case.
+      separator  `;` ends a command, `\;` does not; otherwise a second command
+                 on the same line becomes value tokens of the first, and the
+                 reader reports the FIRST value where tmux resolves the second —
+                 silently.
     """
     cmds, cur, quote, i, word_start = [], "", None, 0, True
     while i < len(line):
@@ -866,9 +847,8 @@ def _tmux_commands(line):
             # agree, and the deployed config relies on the single-quoted half
             # (`\E[...` sequences stay literal there). Without this the string
             # closes early at an escaped quote, and everything after it reparses
-            # as unquoted: `"a\"b #fabd2f"` turned the `#` into a word-initial
-            # comment and took the rest of the FILE with it, the same blast
-            # radius as the apostrophe bug this scanner was written to fix.
+            # as unquoted: `"a\"b #fabd2f"` turns the `#` into a word-initial
+            # comment that takes the rest of the FILE with it.
             if c == "\\" and quote == '"' and i + 1 < len(line):
                 cur += line[i:i + 2]
                 i += 2
@@ -943,8 +923,7 @@ def _tmux_follow_path(head, parts, path, host):
                  line puts an attached client's pane into view-mode showing the
                  path, so such a file is not self-contained. Only an ATTACHED
                  client is told: `start-server` and a detached session are quiet
-                 either way, which is what made the first two controls agree
-                 when they should have differed.
+                 either way.
 
     Everything else is refused, each because what it brings in is not a function
     of the text here: another flag (-F, -n, -v, -t) changes what is read or how,
@@ -952,9 +931,9 @@ def _tmux_follow_path(head, parts, path, host):
     than the file, and a relative path resolves against the SERVER's cwd — the
     same fixture answered RELATIVE-FOUND from one directory and NOTFOUND from
     another, and nothing in the file says which. A `host` target is refused
-    outright: its file is fetched off the box to a local temp path, so following
-    anything would read THIS machine's overlay and report it as the box's — a
-    wrong answer that looks right.
+    outright: its file is fetched off the remote host to a local temp path, so
+    following anything would read THIS machine's overlay and report it as the
+    host's — a wrong answer that looks right.
 
     ⚠️ One refusal is scope, not parity: tmux DOES read several paths from one
     `source-file -q a b`, in order — measured, both options came back set. The
@@ -1015,12 +994,12 @@ def _tmux_segments(path, host=None, chain=(), depth=0):
     segment text, because the body does not arrive nested. Measured: a block
     written across lines hands this scanner `if-shell 'true' {`, then the body's
     `set` as an ordinary top-level command, then a bare `}` — so a reader that
-    looked only at heads read the body as unconditional. With
-    `if-shell 'false' { set -g @probe IFFALSE }` spread over lines the option
-    reader answered IFFALSE where tmux resolves BASE: a value off a branch that
-    never ran. Gathering hides the body from both readers, which then refuse the
-    construct as a whole. The same block written on ONE line was already one
-    command, and answered BASE — wrong the other way, from the same hole.
+    looks only at heads reads the body as unconditional. Spread over lines,
+    `if-shell 'false' { set -g @probe IFFALSE }` would answer IFFALSE where tmux
+    resolves BASE: a value off a branch that never ran. Gathering hides the body
+    from both readers, which then refuse the construct as a whole. On ONE line
+    the block is one command, and a head-only reader answers BASE even when the
+    branch runs — wrong the other way, from the same hole.
     """
     real = os.path.realpath(path)
     if real in chain:
@@ -1082,10 +1061,10 @@ def read_tmux(path, key, accumulate=False, host=None, **_opts):
 
     ⚠️ **tmux.conf is a command script, not a config format.** It has a statement
     separator, a conditional preprocessor, flags that change how a value is
-    stored, and two ways to bring in directives from outside the file. Reading
-    it as `key value` lines is what produced every defect an audit found here on
-    25-08-2026. This reader models the subset that behaves like a config and
-    REFUSES the rest — a refusal is a failed assertion, a guess is a green one.
+    stored, and two ways to bring in directives from outside the file. Read as
+    `key value` lines, it answers wrong without an error. This reader models
+    the subset that behaves like a config and REFUSES the rest — a refusal is a
+    failed assertion, a guess is a green one.
 
     Measured against tmux 3.7c's own parser on an isolated socket
     (`tmux -L probe -f fixture new-session -d`, then `show-options -gv`):
@@ -1098,8 +1077,7 @@ def read_tmux(path, key, accumulate=False, host=None, **_opts):
                      so unset is the right answer. On a BUILT-IN it reverts to
                      tmux's DEFAULT — `status-left` came back as
                      `[#{session_name}] `, not absent — which this reader cannot
-                     supply, so that half is refused. The first version claimed
-                     removal for both, having measured only the user half.
+                     supply, so that half is refused.
 
     Refused rather than answered, each because the live value is not a function
     of this file alone:
@@ -1119,11 +1097,10 @@ def read_tmux(path, key, accumulate=False, host=None, **_opts):
                    REQUESTED key is set inside one, so an unrelated block costs
                    nothing.
       if-shell     a condition evaluated at RUN time, refused on the same
-                   key-scoped terms. read_tmux_bind has refused this shape for
-                   bindings since 09-09-2026 and this reader had no twin until
-                   17-09-2026: `if-shell 'true' 'set -g @probe IFSET'` resolves
-                   to IFSET in tmux and read as BASE here, silently, because the
-                   head is not a `set`. `if` is the same command.
+                   key-scoped terms, as read_tmux_bind refuses it for bindings:
+                   `if-shell 'true' 'set -g @probe IFSET'` resolves to IFSET in
+                   tmux, where a reader that skips it answers BASE, silently,
+                   because the head is not a `set`. `if` is the same command.
       source-file  in every form but the one `_tmux_segments` follows — the
                    `-q` overlay hook with a single plain path, read in place.
                    Each refused form (no -q, another flag, several paths, a glob
@@ -1159,10 +1136,10 @@ def read_tmux(path, key, accumulate=False, host=None, **_opts):
             continue
 
         # Flags are the LEADING dash tokens only. Partitioning the whole
-        # token list instead — the original — pulled a value starting with
-        # `-` into the flag cluster, which emptied the value, and folded its
-        # letters into the flag test: `set -g @k "-x-marks"` raised a
-        # fabricated "-a (append)" diagnostic off the `a` in `marks`.
+        # token list pulls a value starting with `-` into the flag cluster,
+        # which empties the value, and folds its letters into the flag test:
+        # `set -g @k "-x-marks"` would raise a fabricated "-a (append)"
+        # diagnostic off the `a` in `marks`.
         idx = 1
         while idx < len(parts) and parts[idx].startswith("-") and parts[idx] != "-":
             idx += 1
@@ -1231,7 +1208,7 @@ def _tmux_key_norm(stroke):
 
     tmux folds the case of a NAMED key and of a modifier prefix — `bind left`
     and `bind M-LEFT` bind Left and M-Left — while a single-character key stays
-    literal, `h` and `H` being different keys. A byte comparison therefore read
+    literal, `h` and `H` being different keys. A byte comparison therefore reads
     `bind left select-pane -R` as "Left is not bound", which is a want_absent
     row's passing answer over a line that both shadows the arrow and points it
     the wrong way. Measured against tmux on both installed versions.
@@ -1253,25 +1230,24 @@ def _tmux_key_norm(stroke):
 def read_tmux_bind(path, key, accumulate=False, host=None, **_opts):
     """`bind [-nr] [-T table] key command…` — the key table, which read_tmux cannot see.
 
-    read_tmux models the `set` stream and skips every other command, so until
-    this reader existed not one binding in either deployed tmux.conf was
-    asserted by anything. No such assertion was ever written — but one aimed at
-    read_tmux to prove a binding GONE would have passed vacuously, since no
-    `set` line ever carries a keystroke, and that is why the absence rows in
-    pref.tmux_keys are routed through here instead.
+    read_tmux models the `set` stream and skips every other command, so an
+    assertion aimed at it to prove a binding GONE passes vacuously: no `set`
+    line carries a keystroke. That is why the absence rows in pref.tmux_keys
+    read through here.
 
     ⚠️ That hazard does not end at the reader boundary: a None from ANY reader
     is a `want_absent` row's passing answer. So every way this reader can fail
     to see a binding is a way for such a row to go green over the very line it
-    was written to catch. An audit on 09-09-2026 found four, all now closed and
-    all covered by tests/battery/2026-09-09-tmuxbind-reader.sh: clustered
+    was written to catch. Among the ways handled below: clustered
     `-rT`/`-nT`/`-rN` flags, a glued `-N'note'`, a key spelled in another case,
-    and a bind inside `if-shell`. Add a case there before trusting a new one.
+    and a bind inside `if-shell`. Prove a new shape with a case that goes red
+    before trusting it.
 
     The key is `TABLE/KEYSTROKE`; the value is the command with its arguments,
     rejoined after shlex. Rejoining is what makes one assertion cover both
-    machines: the Mac writes `-c "#{pane_current_path}"` and the box writes it
-    single-quoted, and shlex strips either, so both read as the same string.
+    machines: the Mac writes `-c "#{pane_current_path}"` and the remote host
+    writes it single-quoted, and shlex strips either, so both read as the same
+    string.
 
     tmux semantics this reader follows:
 
@@ -1341,9 +1317,9 @@ def read_tmux_bind(path, key, accumulate=False, host=None, **_opts):
                 # -T and -N take an argument: the REST of this token if there
                 # is one, else the next token. Clustering is legal —
                 # `bind -rT prefix h` and `bind -N'note' g` are both real —
-                # and reading the cluster as one opaque flag consumed the
-                # argument as the keystroke, so the binding vanished and a
-                # want_absent row went green over a binding that was there.
+                # and reading the cluster as one opaque flag would take the
+                # argument for the keystroke, so the binding would vanish and
+                # a want_absent row go green over a binding that is there.
                 if ch in "TN":
                     arg = chars[pos + 1:]
                     if not arg:
@@ -1406,8 +1382,6 @@ def _strip_flags_comment(line):
     rule, not a guess: `--theme=Bad # c` warns about `Bad`, a glued
     `ansi#x` is a literal, and a `#` inside quotes ships with the value.
     POSIX-shell shaped — the same class of finding the tmux reader records.
-    An audit refuted this file's first claim ("full-line comments only"),
-    which would have folded a trailing comment into the value.
     """
     quote = None
     for i, ch in enumerate(line):
@@ -1512,11 +1486,9 @@ def read_ncduconf(path, key, accumulate=False, **_opts):
     apply in file order, so a repeated setter's LAST occurrence wins
     (probed: a bad value on the second line errors AFTER the first is
     accepted). A malformed line is FATAL — unknown flag, bad value,
-    quoted value all exit 1 before the UI opens. (A first probe read the
-    opposite off a pipeline: `rc=$?` after `| head` measured head. The
-    audit re-measured ncdu directly, both -o and interactive.) The one
-    run-past mechanism is the documented `@` prefix, and it is SILENT,
-    not a warning. Full-line `#` comments; blank lines ignored.
+    quoted value all exit 1 before the UI opens. The one run-past mechanism
+    is the documented `@` prefix, and it is SILENT, not a warning. Full-line
+    `#` comments; blank lines ignored.
 
     `key` is the long-option name without `--`. `@`-prefixed lines
     (error-suppressed), short flags and `=`-form values are refused
@@ -1560,9 +1532,8 @@ def _strip_zsh_comment(line):
 # The zsh directives that are a TABLE keyed by name, so a later line for the
 # same name replaces the earlier one and a deletion removes it — read flat,
 # the earlier line stays in the list and a row on it stays green over a
-# config that no longer does it (the kitty `map` defect of 10-09-2026, found
-# again here by the audit the same evening). The value kept is the line as
-# written; only the IDENTITY is resolved.
+# config that no longer does it. The value kept is the line as written; only
+# the IDENTITY is resolved.
 _ZSH_TABLE_DIRECTIVES = ("alias", "bindkey", "zstyle", "hash")
 _ZSH_BLOCK_OPEN = ("if", "case", "while", "until", "for", "select", "function")
 _ZSH_BLOCK_CLOSE = ("fi", "esac", "done", "}")
@@ -1660,15 +1631,15 @@ def read_zsh(path, key, accumulate=False, **_opts):
     source gates are also zshcap territory. Non-accumulate returns the
     LAST occurrence, matching zsh assignment semantics.
 
-    Since 10-09-2026 the table directives (alias, bindkey, zstyle, hash)
-    are read the way zsh keeps them: at the TOP LEVEL of the file a later
-    line for the same name replaces the earlier one and `unalias`,
-    `unhash`, `zstyle -d` and `bindkey -r` remove it, so an accumulated
-    list holds only what is still in force. Inside an `if`/`case`/loop or a
-    function body a line keeps the branch semantics above — appended, and
-    neither overriding nor overridden — because which branch runs is not
-    the text's to know; an override that crosses a block boundary is the
-    one shape this does not model, and it errs green, like every flat read.
+    The table directives (alias, bindkey, zstyle, hash) are read the way
+    zsh keeps them: at the TOP LEVEL of the file a later line for the same
+    name replaces the earlier one and `unalias`, `unhash`, `zstyle -d` and
+    `bindkey -r` remove it, so an accumulated list holds only what is still
+    in force. Inside an `if`/`case`/loop or a function body a line keeps the
+    branch semantics above — appended, and neither overriding nor overridden
+    — because which branch runs is not the text's to know; an override that
+    crosses a block boundary is the one shape this does not model, and it
+    errs green, like every flat read.
     """
     with open(path, encoding="utf-8-sig") as fh:
         text = fh.read()
@@ -1725,7 +1696,7 @@ _ZSHCAP_ERROR = None
 _ZSHCAP_PROBE = (
     # `bindkey -L` is the main keymap only; the menuselect keymap and the
     # main->emacs link are printed beside it so a binding that lives in
-    # the menu, and the keymap choice itself, are assertable (02-09-2026).
+    # the menu, and the keymap choice itself, are assertable.
     'print -r -- "--BINDKEY--"; bindkey -L; bindkey -M menuselect -L 2>/dev/null; bindkey -lL main; '
     'print -r -- "--WIDGETS--"; print -rl -- ${(k)widgets}; '
     # Aliases and functions are the END STATE a `[ -f ] && source` gate or
@@ -1745,10 +1716,10 @@ _ZSHCAP_PROBE = (
     'print -r -- "ZSH_AUTOSUGGEST_STRATEGY=$ZSH_AUTOSUGGEST_STRATEGY"; '
     'print -r -- "ZSH_AUTOSUGGEST_MANUAL_REBIND=$ZSH_AUTOSUGGEST_MANUAL_REBIND"; '
     'print -r -- "ZSH_HIGHLIGHT_HIGHLIGHTERS=$ZSH_HIGHLIGHT_HIGHLIGHTERS"; '
-    # The lines a governed box is asserted on that the Mac's entries never
+    # The lines a remote host is asserted on that the Mac's entries never
     # needed: the picker's palette flag and previews, the motion and
     # reporting parameters, the prompt's identity, and LS_COLORS' bit depth
-    # (a box whose ls needs the variable rides the palette only if every
+    # (a host whose ls needs the variable rides the palette only if every
     # code in it is 4-bit — the same rider rule as HL_OFF_PALETTE below).
     'print -r -- "FZF_DEFAULT_OPTS=$FZF_DEFAULT_OPTS"; '
     'print -r -- "FZF_CTRL_T_OPTS=$FZF_CTRL_T_OPTS"; '
@@ -1758,17 +1729,17 @@ _ZSHCAP_PROBE = (
     'print -r -- "zle_highlight=$zle_highlight"; '
     'print -r -- "PROMPT=$PROMPT"; print -r -- "RPROMPT=$RPROMPT"; '
     # VISUAL is text-asserted as the literal `$EDITOR`; only live says the
-    # expansion happened. CORRECT_IGNORE had no live half at all.
+    # expansion happened.
     'print -r -- "VISUAL=$VISUAL"; print -r -- "CORRECT_IGNORE=$CORRECT_IGNORE"; '
     # `typeset -U path` is a MECHANISM whose end state is an absence, so the
     # text half can only prove the line exists — not that a later rebuild
     # (.zprofile's, mise's, .zshrc's re-front) left the result deduplicated.
     # An explicit loop, not a quoted `:#` filter, which would test the JOINED
-    # string and answer all-or-nothing (traps.md). `(Ie)` and not `(I)`: the
-    # bare I subscript searches by PATTERN, so an entry containing a glob
+    # string and answer all-or-nothing. `(Ie)` and not `(I)`: the bare I
+    # subscript searches by PATTERN, so an entry containing a glob
     # metacharacter fails to match its own duplicate and the absence assertion
-    # goes vacuously green — the exact failure this line exists to catch
-    # (audit, 09-09-2026). The `e` flag makes it string equality.
+    # goes vacuously green — the exact failure this line exists to catch. The
+    # `e` flag makes it string equality.
     'typeset -a _sn=() _dp=(); '
     'for _p in "${path[@]}"; do if (( ${_sn[(Ie)$_p]} )); then _dp+=("$_p"); else _sn+=("$_p"); fi; done; '
     'print -r -- "PATH_DUPES=${(j:,:)_dp:-none}"; '
@@ -1796,16 +1767,15 @@ _ZSHCAP_PROBE = (
     # is listed; `none` is the compliant answer, asserted with want_any
     # (exact) because a STYLE can be valued `none` too. Explicit loop, not
     # `${(M)arr:#pat}`: inside double quotes that filters the JOINED
-    # string, so the first draft printed every style or nothing and its
-    # controls read the joined output as a catch — the battery caught it
-    # 02-09-2026. `\\#` because the shell runs EXTENDED_GLOB.
+    # string, printing every style or nothing. `\\#` because the shell runs
+    # EXTENDED_GLOB.
     'typeset -a _hl=(${(v)ZSH_HIGHLIGHT_STYLES} ${(v)ZSH_HIGHLIGHT_PATTERNS} $ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE) _off=(); '
     'for _s in "${_hl[@]}"; do case $_s in (*fg=\\#*|*bg=\\#*|*fg=<16->*|*bg=<16->*) _off+=("$_s");; esac; done; '
     'print -r -- "HL_OFF_PALETTE=${(j:,:)_off:-none}"; '
     'print -r -- "--SETOPT--"; setopt; '
-    # zstyle -L prints the RESOLVED styles — the half that caught the
-    # completion colours asserted as a directive name over an empty
-    # expansion (27-08-2026).
+    # zstyle -L prints the RESOLVED styles, so a completion-colour zstyle
+    # whose expansion is empty fails here while its directive name passes as
+    # text.
     'print -r -- "--ZSTYLE--"; zstyle -L'
 )
 
@@ -1823,10 +1793,10 @@ _ZSHCAP_MARKERS = {
 
 
 def _zshcap_remote(host):
-    """The same probe on a governed box, through sshd's PTY instead of `script`.
+    """The same probe on a remote host, through sshd's PTY instead of `script`.
 
     `-tt` forces the PTY a piped caller would not get; env -i clears
-    SSH_CONNECTION so the box's tmux auto-attach stays out of the probe, and
+    SSH_CONNECTION so the host's tmux auto-attach stays out of the probe, and
     TERM is what a pane there actually has. The reply is cleaned the way zcap
     cleans its own — CR stripped, an ESC byte refused, col -b for zle's EOF
     artefact — so the parser below sees one shape from either machine. A
@@ -1854,7 +1824,7 @@ def _zshcap_capture(host=None):
     global _ZSHCAP_ERROR
     if host:
         # One capture per host per run, the local cache's shape. A ReadSkip
-        # is cached too, so an offline box costs one attempt, not one per
+        # is cached too, so an offline host costs one attempt, not one per
         # assertion.
         if host in _ZSHCAP_HOSTS:
             got = _ZSHCAP_HOSTS[host]
@@ -1955,8 +1925,8 @@ def read_nanorc(path, key, accumulate=False, **_opts):
 
     A bare `set NAME` is a switch and reads as `true`; `unset NAME` reads as
     `false`; a valued `set` reads ONE word, or one double-quoted string, and
-    ignores the rest of the line — nano 9.2's own parse, measured on the box
-    07-09-2026 with a control: `set guidestripe abc` errors at startup,
+    ignores the rest of the line — nano 9.2's own parse, measured on the remote
+    host 07-09-2026 with a control: `set guidestripe abc` errors at startup,
     `set guidestripe 80   # trailing` does not. `include` accumulates.
     """
     found = []
@@ -1981,7 +1951,7 @@ def read_nanorc(path, key, accumulate=False, **_opts):
             elif verb == key == "include" and len(parts) >= 2:
                 found.append(line[len("include"):].strip())
             elif verb == key and verb in ("bind", "unbind") and len(parts) >= 2:
-                # `bind KEY FUNCTION MENU` / `unbind KEY MENU`, whole (09-09-2026).
+                # `bind KEY FUNCTION MENU` / `unbind KEY MENU`, whole.
                 found.append(line[len(verb):].strip())
     if not found:
         return None
@@ -2112,20 +2082,16 @@ def read_sshcfg(path, key, accumulate=False, **_opts):
 # and Style Settings toggle, the custom hotkeys. The CLI's `eval` (1.13.7)
 # hands all of it back as one JSON document.
 #
-# ⚠️ Call `obsidian-cli`, never the bare name. On this machine `obsidian` on
-# PATH resolved to the Electron executable: the installer-added app-dir entry
-# the zprofile carried until 03-09-2026 shadowed Homebrew's `obsidian` →
-# `obsidian-cli` symlink, and the case-insensitive volume maps `obsidian` to
-# `Obsidian`. That binary forwards to a running instance and BOOTS a GUI
-# instance when there is none, never returning — each probe made through it
-# while the app was closed on 03-09-2026 ran to its alarm. The real CLI talks
-# to the app over a socket and answers "The CLI is unable to find Obsidian"
-# instead (its own message, read off the binary) — so that answer is the one
-# oracle for "closed", and the reader SKIPS (warn) on it: a closed app is not
-# drift, and launching one is not a checker's to do. (A `pgrep` guard was
-# tried first and dropped: under the tool sandbox pgrep sees the GUI app and
-# not `bash`, so it cannot be relied on and cannot be tested.)
-# The binary is overridable so the suite can prove both answers with a fake —
+# ⚠️ Call `obsidian-cli`, never the bare name: an app-directory PATH entry
+# ahead of Homebrew's `obsidian` → `obsidian-cli` symlink, on a
+# case-insensitive volume, makes `obsidian` the Electron executable, which
+# forwards to a running instance and BOOTS a GUI one when there is none,
+# never returning. The real CLI talks to the app over a socket and answers
+# "The CLI is unable to find Obsidian" instead (its own message, read off the
+# binary) — so that answer is the one oracle for "closed", and the reader
+# SKIPS (warn) on it: a closed app is not drift, and launching one is not a
+# checker's to do.
+# The binary is overridable so a test can prove both answers with a fake —
 # the same reason PREF_SPEC exists.
 OBSIDIAN_BIN = os.environ.get("OBSCAP_BIN", "/Applications/Obsidian.app/Contents/MacOS/obsidian-cli")
 OBSIDIAN_NOT_RUNNING = "unable to find Obsidian"
@@ -2161,8 +2127,8 @@ _OBSCAP_PROBE = (
     "snippets:{all:app.customCss.snippets,enabled:Array.from(app.customCss.enabledSnippets||[])},"
     "body:{classes:Array.from(document.body.classList)},"
     "community:{enabled:Array.from(app.plugins.enabledPlugins),installed:Object.keys(app.plugins.manifests),"
-    # An enabled id with no manifest behind it: the app keeps the id and
-    # loads nothing (the Hider entry outlived its uninstall, 05-09-2026).
+    # An enabled id with no manifest behind it: the app keeps an enabled id
+    # whose plugin is gone and loads nothing for it.
     # A string, `none` when empty, so the spec can want one answer.
     "orphans:Array.from(app.plugins.enabledPlugins).filter(function(k){return !app.plugins.manifests[k]}).join(',')||'none'},"
     "core:Object.fromEntries(Object.keys(app.internalPlugins.plugins).map(function(k){return[k,app.internalPlugins.plugins[k].enabled]})),"
@@ -2290,7 +2256,7 @@ def read_defaults(path, key, **_opts):
     as 1/0 and strings as themselves, so the spec's wants for this format are
     the text `defaults read` prints — an array of scalars after the join
     above, and every want after the number-folding `normalise` applies to all
-    readers. Added 16-09-2026 for the macOS surface.
+    readers.
     """
     proc = _tool_run(["defaults", "read", path, key], stdin=subprocess.DEVNULL)
     if proc.returncode != 0:
@@ -2346,14 +2312,10 @@ def probe_sublime_caret_styles():
     # popups, git diff target…), and the caret one is first ONLY by current file
     # ordering. Matching the earliest would keep answering "still unreachable"
     # after a reorder, because `underline` is absent from those other lists too —
-    # a check returning the same answer regardless of what it read. Found
-    # 14-08-2026.
+    # a check returning the same answer regardless of what it read.
     # Anchor by LOCATING caret_style first, then taking the nearest preceding
-    # "Valid values are". A single forward regex cannot express "nearest
-    # preceding" and the attempt at one over-constrained the gap and matched
-    # nothing — the probe then reported "unverifiable", which is at least honest
-    # but useless. Searching backwards from the setting is what "anchored"
-    # actually requires.
+    # "Valid values are": a single forward regex cannot express "nearest
+    # preceding".
     setting = text.find('"caret_style"')
     if setting == -1:
         return None, "caret_style is no longer in the shipped defaults — re-read them by hand"
@@ -2406,15 +2368,15 @@ _ASAR_NAME = re.compile(r"obsidian-(\d+(?:\.\d+)*)\.asar$")
 
 def _obsidian_asar_version(path):
     """The version tuple in an archive's name, or () for a name that is not
-    one — `obsidian-1..asar` used to reach int('') and crash the chooser."""
+    one: without it `obsidian-1..asar` reaches int('') and crashes the chooser."""
     m = _ASAR_NAME.search(os.path.basename(path))
     return tuple(int(x) for x in m.group(1).split(".")) if m else ()
 
 
 def obsidian_asar_path():
     """The installed app archive with the highest VERSION — not the last name
-    alphabetically, which would rank 1.9 above 1.13. One chooser, shared with
-    bin/lib/obsidian-gaps.py; None when nothing is installed."""
+    alphabetically, which would rank 1.9 above 1.13. None when nothing is
+    installed."""
     asars = glob.glob(spec_path("probes", "obsidian_caret", "asar_glob", OBSIDIAN_ASAR_GLOB))
     return max(asars, key=_obsidian_asar_version) if asars else None
 
@@ -2425,8 +2387,7 @@ def obsidian_config_defaults():
     The asar is an uncompressed archive, so the app's own source is greppable
     without extracting it. Anchored on the object's first key rather than an
     offset; a version that moves or renames it returns (None, reason) instead
-    of a guess. Shared with bin/lib/obsidian-gaps.py so there is one reader
-    of this object, not two.
+    of a guess.
     """
     path = obsidian_asar_path()
     if path is None:
@@ -2542,10 +2503,8 @@ def probe_kitty_ctrl_shift_plane():
     A tmux binding without the prefix has to live on a chord kitty forwards.
     ctrl+shift is the obvious plane and kitty claims most of it by DEFAULT.
     Two halves, and both are read, because a default only stands while the live
-    config leaves it standing — an earlier version of this probe asserted that
-    in its docstring and checked only the first half, so `kitty_mod alt` or a
-    `no_op` would have freed the plane while it still reported the ceiling
-    intact (audit, 09-09-2026):
+    config leaves it standing — `kitty_mod alt` or a `no_op` frees the plane
+    with the shipped reference unchanged:
 
       shipped   the reference conf the app ships, where a default appears as a
                 commented `# map` line. Not the running process: reading
@@ -2612,8 +2571,8 @@ def probe_mac_nano_is_pico():
 
     `public/shell/zshenv` sets `EDITOR=nano` for the SSH/headless branch, and
     on macOS `/usr/bin/nano` is a SYMLINK to `/usr/bin/pico` — UW PICO, the
-    Pine component, which reads no rc file of its own. So the box's nano
-    surface (rulers, indent guides, whitespace, word motion, all asserted
+    Pine component, which reads no rc file of its own. So the remote host's
+    nano surface (rulers, indent guides, whitespace, word motion, all asserted
     there against `~/.nanorc`) has nothing to land on here.
 
     Two halves, because either one lifts the ceiling: the symlink could stop
@@ -2691,10 +2650,9 @@ PROBES = {
 # Every path literal inside a probe or the defaults oracle is THIS machine's.
 # `[probes.<name>]` and `[oracles.<format>]` let a spec name its own, so a
 # checkout elsewhere can point them at real paths without editing code. An
-# absent table or key is the literal, so a spec that says nothing behaves
-# exactly as before. Precedence: an env override (PREF_KITTY_REF, PREF_ASAR_GLOB
-# …) beats the spec, which beats the literal — a fixture must win over a spec it
-# did not write.
+# absent table or key is the literal. Precedence: an env override
+# (PREF_KITTY_REF, PREF_ASAR_GLOB …) beats the spec, which beats the literal — a
+# fixture must win over a spec it did not write.
 SPEC_PATH_KEYS = {
     "probes": {
         "sublime_caret_styles":   ("shipped_package",),
@@ -2759,12 +2717,13 @@ def normalise(value):
     not read as four different values:
 
       lists    [80, 100, 120] (JSON) and "80,100,120" (IDEA XML) -> "80,100,120"
-      bools    JSON true and XML "true" -> "true". Without this, the spec had to
+      bools    JSON true and XML "true" -> "true". Without this, the spec would
                carry `want = "True"` — CPython's str(bool) leaking into a
                hand-edited SSOT, which breaks the moment a reader changes.
       numbers  kitty's text "16.0" and JSON's 16 -> "16". Without this the same
-               preference needed want="16.0" for kitty and want="16" for Zed,
-               and a perfectly valid `font_size 16` in kitty.conf would fail.
+               preference would need want="16.0" for kitty and want="16" for
+               Zed, and a perfectly valid `font_size 16` in kitty.conf would
+               fail.
 
     kitty's own literals (`yes`/`no`) are deliberately NOT folded into booleans:
     they are what that file actually says, and pretending otherwise would make
@@ -2789,23 +2748,16 @@ def normalise(value):
 # ── spec validation ───────────────────────────────────────────────────────────
 # THE one home for the spec's structural rules. Both the live run and
 # `--validate-spec` call these, and nothing else may restate them.
-#
-# tests/test-pref-check.sh used to carry a second copy of these rules inline, to
-# validate the shipped spec. Two copies of a rule is the exact defect this repo
-# exists to close, and this pair had already drifted: the test's copy never
-# checked `recheck = "auto"` probe names, so a spec THIS checker rejects could
-# pass the suite's "structurally valid" step. The suite now calls
-# `--validate-spec` instead of re-deriving anything.
 
 
 def resolve_target(name, entry, targets, where="the spec"):
     """Return (target_dict, expanded_path, error_message).
 
     A target with `host` lives on another machine: its path is kept
-    ~/-relative for the box to expand, and remote_path() below turns it into
-    a local file at read time.
+    ~/-relative for the remote host to expand, and remote_path() below turns it
+    into a local file at read time.
 
-    `where` is the file this ENTRY came from. The spec is several files now, so
+    `where` is the file this ENTRY came from. The spec is several files, so
     "in preferences.toml" would name a document rather than the half a reader
     has to open.
     """
@@ -2821,7 +2773,7 @@ def resolve_target(name, entry, targets, where="the spec"):
         if not re.fullmatch(r"[A-Za-z0-9._-]+", t["host"]):
             return None, None, f"target '{tname}' has an unusable host '{t['host']}'"
         # The path is interpolated into a program that runs on the remote
-        # machine — the remote pull verb's manifest discipline applies here too.
+        # machine, so only a plain ~/-relative path is accepted.
         if (t["format"] != "zshcap" and not re.fullmatch(r"~/[A-Za-z0-9._/-]+", t["path"])) or ".." in t["path"]:
             return None, None, f"target '{tname}' on {t['host']} needs a plain ~/-relative path, got '{t['path']}'"
         return t, t["path"], None
@@ -2830,11 +2782,11 @@ def resolve_target(name, entry, targets, where="the spec"):
 
 # ── remote targets ────────────────────────────────────────────────────────────
 # A `host` on a target block means the config lives on a machine this repo
-# governs over ssh. Every such file is fetched in ONE ssh call per host per run
-# — base64-framed with a sentinel, the same shape as the remote pull verb — and
-# handed to the ordinary reader as a local temp file, so no reader knows the
-# difference. An unreachable host is a ReadSkip: a laptop offline is not
-# drift, and the doctor must not go red for it.
+# governs over ssh. Every such file is fetched in ONE ssh call per host per
+# run, base64-framed with a sentinel, and handed to the ordinary reader as a
+# local temp file, so no reader knows the difference. An unreachable host is
+# a ReadSkip: a laptop offline is not drift, and the doctor must not go red
+# for it.
 _REMOTE = {}          # host -> {remote_path: local_path | None}  or  ReadSkip
 _REMOTE_DIR = ""
 _SSH_OPTS = ["-o", "BatchMode=yes", "-o", "ConnectTimeout=8"]
@@ -2890,8 +2842,8 @@ def _remote_fetch(host, targets):
 
 
 def remote_path(t, targets):
-    """The local file standing in for a remote target's path — None if the box
-    does not have it, ReadSkip (raised) if the box could not be asked."""
+    """The local file standing in for a remote target's path — None if the host
+    does not have it, ReadSkip (raised) if the host could not be asked."""
     got = _remote_fetch(t["host"], targets)
     if isinstance(got, ReadSkip):
         raise got
@@ -2906,8 +2858,8 @@ def entry_problems(name, entry, targets, where="the spec"):
 
     An ABSENT `state` is `enforce`: that is what all but a handful of entries
     say, and a host half full of bare entries should not have to repeat it. A
-    PRESENT one this file does not know stays the failure it always was — a
-    typo must never be read as a default.
+    PRESENT one this file does not know is a failure — a typo must never be
+    read as a default.
     """
     state = entry.get("state", "enforce")
     if state not in STATES:
@@ -2918,7 +2870,7 @@ def entry_problems(name, entry, targets, where="the spec"):
 
     if state == "unreachable":
         if entry.get("recheck") == "auto":
-            # A typo here used to fall through to the manual branch and print
+            # A typo must not fall through to the manual branch: it would print
             # "unreachable, manual re-check" — cancelling the subscription with a
             # message asserting it never had one.
             probe = entry.get("probe")
@@ -2947,7 +2899,7 @@ def entry_problems(name, entry, targets, where="the spec"):
         problems.append(f"{', '.join(bad_type)} must be a quoted string")
     # An EMPTY string on any matcher but `want` matches everything — `"" in got`
     # is always true — so a row truncated to want_contains = "" is green
-    # forever (auditor, 16-09-2026). `want = ""` stays legal: it asserts a blank.
+    # forever. `want = ""` stays legal: it asserts a blank.
     empty = [m for m in present if m != "want" and entry[m] == ""]
     if empty:
         problems.append(f"{', '.join(empty)} is empty and would match anything")
@@ -3006,12 +2958,10 @@ ANY_HEX = re.compile(r"#[0-9a-fA-F]{6}")
 def emit_published_palette_correspondence(spec, targets):
     """Compare the published palette table against what this spec asserts.
 
-    The mirror ships `public/` and nothing else, so public/prompt/README.md
-    cannot defer to preferences.md the way every other page here does — its
-    readers have only that file. Until 25-08-2026 the spec header claimed "no
-    other copy of them belongs anywhere" while this copy shipped, unpoliced, and
-    a theme swap would have updated the spec and left the published palette
-    describing the previous theme.
+    public/prompt/README.md is all its readers have — the prose half of the
+    spec does not ship — so it carries its own palette table, and a theme swap
+    that updated only the spec would leave that table describing the previous
+    theme.
 
     ONE DIRECTION: every hex this spec asserts must appear in the published
     table. The table also documents colours the spec says nothing about (green,
@@ -3065,11 +3015,11 @@ def emit_published_palette_correspondence(spec, targets):
     failed |= _theme_page_correspondence(asserted, theme)
 
     # The model-family colours are a second published copy, of cship.toml rather
-    # than of this spec. Same failure mode, and there is now a reader for it.
+    # than of this spec. Same failure mode, same check.
     cship = targets.get("cship")
     # The paragraph, not the line: the published list wraps, and matching one
-    # line silently dropped the last family — a check that under-reports while
-    # printing ok for the ones it did reach.
+    # line would silently drop the last family — a check that under-reports
+    # while printing ok for the ones it did reach.
     line = None
     if "Model families:" in text:
         para = text[text.index("Model families:"):]
@@ -3099,9 +3049,8 @@ def _theme_page_correspondence(asserted, theme):
     """The kitty drop-in's palette tables against the spec and the theme file.
 
     The page says its tables are read off current-theme.conf, and both ship, so
-    a hex on the page that the file does not carry is a stale copy — the same
-    failure the prompt page had before 25-08-2026, one directory over. Returns
-    1 on a mismatch, 0 otherwise and when the page is not there to check.
+    a hex on the page that the file does not carry is a stale copy. Returns 1
+    on a mismatch, 0 otherwise and when the page is not there to check.
     """
     if not PUBLISHED_THEME_PAGE or not os.path.isfile(PUBLISHED_THEME_PAGE):
         return 0
@@ -3136,9 +3085,8 @@ def emit_ceiling_correspondence(spec):
     """Assert preferences.md's ceiling table and the spec's `unreachable` entries
     are the same set. Returns 1 if they are not.
 
-    preferences.md promises "if one ever lifts, it is noticed." Until 14-08-2026
-    nothing compared the two lists and they disagreed in BOTH directions, so a
-    ceiling could be listed and unwatched, or watched and unlisted.
+    preferences.md promises "if one ever lifts, it is noticed." Without this
+    comparison a ceiling could be listed and unwatched, or watched and unlisted.
     """
     declared = {
         f"{pid} / {tname}"
@@ -3179,13 +3127,11 @@ def emit_ceiling_correspondence(spec):
 
 
 # ── surfaces: the version event ───────────────────────────────────────────────
-# "A closed surface re-enters only on an event." Until 11-09-2026 the event was
-# remembered, not observed: atuin and gh print their own update notices, and
-# every other bump needed a sweep run by hand against a stamp file. This reads
-# the installed version of every tool a closed surface names and compares it
-# with the version the surface was closed at — never by launching an
-# application: a bundle's Info.plist, Homebrew's linked keg, a manifest, an
-# archive name, or one CLI binary run with one version flag in an empty world.
+# "A closed surface re-enters only on an event." This reads the installed
+# version of every tool a closed surface names and compares it with the
+# version the surface was closed at — never by launching an application: a
+# bundle's Info.plist, Homebrew's linked keg, a manifest, an archive name, or
+# one CLI binary run with one version flag in an empty world.
 # A moved version is a WARN naming the surface, because a bump is a signal for
 # a pass, not drift in a value; an unreadable one is a warn too, since an app
 # that moved is an event of its own kind. Nothing here may crash the run, and
@@ -3229,7 +3175,7 @@ def _forbidden_binary(text):
     bundle id. Tested on the raw string and on the unquoted argv, so a quoted
     or escaped spelling folds back to the word first; and again at run time
     on the RESOLVED path, so a symlink under another name is refused where
-    it lands (traps.md § "Never `kitty @` or `kitten @` from a script")."""
+    it lands."""
     return bool(_KITTY_WORD.search(text))
 
 
@@ -3603,8 +3549,7 @@ def prove(spec, targets, came_from):
 
     A row that stays green over an emptied config is not asserting the file's
     content — whatever else it may be doing, it cannot fail because of what the
-    file says, and until this verb existed that was provable only one row at a
-    time, by hand, in a dated battery.
+    file says.
 
     Two runs of the ordinary assertion loop, laid side by side: the CONTROL on
     the real files, which must be green or the row proves nothing by going red;
@@ -3698,8 +3643,8 @@ def main():
     argv = sys.argv[1:]
 
     if argv and argv[0] == "--spec-files":
-        # The shell half can no longer know where a spec lives — there are three
-        # layouts — so it asks. rc 3 is "this checkout has none", the one answer
+        # The shell half cannot know where a spec lives — the layouts differ —
+        # so it asks. rc 3 is "this checkout has none", the one answer
         # that keeps its section silent; the list itself is what it guards on.
         # Not 2: that is an argument error, which must not silence it.
         for path in SPEC_FILES:
@@ -3729,8 +3674,7 @@ def main():
 
     if argv and argv[0] == "--validate-spec":
         # Structure only, never live config — safe in CI, where none of the
-        # applications exist. This is what tests/test-pref-check.sh calls
-        # instead of restating the rules.
+        # applications exist.
         failed = emit_ceiling_correspondence(spec)
         for pref_id, pref in sorted(spec.get("pref", {}).items()):
             entries = pref.get("targets", {})
@@ -3805,12 +3749,11 @@ def emit_assertions(spec, targets, came_from, read):
         for tname, entry in sorted(entries.items()):
             label = f"{pref_id} / {tname}"
 
-            # Spec shape is validated BEFORE any file is touched. Reading these
-            # inside the try meant a hand-edit that omitted `key` raised
-            # KeyError there and then raised the identical KeyError inside the
-            # handler that was supposed to report it — an uncaught traceback
-            # from the malformation most likely to actually occur. The rules
-            # themselves live in entry_problems(), which --validate-spec shares.
+            # Spec shape is validated BEFORE any file is touched: read inside
+            # the try, an entry missing `key` would raise KeyError there and
+            # again in the handler meant to report it — an uncaught traceback
+            # from the likeliest malformation. The rules live in
+            # entry_problems(), which --validate-spec shares.
             problems = entry_problems(tname, entry, targets, came_from(pref_id, tname))
             if problems:
                 for problem in problems:
@@ -3850,8 +3793,8 @@ def emit_assertions(spec, targets, came_from, read):
             # The exact form of the above: SOME entry must EQUAL this. A
             # substring cannot tell `_fzf_compgen_path` from
             # `_fzf_compgen_pathX`, nor a main-keymap binding from the
-            # menuselect line that repeats its text — both survived the
-            # 02-09-2026 battery under want_any_contain. For a list whose
+            # menuselect line that repeats its text — both passed
+            # want_any_contain (measured 02-09-2026). For a list whose
             # entries are whole names or whole lines, equality is the
             # honest matcher.
             want_any = entry.get("want_any")
@@ -3859,9 +3802,8 @@ def emit_assertions(spec, targets, came_from, read):
             # options are the case that forced this: `liga`/`clig`/`calt` are on
             # by default and are turned off by `no_liga`/`no_clig`/`no_calt`, so
             # "ligatures are on" is only assertable as "none of those appear."
-            # Asserting `dlig` instead — as this spec first did — checks a
-            # different feature and stays green while the stated preference is
-            # switched off.
+            # Asserting `dlig` instead checks a different feature and stays
+            # green while the stated preference is switched off.
             want_absent = entry.get("want_absent")
 
             # entry_problems() already rejected an entry whose target does not
@@ -3931,21 +3873,21 @@ def emit_assertions(spec, targets, came_from, read):
                 raw, from_default = shipped, True
 
             # Provenance goes in the MESSAGE, never the label: the labels are
-            # what the mutation batteries match on.
+            # what tests match on.
             src = f" [{t['format']}'s own default, not the config]" if from_default else ""
 
             # want_absent is checked FIRST, because it is the one matcher for
             # which a missing key is the PASSING case. Sublime's ligatures are
             # the live example: they are on by default and switched off by
             # `no_calt`, so deleting `font_options` entirely satisfies the
-            # preference. Until 14-08-2026 the UNSET branch below ran first and
-            # reported `font_options is UNSET (want None)` — a failure, with a
-            # nonsense expectation, for a config that was correct.
-            # Case-insensitive since 10-09-2026: this matcher only ever names a
-            # DISABLING spelling, and the applications fold case on their side
-            # — kitty lowercases a mouse_map's modes before it checks them
-            # (`parse_mouse_map`, frozen bytecode), so `UNGRABBED` unbound the
-            # click while the exact-case test read it as absent. Folding can
+            # preference; checked after the UNSET branch below, it would report
+            # `font_options is UNSET (want None)` — a failure, with a nonsense
+            # expectation, for a config that is correct.
+            # Case-insensitive: this matcher only ever names a DISABLING
+            # spelling, and the applications fold case on their side — kitty
+            # lowercases a mouse_map's modes before it checks them
+            # (`parse_mouse_map`, frozen bytecode), so `UNGRABBED` unbinds the
+            # click while an exact-case test reads it as absent. Folding can
             # only make the test stricter, which is the safe direction.
             if want_absent is not None:
                 got_abs = "" if raw is None else normalise(raw)
@@ -4000,12 +3942,11 @@ def emit_assertions(spec, targets, came_from, read):
             else:
                 # A want that itself carries edge whitespace is compared
                 # whitespace-exact against the RAW read. normalise trims, so a
-                # module format and its space-less twin read the same and a lost
-                # separator — modules run together — stayed green; starship's
-                # one-space fill symbol and an EMPTY symbol, which collapses the
-                # layout, read the same too (both audits, 16-09-2026). Every
-                # other want keeps the normalised compare that folds numbers and
-                # booleans across syntaxes.
+                # module format and its space-less twin read the same — a lost
+                # separator, modules run together, would stay green — and so do
+                # starship's one-space fill symbol and an EMPTY one, which
+                # collapses the layout. Every other want keeps the normalised
+                # compare that folds numbers and booleans across syntaxes.
                 exact = want is not None and want != want.strip()
                 shown = str(raw) if exact else got
                 if shown == want:

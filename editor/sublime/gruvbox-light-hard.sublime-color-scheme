@@ -15,17 +15,12 @@
 // A .sublime-color-scheme is declarative data, not code. It has no host API to
 // break against and no security surface, so "is upstream alive?" is close to
 // meaningless for it — the useful move is to stop having an upstream. Vendored
-// here, the palette is owned, diffable, and tunable toward the colour family in
-// the source repo's docs/preferences.md instead of frozen at whatever the
-// package author chose.
+// here, the palette is owned, diffable, and tunable toward the setup's colour
+// family instead of frozen at whatever the package author chose.
 //
 // This refines the maintenance criterion generally: upstream health is
 // load-bearing for EXECUTABLE extensions and near-irrelevant for declarative
-// data, which should be vendored rather than chased. See
-// docs/superpowers/specs/2026-08-14-preference-ssot-design.md §12.1.
-//
-// This repo vendors one other third-party artifact on the same reasoning:
-// upstream cannot supply it, so a tracked copy is the only durable form.
+// data, which should be vendored rather than chased.
 //
 // ── Attribution and licence (MIT) ───────────────────────────────────────────
 // Sublime Text port: Brian Reilly — https://github.com/Briles/gruvbox

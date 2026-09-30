@@ -26,7 +26,7 @@ setopt GLOB_DOTS
 setopt NO_CLOBBER                # `>|` is the deliberate override
 setopt ALWAYS_TO_END             # completing mid-word parks the cursor at word end
 setopt COMPLETE_IN_WORD          # …and completes from both ends
-setopt NO_FLOW_CONTROL           # Ctrl+S no longer wedges the terminal
+setopt NO_FLOW_CONTROL           # Ctrl+S does not freeze the terminal
 setopt NUMERIC_GLOB_SORT         # file2 before file10
 CORRECT_IGNORE='_*'              # never "correct" a typo to a completion function
 REPORTTIME=10                    # CPU seconds, so a network wait never reports
@@ -53,7 +53,7 @@ setopt HIST_SAVE_NO_DUPS         # dedupe what SHARE_HISTORY imports from other 
 bindkey -e
 
 # Prefix search: history-beginning-search matches the line up to the
-# cursor (history-search-backward matched the first word only), and the
+# cursor (history-search-backward matches the first word only), and the
 # -end variants park the cursor at end of line.
 autoload -Uz history-search-end
 zle -N history-beginning-search-backward-end history-search-end
@@ -102,7 +102,7 @@ fpath=(~/.docker/completions $fpath)  # Docker Desktop ships its completion here
 autoload -Uz compinit
 # Versioned dump: `compinit -C` skips the staleness check, so an unversioned
 # dump serves broken completions after a zsh upgrade. Rebuilt when older
-# than a day, else the cached path (the saving is noise — traps.md).
+# than a day, else the cached path (the saving is noise).
 ZCOMPDUMP="$HOME/.zcompdump-$ZSH_VERSION"
 if [[ -n $ZCOMPDUMP(#qN.mh+24) ]]; then
   compinit -d "$ZCOMPDUMP"
@@ -129,8 +129,8 @@ zstyle ':completion:*' rehash true                 # a freshly installed command
 # Two completers contribute candidates: the user database (mostly macOS
 # daemon accounts — excluded) and hosts, taken from ~/.ssh/config and the
 # config.local it includes rather than known_hosts, whose entries are hashed
-# and include every host visited once. The numbers are in preferences.md
-# § Interaction. Through cat: awk stops at the first file it cannot open.
+# and include every host visited once. Through cat: awk stops at the first
+# file it cannot open.
 zstyle ':completion:*:*:*:users' ignored-patterns '_*' daemon nobody root
 _ssh_config_hosts=(${(f)"$(cat ~/.ssh/config ~/.ssh/config.local 2>/dev/null | awk '/^[[:space:]]*[Hh]ost[[:space:]]/{for(i=2;i<=NF;i++) if ($i !~ /[*?!]/) print $i}')"})
 zstyle ':completion:*:(ssh|scp|sftp|rsync|mosh|ssh-copy-id):*' hosts $_ssh_config_hosts
@@ -144,15 +144,15 @@ unalias run-help 2>/dev/null
 autoload -Uz run-help run-help-git run-help-sudo run-help-openssl
 
 # ── Runtimes: node + python (mise) ───────────────────────
-# One binary, one config, per-directory versions; replaced pyenv and nvm.
+# One binary, one config, per-directory versions.
 # SDKMAN and jset stay: mise would fight the Homebrew temurin casks, and
 # jset guards against java_home's silent fallback.
 if (( $+commands[mise] )); then
   eval "$(mise activate zsh)"
-  # Its precmd hook spawns `mise hook-env` on most prompts (the cost is in
-  # preferences.md § Shell) and its chpwd_only knob is inert, so the hook is
-  # cut by hand. The chpwd hook stays: a directory's tool set still switches
-  # on cd, and a config edited in place applies on the next one (`cd .`).
+  # Its precmd hook spawns `mise hook-env` on most prompts and its
+  # chpwd_only knob is inert, so the hook is cut by hand. The chpwd hook
+  # stays: a directory's tool set still switches on cd, and a config edited
+  # in place applies on the next one (`cd .`).
   add-zsh-hook -d precmd _mise_hook_precmd
 fi
 
@@ -215,7 +215,7 @@ if (( $+commands[fd] )); then
 fi
 # `setopt zle` errors in a non-TTY interactive shell (Claude Code's
 # `zsh -i -c`), so the widget init is guarded; the same guard makes
-# `bindkey` under-report there — decisions.md, traps.md.
+# `bindkey` under-report there.
 if [[ -t 1 ]] && (( $+commands[fzf] )); then
   source <(fzf --zsh)
 fi
@@ -268,8 +268,8 @@ if (( $+commands[eza] )); then
   alias ll="eza -la --icons=auto --git --hyperlink=auto --group-directories-first --time-style=long-iso"
   alias lt="eza -T --icons=auto --git-ignore --hyperlink=auto --group-directories-first"
 fi
-# rg's own --hyperlink-format=kitty (the ripgrep config) is the clickable grep;
-# the hyperlinked-grep kitten it replaced retired 06-09-2026.
+# No alias for kitty's hyperlinked-grep kitten: rg's own
+# --hyperlink-format=kitty (the ripgrep config) writes the same links.
 alias fp='kitten choose-files'   # keyboard file picker with previews
 
 # ── Zsh Plugins ──────────────────────────────────────────
@@ -299,7 +299,7 @@ fi
 
 # ── zsh-syntax-highlighting — MUST BE LAST ───────────────
 # Upstream: source after every `zle -N`, or a later widget stays unwrapped
-# on the fallback path (traps.md). Nothing that creates a widget goes below.
+# on the fallback path. Nothing that creates a widget goes below.
 # Two candidates, first hit wins: the formula, then a clone — the form a
 # host without root has to use. A host with neither keeps its login shell.
 for _zsh_hl_dir in "${HOMEBREW_PREFIX:-/opt/homebrew}/share/zsh-syntax-highlighting" ~/.zsh/zsh-syntax-highlighting; do

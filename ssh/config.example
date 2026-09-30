@@ -3,10 +3,8 @@
 
 # A remote you hit with many short `ssh host '<cmd>'` calls.
 # ControlMaster reuses one TCP+auth handshake, which is the difference
-# between ~1s and ~150ms per call. Cite the floor, not a hope: a
-# multiplexed command still costs ~2 RTT, so the round-trip time to the
-# host is the hard lower bound — a specific millisecond figure that
-# nobody else can reproduce makes the whole comment suspect.
+# between ~1s and ~150ms per call. A multiplexed command still costs ~2 RTT,
+# so the round-trip time to the host is the hard lower bound.
 Host example-remote
   HostName remote.example.com
   User youruser

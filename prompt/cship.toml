@@ -1,31 +1,31 @@
-# ── CShip · Gruvbox Dark Hard — 3-line layout, v1.5 (cship ≥ 1.8.2) ──────────
+# ── CShip · Gruvbox Dark Hard — 3-line layout (cship ≥ 1.8.2) ────────────────
 # 1: directory · branch · git state/status · runtimes  (Starship passthrough)
 # 2: account · model · effort · agent ⇥ session duration (identity, fill-aligned)
 # 3: context · cost · ±lines         ⇥ 5h/7d windows    (metrics, fill-aligned)
 #
 # cship reads the DEFAULT keychain credential regardless of CLAUDE_CONFIG_DIR
-# (cship#194), so under the dual-account shim every field it fetches for itself
-# is the personal account's — the per-model line 4 was dropped for that on
-# 02-09-2026 (docs/blocked-upstream.md). What is left renders from stdin or from
-# the environment: 5h/7d on line 3 arrive on stdin per session and are exact, and
-# the account label on line 2 comes from CSHIP_ACCOUNT, set by the launcher that
-# picked the account. The one path back to the fetch is a launch that sets no
-# CSHIP_ACCOUNT — there the label is the default credential's, spelled in full.
+# (cship#194), so with several accounts every field it fetches for itself is
+# the default account's; the per-model line is left out for that. What renders
+# comes from stdin or the environment: 5h/7d on line 3 arrive on stdin per
+# session and are exact, and the account label on line 2 comes from
+# CSHIP_ACCOUNT, set by whatever launched claude for that account. A launch
+# that sets no CSHIP_ACCOUNT falls back to the fetch: there the label is the
+# default credential's, spelled in full.
 #
 # $fill right-aligns to the live terminal width: cship reads the controlling
-# tty of an ancestor process, then $COLUMNS (Claude Code sets it since
-# claude-code#22115 closed, 05-2026), then `width` below, then 80. In a real
-# terminal the first two always answer, so `width` only matters where neither
-# exists — Windows, the web/desktop apps. Measured 02-09-2026: a 133-column
-# window rendered 130 cells with `width = 129` untouched.
+# tty of an ancestor process, then $COLUMNS (Claude Code sets it; see
+# claude-code#22115), then `width` below, then 80. In a real terminal the
+# first two always answer, so `width` only matters where neither exists —
+# Windows, the web/desktop apps. Measured 02-09-2026: a 133-column window
+# rendered 130 cells with `width = 129` untouched.
 
 "$schema" = 'https://cship.dev/config-schema.json'
 
 [cship]
 width = 129
-# Columns Claude Code keeps around the statusline (gutter + right margin); cship's
-# default of 3 predates Claude Code 2.1.258, which keeps 4 — with 3 every
-# right-aligned line lost its last cell to an ellipsis (screenshot, 02-09-2026).
+# Columns Claude Code keeps around the statusline (gutter + right margin):
+# cship's default is 3, Claude Code 2.1.258 keeps 4, and with 3 every
+# right-aligned line loses its last cell to an ellipsis (screenshot, 02-09-2026).
 # Re-measure after a Claude Code update: a trailing "…" on line 2 or 3 means
 # this is short again.
 width_offset = 4
@@ -54,16 +54,15 @@ symbol = " "
 
 # ── Line 2 · Identity ────────────────────────────────────
 
-# Fed by the launcher, not by cship's own lookup: that reads the unsuffixed
+# Fed by whatever launches claude, not by cship's own lookup: that reads the unsuffixed
 # `Claude Code-credentials` keychain entry whatever CLAUDE_CONFIG_DIR says (cship#194), so under a
 # multi-account setup it names the default account in every session. CSHIP_ACCOUNT (cship ≥ 1.8.2)
 # lets the process that chose the account state it instead. {label} falls back to {organization}
-# when no labels map matches, so the launcher sends the friendly name as organization_name and
-# there is no mapping table to keep — which is also why this file carries no real organisation
-# name and can stay in public/. Unset — an IDE run config or a cron line that starts `claude`
-# without the launcher — cship falls back to its own lookup and renders the raw organisation
-# name (measured 11-09-2026). Such a launch gets the default credential anyway, so that is the
-# right account spelled the long way, not the wrong one.
+# when no labels map matches, so a launcher sends the friendly name as organization_name, there
+# is no mapping table to keep, and no real organisation name sits in this file. Unset — an IDE
+# run config or a cron line that starts `claude` without such a launcher — cship falls back to its
+# own lookup and renders the raw organisation name (measured 11-09-2026). Such a launch gets the
+# default credential anyway, so that is the right account spelled the long way, not the wrong one.
 [cship.account]
 symbol = "󰀄 "
 format = "{label}"
@@ -122,22 +121,22 @@ style  = "fg:#b8bb26"
 format = "[-$value]($style)"
 style  = "fg:#fb4934"
 
-# Human-readable since 1.8.0 (45s / 1m30s / 2h15m30s) — was raw ms when we
-# removed it in the 1.5.1 layout; safe to show again.
+# Human-readable (45s / 1m30s / 2h15m30s).
 [cship.cost.total_duration_ms]
 symbol = " "
 format = "[$symbol$value]($style)"
 style  = "fg:#ebdbb2"
 
 [cship.usage_limits]
-# ttl governs only the OAuth refetch; 5h/7d arrive on stdin every render. Nothing
-# shown comes from OAuth any more, so refetch hourly instead of every 2 minutes —
-# each failure costs one render a 2 s stall (02-09-2026).
+# ttl governs only the OAuth refetch; 5h/7d arrive on stdin every render.
+# Past a session's first seconds only the account module, with CSHIP_ACCOUNT
+# unset, renders anything from OAuth, so refetch hourly instead of every 2
+# minutes — each failure costs one render a 2 s stall (02-09-2026).
 ttl                = 3600
 # Two per-window tokens on line 3 (cship ≥ 1.8.2), each coloured by its own
-# utilisation; the composite $cship.usage_limits painted both with max(5h, 7d),
-# so a calm window wore the hot one's colour. The gap between them is literal
-# in the line, which is why there is no `separator` here.
+# utilisation; the composite $cship.usage_limits paints both with max(5h, 7d),
+# so a calm window would wear the hot one's colour. The gap between them is
+# literal in the line, which is why there is no `separator` here.
 five_hour_format   = " 5h {pct}% → {reset_at}"
 seven_day_format   = " 7d {pct}% → {reset_at}"
 warn_threshold     = 70.0

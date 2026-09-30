@@ -2,9 +2,8 @@
 # Verify the deployed state against manifest.tsv, plus semantic checks.
 #
 # Enumerates every unit; never prints a tally. A count drifts between the
-# checker and the checked and nobody notices — the vault has four separate
-# instances of a doctor count going stale in under a week. Read the state
-# off the run, not off a number.
+# checker and the checked and nobody notices. Read the state off the run, not
+# off a number.
 #
 #   preen doctor          every unit, one line each
 #   preen doctor --quiet  the headings, every warn and FAIL, the verdict — an
@@ -69,20 +68,18 @@ short() {
   esac
 }
 
-# The public mirror ships bin/ and the configs, but never docs/, publish/,
-# hosts/ or private/. Checks that assert a PREFERENCE of this machine's owner
-# rather than whether something is broken are scoped to the source repo by
-# it — an adopter never agreed to those decisions, and failing their correct
-# setup over one is how a verification step loses its meaning.
+# Checks that assert a PREFERENCE of this repo's owner, rather than whether
+# something is broken, run only in the source repo: an adopter never agreed to
+# those decisions, and failing their correct setup over one is how a
+# verification step loses its meaning.
 SOURCE_REPO=no
-# hosts/ never ships. docs/ was the test until 23-09-2026, and an adopter who
-# added a docs/ directory to their clone had the author's taste asserted unasked.
+# The source repo is the one with hosts/, which never ships. Testing for a
+# directory an adopter might add, such as docs/, would assert this repo's taste
+# on them.
 [ -d "$REPO/hosts" ] && SOURCE_REPO=yes
 
-# preen pull reconciles a copy row back into the repo and is NOT in the mirror.
-# Naming it there sent an adopter after a tool they do not have, in the one
-# message they are most likely to ever see: every copy row exists precisely
-# because the application rewrites that file itself (found 14-09-2026).
+# preen pull, which reconciles a copy row back into the repo, is named only
+# where it exists; a copy of this repo without it gets the manual remedy.
 if [ -x "$REPO/bin/preen-pull" ]; then
   RECONCILE="run preen pull to reconcile"
 else
@@ -135,11 +132,9 @@ while IFS=$'\t' read -r src tgt mode perms; do
       ;;
   esac
 
-  # The `perms` column is APPLIED by preen apply (`chmod "$perms"`) and, until
-  # 14-08-2026, was verified by nothing here — this loop read $perms and never
-  # used it. So a host's ssh config could drift from 0600 to 0644 and every row
-  # still reported ok: the column looked like a guarantee and was only ever an
-  # instruction. -L on purpose, because chmod follows symlinks, so the mode that
+  # preen apply applies the `perms` column (`chmod "$perms"`); this verifies it,
+  # so a mode that drifts, an ssh config from 0600 to 0644, fails instead of
+  # reading ok. -L on purpose, because chmod follows symlinks, so the mode that
   # matters for a link row is the resolved file's.
   # GNU's form first: BSD stat rejects -c and prints nothing, while GNU stat
   # reads -f as "file system" and prints a dump of it before failing.
@@ -339,24 +334,19 @@ elif command -v git >/dev/null 2>&1; then
   rm -rf "$ign_fixture"
 fi
 
-# core.fsmonitor is WITHDRAWN (preferences.md § Git, 15-09-2026): a prompt
-# runs git with GIT_OPTIONAL_LOCKS=0 and git will not start the daemon under
-# it, so every render pays a 1.088s handshake and falls back to the walk —
-# forever, since the prompt is the one caller that cannot start what it needs.
+# core.fsmonitor is WITHDRAWN (ruled 15-09-2026): a prompt runs git with
+# GIT_OPTIONAL_LOCKS=0 and git will not start the daemon under it, so every
+# render pays a 1.088s handshake and falls back to the walk — forever, since
+# the prompt is the one caller that cannot start what it needs.
 # The gitcfg row reads the FILE for the key coming back; this reads git's own
 # EFFECTIVE boolean, so `1`, `yes` and `on` are caught too, and so is a value
 # arriving from a scope the manifest does not own.
 #
-# Until 15-09-2026 this block asserted the opposite, and its own `git status`
-# STARTED the daemon it then checked for — so a doctor run repaired the
-# symptom it was meant to report, in this repo only.
-#
-# Source-repo only: it asserts a decision of Gati's, not a broken setup, and
-# an adopter with a 100k-file monorepo and a daemon already running has made a
-# different call correctly. Also scoped to a work tree — a ZIP download of the
-# mirror has no .git, so `config --get` fell through to the GLOBAL scope and a
-# correct setup was told its daemon was missing (14-09-2026, found once the
-# $USER abort above stopped hiding this line).
+# Source-repo only: it asserts this repo owner's decision, not a broken setup,
+# and an adopter with a 100k-file monorepo and a daemon already running has
+# made a different call correctly. Also scoped to a work tree: without a .git
+# (a copy exported without git) `config --get` falls through to the GLOBAL
+# scope.
 if [ "$SOURCE_REPO" = yes ] && git -C "$REPO" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   if [ "$(git -C "$REPO" config --type=bool --get core.fsmonitor 2>/dev/null)" = "true" ]; then
     bad "core.fsmonitor is true in effect — withdrawn; it costs the prompt 1.088s per repo per boot (preferences.md § Git)"
@@ -365,23 +355,18 @@ if [ "$SOURCE_REPO" = yes ] && git -C "$REPO" rev-parse --is-inside-work-tree >/
   fi
 fi
 
-# The check below needs a real file at $REPO/<src>. In the checked-out repo
-# that's public/shell/zshrc, but this same script is also staged verbatim
-# into the flattened public mirror (see bin/preen-publish), where there is no
-# public/ prefix at all — the row's source there is just shell/zshrc.
-# Deriving the path from manifest.tsv (present, correctly stripped, in both
-# layouts) instead of hardcoding "public/..." is what makes one script
-# correct in both. (A cship `width` vs `tput cols` comparison lived here until
-# 02-09-2026; cship never reads `width` in a terminal — see docs/traps.md.)
+# The check below needs a real file at $REPO/<src>: public/shell/zshrc in the
+# source repo, shell/zshrc in the flattened public mirror. Deriving the path
+# from manifest.tsv, right in both layouts, keeps one script correct in both.
 manifest_src_for_target() {
   awk -F'\t' -v t="$1" '$2 == t { print $1; exit }' "$MANIFEST"
 }
 
 # z-sy-h must be the last thing that creates or wraps ZLE widgets. `zle -N`
 # (and `zle -C`) create widgets directly, without going through `source` or
-# `eval` — a `zle -N` line appended below z-sy-h is exactly the D1-class
-# regression this check exists for, so it has to be matched too, not just
-# the two ways of pulling in someone else's plugin.
+# `eval` — a `zle -N` line appended below z-sy-h leaves that widget unwrapped,
+# which is what this check exists to catch, so it is matched too, not just the
+# two ways of pulling in someone else's plugin.
 zshrc_src="$(manifest_src_for_target '~/.zshrc')"
 if [ -n "$zshrc_src" ] && [ -f "$REPO/$zshrc_src" ]; then
   last_source=$(grep -nE 'source|eval|zle +-[NC]' "$REPO/$zshrc_src" | tail -1)
@@ -394,12 +379,10 @@ else
   warn "zshrc not found via manifest (~/.zshrc) — skipping z-sy-h ordering check"
 fi
 
-# This machine's decision: the directory was deleted rather than wired in.
-# Source-repo only, and for two reasons — the shipped zshrc adds only
-# ~/.docker/completions to fpath, so an adopter who HAS this directory could
-# never pass, and the passing branch printed a bare "D4" that appears nowhere
-# else in the mirror (both found 14-09-2026). It also spends a second
-# launching an interactive login zsh.
+# This repo owner's decision: the directory was deleted rather than wired in.
+# Source-repo only: the shipped zshrc adds only ~/.docker/completions to
+# fpath, so an adopter who HAS this directory could never pass. It also spends
+# a second launching an interactive login zsh.
 if [ "$SOURCE_REPO" = yes ]; then
   if [ -d "$HOME/.zsh/completions" ]; then
     if grep -q '.zsh/completions' <<< "$(script -q /dev/null zsh -l -i -c 'print -l $fpath' 2>/dev/null | tr -d '\r')"; then
@@ -479,17 +462,15 @@ fi
 
 # kitty starts every tab through /usr/bin/login (`login -f -l -p $USER …`,
 # read off the process table), and login prints "Last login: …" until
-# ~/.hushlogin exists — a manifest row since 02-09-2026. The row proves the
-# file is deployed; this proves the mechanism the file exists for is the one
-# in play, so the pair says "a new tab opens at the prompt". The effect was
-# proven once, both ways, with kitty's exact invocation under a PTY; it is
-# NOT re-run here because every `login -f` leaves a utmpx record (`last`
-# showed one per probe that day). Silent when kitty is not running — the
-# mirror's CI, or a Mac with no tab open.
+# ~/.hushlogin exists — a manifest row. The row proves the file is deployed;
+# this proves the mechanism the file exists for is the one in play, so the
+# pair says "a new tab opens at the prompt". The effect was proven once, both
+# ways, with kitty's exact invocation under a PTY; it is NOT re-run here
+# because every `login -f` leaves a utmpx record. Silent when kitty is not
+# running — the mirror's CI, or a Mac with no tab open.
 # $USER is unset under `env -i` (a sandboxed test, cron, a container), and
-# `set -u` turned that into an abort that skipped every check below — found
-# 14-09-2026 running this script from a fresh clone of the mirror. No $USER,
-# no kitty tab to ask about: silent, like kitty not running.
+# under `set -u` reading it would abort every check below. No $USER, no kitty
+# tab to ask about: silent, like kitty not running.
 if [ -n "${USER:-}" ] && pgrep -qf "/usr/bin/login -f -l -p $USER " 2>/dev/null; then
   if [ -f "$HOME/.hushlogin" ]; then
     ok "kitty tabs start through login, and ~/.hushlogin keeps the banner off"
@@ -504,7 +485,7 @@ fi
 # The next two checks are SOURCE-REPO ONLY: this script ships, but
 # publish/.last-published and bin/lib/stage-mirror.sh, which it sources below,
 # exist only here.
-# `publish/` is the context signal — same guard style as blocked-upstream.md
+# `publish/` is the context signal — same guard style as the cship check
 # below.
 if [ -d "$REPO/publish" ]; then
   source "$REPO/bin/lib/stage-mirror.sh"   # here, not at the top: it does not ship
@@ -521,12 +502,8 @@ if [ -d "$REPO/publish" ]; then
     warn "public mirror not cloned at $MIRROR"
   fi
 
-  # The expected account is DERIVED from origin, not hardcoded. It read
-  # `grep -q 'gati3478'` until 09-08-2026, so every other user of the mirror was
-  # told their correct account was the wrong one — the same class of defect as
-  # the four-of-five hardcoded /Users/gati3478 paths parameterised in Task 20
-  # (deny.txt has the count; this line said "the five" until 07-09-2026, which
-  # disagreed with it — the fifth is kitty.conf's, and stays literal).
+  # The expected account is DERIVED from origin, never hardcoded, so the check
+  # holds in anyone's clone.
   origin_url=$(git -C "$REPO" remote get-url origin 2>/dev/null || echo '')
   expected_owner=$(printf '%s' "$origin_url" | sed -E 's#.*[:/]([^/]+)/[^/]+$#\1#')
   if [ -z "$expected_owner" ] || [ "$expected_owner" = "$origin_url" ]; then
@@ -542,10 +519,9 @@ fi
 if [ -f "$REPO/docs/blocked-upstream.md" ]; then
   installed=$("$HOME/.local/bin/cship" --version 2>/dev/null | awk '{print $NF}')
   broken=$(awk -F'`' '/cship.*broken at/{print $2; exit}' "$REPO/docs/blocked-upstream.md")
-  # An unparseable state (cship missing/erroring, or the awk pattern no
-  # longer matching blocked-upstream.md's prose) previously fell through
-  # to the same "ok" as a genuinely-confirmed-unchanged version, silently
-  # asserting something that was never actually checked.
+  # An unparseable state (cship missing/erroring, or the awk pattern failing
+  # to match blocked-upstream.md's prose) warns: an "ok" there would assert
+  # something never checked.
   if [ -z "$installed" ] || [ -z "$broken" ]; then
     warn "could not determine cship version or blocked-upstream entry (installed='${installed:-?}' recorded='${broken:-?}') — re-check manually"
   elif [ "$installed" != "$broken" ]; then
@@ -556,14 +532,8 @@ if [ -f "$REPO/docs/blocked-upstream.md" ]; then
 fi
 
 # The pre-commit hook (glyph integrity, TOML parse) is opt-in PER CLONE via
-# `git config core.hooksPath .githooks`. Nothing enforced it, and nothing
-# noticed when it was absent — so on a fresh clone the only commit-time
-# protection was silently off until someone remembered the README line. This
-# turns "silently unprotected" into a visible warning.
-# Source-repo only, for the same reason as the two checks above: the mirror
-# ships no .githooks, so this warned falsely there. I introduced that false
-# warning earlier the same day while fixing a different one — which is exactly
-# why the guard belongs on the check itself, not on a promise to remember.
+# `git config core.hooksPath .githooks`; this warns on a clone that has not
+# opted in. Only where .githooks exists: the mirror ships none.
 if [ -d "$REPO/.githooks" ]; then
   hooks_path="$(git -C "$REPO" config --get core.hooksPath 2>/dev/null || true)"
   if [ "$hooks_path" = ".githooks" ]; then
@@ -577,9 +547,9 @@ fi
 # heading and calls ok/bad/warn from this scope; nothing here registers or
 # enumerates them, so adding one is adding a file. The extension point is
 # generic on purpose: a check written inline would ship in the mirror and
-# describe infrastructure that no deny.txt entry could catch, because none of
-# it is a secret string — it is the shape of a private setup. The mirror
-# carries no hosts/, so this loop finds nothing there and names nothing.
+# describe a private setup's shape, which no scan for secret strings catches.
+# The mirror carries no hosts/, so this loop finds nothing there and names
+# nothing.
 # Each module prints its own heading for the same reason run_pref_checks does:
 # a heading printed here would leave a bare section with nothing under it.
 for _mod in "$REPO"/hosts/*/doctor.d/*.sh; do
@@ -590,11 +560,11 @@ unset _mod
 # Asserts the preference spec against LIVE config — what the applications
 # actually render, not what this repo believes they were given. The manifest
 # checks above prove deployment; these prove the deployed values are the ones
-# preferences.md claims. Two different questions: a copy-mode file can match the
-# repo perfectly and still carry a value the SSOT never sanctioned.
-# The header is printed by run_pref_checks itself, after its own guard. Printing
-# it here would leave a bare heading with nothing under it in the public mirror,
-# which ships bin/ but not docs/ — a section that looks broken rather than absent.
+# the spec names. Two different questions: a copy-mode file can match the repo
+# perfectly and still carry a value the spec never sanctioned.
+# The header is printed by run_pref_checks itself, after its own guard: printed
+# here, it would leave a bare heading where the checkout has no spec — a
+# section that looks broken rather than absent.
 # Outside the source repo the spec is the author's taste, asserted only when
 # asked for (--taste): an adopter's correct setup is not failed over it.
 if declare -f run_pref_checks >/dev/null 2>&1 && { [ "$SOURCE_REPO" = yes ] || [ "$TASTE" = yes ]; }; then

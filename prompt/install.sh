@@ -61,10 +61,9 @@ while [ $# -gt 0 ]; do
     --no-account)    account_mode=hide ;;
     --dry-run)       dry_run=yes ;;
     --account-label)
-      # `-*`, not `--*`: the guard exists to catch a forgotten name followed
-      # by a flag, and reading only long flags let `--account-label -x` take
-      # `-x` as the label. A label that genuinely starts with a dash is the
-      # price, and nobody has one.
+      # `-*`, not `--*`: the guard catches a forgotten name followed by a
+      # flag, short or long, so `--account-label -x` does not take `-x` as the
+      # label. A label that genuinely starts with a dash is the price.
       case "${2:-}" in ''|-*) bad_arg "--account-label needs a name after it, or say --no-account" ;; esac
       shift
       label_ok "$1" || bad_arg "--account-label: a name of letters, digits, space, '.', '_', '-', or say --no-account"
@@ -140,7 +139,7 @@ if [ -z "$cship_bin" ]; then
 fi
 case "$cship_bin" in /*) ;; *) cship_bin="$(cd "$(dirname "$cship_bin")" && pwd)/${cship_bin##*/}" ;; esac   # a relative PATH entry
 cship_version="$("$cship_bin" --version 2>/dev/null | awk '{ print $2 }')"
-# cship prints a bare `1.8.3` today. If upstream ever tags with a `v`, the
+# cship 1.8.3 prints a bare `1.8.3`. If upstream ever tags with a `v`, the
 # comparison below would sort `v1.9.0` under `1.8.2` and refuse every
 # install — telling an adopter their NEWER cship is too old.
 cship_version="${cship_version#v}"
@@ -150,8 +149,8 @@ fi
 echo "cship $cship_version at $(short "$cship_bin")"
 
 # starship 1.26 creates ~/.cache/starship on any invocation, --version
-# included, and a dry run had promised to leave the home alone (the audit of
-# 22-09-2026). Its cache goes to this run's temp directory, gone on exit.
+# included, so its cache goes to this run's temp directory, gone on exit: a
+# dry run leaves the home alone.
 export STARSHIP_CACHE="$WORK/starship-cache"
 starship_bin="$(command -v starship 2>/dev/null || true)"
 if [ -n "$starship_bin" ]; then
@@ -162,9 +161,8 @@ fi
 
 # ── settings.json, probed before anything is written ─────────────────────────
 # Apple's python3 caches the bytecode of every module it imports under
-# ~/Library/Caches/com.apple.python, so the probe below left thirty-odd files
-# in a home the dry run had promised to leave alone (found by
-# tests/test-readme.sh, 22-09-2026). Off, for every python this script runs.
+# ~/Library/Caches/com.apple.python, and a dry run must leave the home
+# untouched. Off, for every python this script runs.
 export PYTHONDONTWRITEBYTECODE=1
 # bare_shim sees the Command Line Tools stub without running it. A python3
 # that passes is still run once: one with developer tools behind it fails too

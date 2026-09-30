@@ -20,9 +20,9 @@
     // Terminus.hidden-color-scheme files from this dict (theme.py reads
     // user_theme_colors); the scheme files are build artifacts. Unset, any
     // "Select Theme → user" regenerates them from {} and the panel falls back
-    // to defaults — happened twice on 25-08-2026, the second undoing the
-    // first repair. Values: Gruvbox Dark Hard, the same canon kitty carries —
-    // a terminal is dark where code runs, even inside a light editor.
+    // to defaults (seen twice, 25-08-2026). Values: Gruvbox Dark Hard, the
+    // same canon kitty carries — a terminal is dark where code runs, even
+    // inside a light editor.
     "user_theme_colors": {
         "background": "#1d2021",
         "foreground": "#ebdbb2",

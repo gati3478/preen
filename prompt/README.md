@@ -186,12 +186,12 @@ exceptions. Until the session's first API response `rate_limits` is not on
 stdin yet, so the 5h/7d figures come from the OAuth path for a few seconds.
 And the account module falls back to it whenever `CSHIP_ACCOUNT` is unset and
 the module is not disabled — the case the section above exists for. A
-per-model line existed until 02-09-2026 and was dropped for the same reason;
-with one account it is safe to restore (`$cship.usage_limits.per_model` as a
-fourth line, plus the `opus_format` / `sonnet_format` / `cowork_format` /
-`oauth_apps_format` / `extra_usage_format` entries). cship still performs the
-OAuth fetch every `ttl` seconds; a failure costs one render a 2 s stall and
-then a 30 s cooldown, never a broken row.
+per-model line is left out for the same reason; with one account it is safe
+to add (`$cship.usage_limits.per_model` as a fourth line, plus the
+`opus_format` / `sonnet_format` / `cowork_format` / `oauth_apps_format` /
+`extra_usage_format` entries). cship still performs the OAuth fetch every
+`ttl` seconds; a failure costs one render a 2 s stall and then a 30 s
+cooldown, never a broken row.
 
 One more thing worth knowing before filing a bug: **the metrics line's
 content alone runs to about 100 cells** — the picture above is exactly that
@@ -204,17 +204,16 @@ in a narrow window.
 - **Terminal width** — cship resolves the width for `$fill` in this order,
   unchanged through 1.8.3: the controlling TTY of an ancestor process, then
   `$COLUMNS`, then `width` in `cship.toml`, then 80. Claude Code sets
-  `COLUMNS` and `LINES` before running the statusline command (it passed no
-  width until
-  [claude-code#22115](https://github.com/anthropics/claude-code/issues/22115)
-  closed in May 2026), so in a real terminal the first two always answer and
-  `width` is never read. It matters only where neither exists — Windows, the
-  web and desktop apps — and there it should be your terminal's column count.
-  It ships at 129; resizing a real terminal never misaligns anything, so a
-  wider or narrower window is no reason to change it.
+  `COLUMNS` and `LINES` before running the statusline command
+  ([claude-code#22115](https://github.com/anthropics/claude-code/issues/22115)),
+  so in a real terminal the first two always answer and `width` is never
+  read. It matters only where neither exists — Windows, the web and desktop
+  apps — and there it should be your terminal's column count. It ships at
+  129; resizing a real terminal never misaligns anything, so a wider or
+  narrower window is no reason to change it.
 - **Right margin** — `width_offset` is the number of columns Claude Code keeps
   around the statusline. cship defaults to 3; Claude Code 2.1.258 keeps 4, and
-  with 3 every right-aligned line lost its last cell to an ellipsis. It ships
+  with 3 every right-aligned line loses its last cell to an ellipsis. It ships
   at 4. A trailing `…` on the right after a Claude Code update means it needs
   re-measuring.
 - **Several accounts**, switched with `CLAUDE_CONFIG_DIR` — cship's own lookup
@@ -270,11 +269,9 @@ Haiku `#b8bb26`. The table is the whole theme; `background`, `bg1` and
 ## About the file itself
 
 `cship.toml` and `starship.toml` are the author's live configuration,
-published verbatim. Their comments cite files of the private source
-repository — `preferences.md`, `docs/blocked-upstream.md` — that hold the
-reasoning behind a few values, and `preferences.toml`, which ships with the
-whole setup but not with this directory. This page carries what an adopter
-needs; those comments are context, not instructions.
+published verbatim. A comment in `cship.toml` names `preferences.toml`, which
+ships with the whole setup but not with this directory; this page carries
+what an adopter needs.
 
 ## License
 

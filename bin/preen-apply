@@ -3,8 +3,8 @@
 #
 # Modes:
 #   link  a symlink into the repo — editing the repo IS editing the live file
-#   copy  the application rewrites this file itself, so it is copied and
-#         reconciled by preen pull rather than linked
+#   copy  a plain copy, for a file that must not be a symlink, such as one the
+#         application rewrites itself
 set -euo pipefail
 
 usage() { cat <<'EOF'
@@ -42,9 +42,9 @@ if [ "$(id -u)" -eq 0 ]; then
 fi
 
 expand() { printf '%s' "${1/#\~/$HOME}"; }
-# The other direction, for printing. `${1/#$HOME/\~}` keeps the backslash in
-# bash — the same trap public/prompt/install.sh names — so a first run said
-# `CREATED DIR     \~/.config/kitty` once per directory it made (14-09-2026).
+# The other direction, for printing: bash 3.2 keeps the backslash in
+# `${1/#$HOME/\~}`, printing `\~/.config/kitty`, so the prefix is matched
+# instead.
 short() {
   case "$1" in
     "$HOME"|"$HOME"/*) printf '~%s' "${1#"$HOME"}" ;;
@@ -145,14 +145,10 @@ while IFS=$'\t' read -r src tgt mode perms; do
   fi
 done < "$MANIFEST"
 
-# Guards the classic `while read` gotcha (same fix as preen doctor and preen pull):
-# a manifest missing its trailing newline silently drops its last row from
-# this loop entirely — `read` still populates the row's variables but
-# returns non-zero on that final line, so the loop condition fails before
-# the body runs. preen apply is the tool that actually DEPLOYS the manifest;
-# unlike preen doctor (verifies) and preen pull (reconciles copy-mode files),
-# a silent short-deploy here means a stale symlink or missing file stays
-# live with no error and an "every row applied" that looks correct.
+# A manifest missing its trailing newline drops its last row from a while-read
+# loop: `read` fills the row's variables but returns non-zero on that line.
+# Here that would leave a stale link or a missing file live under "every row
+# applied".
 if [ "$rows_seen" -ne "$expected_rows" ]; then
   echo "preen apply: refusing — a row of $(short "$MANIFEST") was silently skipped (missing trailing newline?)" >&2
   refused=yes
@@ -197,12 +193,13 @@ while IFS=$'\t' read -r src tgt mode perms; do
   [ -n "$DRY_RUN" ] || row="$tgt"
 
   # Creating a parent is legitimate on a fresh machine, but it must never be
-  # SILENT. Version-pinned targets (the IDEA rows carry `IntelliJIdea2026.2`)
-  # would otherwise let a stale path resurrect itself after a major upgrade:
-  # mkdir -p happily recreates the dead directory, cp succeeds, the run reports
-  # every row applied, and the config the IDE actually reads never receives
-  # anything. Announcing the creation is what turns that from silent into
-  # visible — an unexpected line here means a manifest path has gone stale.
+  # SILENT. Version-pinned targets (a JetBrains config directory such as
+  # `IntelliJIdea2026.2`) would otherwise let a stale path resurrect itself
+  # after a major upgrade: mkdir -p happily recreates the dead directory, cp
+  # succeeds, the run reports every row applied, and the config the IDE
+  # actually reads never receives anything. Announcing the creation is what
+  # turns that from silent into visible — an unexpected line here means a
+  # manifest path has gone stale.
   tgt_dir="$(dirname "$abs_tgt")"
   if [ ! -d "$tgt_dir" ] && ! dry_made "$tgt_dir"; then
     if [ -n "$DRY_RUN" ]; then
@@ -229,21 +226,18 @@ while IFS=$'\t' read -r src tgt mode perms; do
         run cp "$abs_tgt" "$bak"
         say 'backed up' 'would back up' "$tgt -> $tgt${bak#"$abs_tgt"}"
       elif [ -L "$abs_tgt" ] && [ ! "$abs_tgt" -ef "$abs_src" ]; then
-        # An adopter coming from stow, chezmoi or yadm has SYMLINKS here, not
-        # plain files, and this branch replaced them without a word — the file
-        # they pointed at survived, but nothing recorded where that was.
-        # Saying it is the whole fix: there is nothing to copy, only to name.
+        # An adopter coming from stow, chezmoi or yadm has symlinks here, not
+        # plain files. Replacing one loses only where it pointed, so the line
+        # names that; there is nothing to copy.
         say 'replaced link' 'would replace link' "$tgt (was -> $(readlink "$abs_tgt"))"
       fi
       run ln -sfn "$abs_src" "$abs_tgt"
       ;;
     copy)
-      # `cp` FOLLOWS a symlink, so a link already sitting here was written
-      # straight through and whatever it pointed at — an adopter's own file,
-      # outside everything this manifest manages — was destroyed. The link
-      # still read as a link afterwards and every check still said ok, so
-      # nothing anywhere showed it (found 14-09-2026, on 8 of 30 rows). Move
-      # the link aside, link and all, as the statusline drop-in's place() does.
+      # `cp` follows a symlink: copying over a link here would overwrite what it
+      # points at, an adopter's own file outside this manifest, while the link
+      # still reads as a link and every check says ok. Move the link aside,
+      # link and all, as the drop-ins' shared place() does.
       if [ -L "$abs_tgt" ]; then
         bak="$abs_tgt.unpreened"; n=1
         while [ -e "$bak" ] || [ -L "$bak" ]; do bak="$abs_tgt.unpreened.$n"; n=$((n + 1)); done
@@ -252,10 +246,9 @@ while IFS=$'\t' read -r src tgt mode perms; do
         say 'moved aside' 'would move aside' "$tgt (a symlink -> $was)"
       elif [ -f "$abs_tgt" ] && ! cmp -s "$abs_src" "$abs_tgt"; then
         # A plain file here is the adopter's own, or the application's rewrite
-        # of an earlier copy, and it was overwritten with no backup — a cold
-        # reader of the mirror's page closed the tab on that (22-09-2026). The
-        # link row's rule: kept beside itself, under a name nothing holds yet;
-        # identical content is left alone, so a re-run backs up nothing.
+        # of an earlier copy, so it is kept beside itself under a name nothing
+        # holds yet, as for a link row; identical content is left alone, so a
+        # re-run backs up nothing.
         bak="$abs_tgt.unpreened"; n=1
         while [ -e "$bak" ] || [ -L "$bak" ]; do bak="$abs_tgt.unpreened.$n"; n=$((n + 1)); done
         run cp "$abs_tgt" "$bak"

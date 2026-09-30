@@ -2,25 +2,24 @@
 # host of its own. A host's own file (hosts/<name>/preferences.toml: its targets,
 # their rows, its installed-version table) is merged onto this one at load
 # time, and a key defined in two files is refused, never overridden. The
-# prose half, preferences.md, is not published: without it the ceiling
-# cross-check is skipped with one warn, and every row below still runs.
+# prose half is the authority and is not published: it holds the reasoning
+# and a ceiling table that must list exactly the merged spec's `unreachable`
+# entries, so without it that cross-check is skipped with one warn and every
+# row still runs.
 #
-# `preferences.md` is the authority and carries the reasoning. This file carries
-# only what a check can act on, and `bin/lib/pref-check.py` asserts it against
-# LIVE config — not against the copies in this repo, because a `copy`-mode entry
-# can be legitimately stale between `preen pull` runs and the question is what the
-# application actually renders.
+# This file carries only what a check can act on, and `bin/lib/pref-check.py`
+# asserts it against LIVE config — not against the copies in this repo, because
+# an application can rewrite a `copy`-mode file, so the live copy can
+# legitimately differ from the repo's, and the question is what the
+# application renders.
 #
 # "Live config" means the whole config an application assembles, not one file:
 # the kitty reader follows `include`/`globinclude` inline, the way kitty does.
-# Every `unreachable` entry below must also appear in preferences.md's ceiling
-# table, and vice versa — the two lists are compared on every run.
 #
 # ── The state field declares INTENT, never outcome ─────────────────────────────
-# An earlier draft of the design had four states, two of which (`holds`,
-# `drift`) were outcomes of running the check. Those cannot be declared: writing
-# "this holds" into the SSOT means hand-editing it every time a config changes,
-# which is the maintenance burden the mechanism exists to remove. Three states:
+# An outcome such as "holds" or "drift" cannot be declared: writing it into the
+# SSOT means hand-editing it every time a config changes, which is the
+# maintenance burden the mechanism exists to remove. Three states:
 #
 #   enforce      compare live value against `want` -> ok / FAIL. The default:
 #                a row that writes no `state` is enforced.
@@ -44,21 +43,22 @@
 #                     function name, a probe's `key=value` line — where a
 #                     substring cannot tell `_fzf_compgen_path` from
 #                     `_fzf_compgen_pathX`, nor a main-keymap binding from a
-#                     menuselect line repeating its text (both survived the
-#                     02-09-2026 battery under want_any_contain).
+#                     menuselect line repeating its text (both pass
+#                     want_any_contain — measured 02-09-2026).
 #   want_absent       the value must NOT contain this, CASE-INSENSITIVELY. For
 #                     preferences a tool expresses by NEGATION — Sublime's
 #                     ligatures are on by default and switched off by
 #                     no_liga/no_clig/no_calt. An ABSENT key passes: deleting
-#                     the setting satisfies it. Case-folded since 10-09-2026:
-#                     kitty lowercases a mouse_map's modes before matching them,
-#                     so `UNGRABBED` unbound the click past an exact-case test.
+#                     the setting satisfies it. Case-folded because kitty
+#                     lowercases a mouse_map's modes before matching them: an
+#                     exact-case test would miss an `UNGRABBED` that unbinds
+#                     the click.
 #   want_contains     substring test.
 #   want              exact, string-compared after trimming — unless the want
 #                     itself carries leading or trailing whitespace, when it is
 #                     compared whitespace-exact against the raw read: starship's
 #                     one-space fill symbol, and the separator space that ends a
-#                     module format (both audits, 16-09-2026).
+#                     module format.
 #
 # Every matcher takes a QUOTED string. `want = 16` is rejected rather than
 # silently never matching, because reads are normalised to strings.
@@ -69,8 +69,7 @@
 # the disabling spelling is the trap: an absent key passes whatever the
 # application would do with it, so the row is green in two very different
 # worlds — the default is right, or the default moved and the preference is
-# gone. It is also only as tight as the spellings you thought of, and a
-# substring test over an un-lowercased read is not tight at all.
+# gone. It is also only as tight as the spellings you thought of.
 # `unset_reads_default = true` resolves an absent key to the value the
 # application's OWN shipped documentation gives, and hands that to the ordinary
 # matcher. The row becomes a positive statement, an upstream default flip fails
@@ -83,9 +82,9 @@
 #
 # ── A line that restates a shipped default is not a preference ─────────────────
 # It buys nothing and costs a line, and it hides the one thing a config should
-# show: what was CHOSEN. Both governed tmux.conf files say so in their own
-# headers, and the tmux_keys rows below assert it for the keys tmux already
-# binds well — a `bind Left select-pane -L` would be exactly this mistake.
+# show: what was CHOSEN. The tmux_keys rows below assert it for the keys tmux
+# already binds well — a `bind Left select-pane -L` would be exactly this
+# mistake.
 
 # ── Where each surface's live config lives ─────────────────────────────────────
 
@@ -93,16 +92,16 @@
 format = "kitty"
 path = "~/.config/kitty/kitty.conf"
 
-# Two more files kitty reads beside kitty.conf, both link rows since
-# 06-09-2026 (the zsh+kitty seam pass). Same `key value` grammar, no
-# includes. kitty stats open-actions.conf on every click, so an edit is live
-# at once; mime.types is read once per process and needs a config reload.
+# Two more files kitty reads beside kitty.conf, both link rows. Same
+# `key value` grammar, no includes. kitty stats open-actions.conf on every
+# click, so an edit is live at once; mime.types is read once per process and
+# needs a config reload.
 # open-actions.conf is read as ORDERED ENTRIES, not as an option stream. It
-# shares kitty.conf's `key value` grammar, so the plain kitty reader parses it
-# — and did, until 10-09-2026 — but that reader flattens the file and this
-# file's meaning is not flat: kitty takes the first entry whose criteria ALL
-# match, and an entry's `action` belongs to the criteria above it. Flattened,
-# the directives are a bag. Keys are `block1`, `block2`, … in file order.
+# shares kitty.conf's `key value` grammar, so the plain kitty reader would
+# parse it, but that reader flattens the file and this file's meaning is not
+# flat: kitty takes the first entry whose criteria ALL match, and an entry's
+# `action` belongs to the criteria above it. Flattened, the directives are a
+# bag. Keys are `block1`, `block2`, … in file order.
 [targets.kitty_open_action_blocks]
 format = "kittyblocks"
 path = "~/.config/kitty/open-actions.conf"
@@ -111,8 +110,8 @@ path = "~/.config/kitty/open-actions.conf"
 format = "kitty"
 path = "~/.config/kitty/mime.types"
 
-# The one adopted kitten's own config, a link row since 10-09-2026. Same
-# `key value` grammar again; `ignore` accumulates.
+# The one adopted kitten's own config, a link row. Same `key value` grammar
+# again; `ignore` accumulates.
 [targets.kitty_choose_files]
 format = "kitty"
 path = "~/.config/kitty/choose-files.conf"
@@ -204,10 +203,6 @@ path = "~/.zprofile"
 format = "zshcap"
 path = "~/.zshrc"
 
-# Managed since 27-08-2026 (the 18.19 sweep's adoptions ended the
-# no-managed-config settlement). link-mode: atuin writes this file once, at
-# first run, and never again — the live mtime sat at its 14-08 creation
-# through daily use to 27-08.
 # Readline's rc on the Mac — Apple's /bin/bash by name, Homebrew's gpg, and
 # mise's python REPL (its readline module links libreadline.8; python@3.14's
 # links libedit, so that REPL never reads this file, and neither does sqlite3:
@@ -218,6 +213,8 @@ path = "~/.zshrc"
 format = "nanorc"
 path = "~/.inputrc"
 
+# link-mode: atuin writes this file once, at its first run, and never again —
+# created 14-08-2026, its mtime was unchanged at 27-08-2026 through daily use.
 [targets.atuin]
 format = "toml"
 path = "~/.config/atuin/config.toml"
@@ -246,7 +243,7 @@ format = "sshcfg"
 
 # Terminus's colour scheme — the second terminal surface. BOTH
 # Terminus.hidden-color-scheme files are build artifacts, generated from
-# `user_theme_colors` in Terminus.sublime-settings (see the traps.md entry).
+# `user_theme_colors` in Terminus.sublime-settings.
 # The repo copy of the small one is pinned generated bytes, so a legitimate
 # regeneration is a no-op diff.
 [targets.sublime_terminus_scheme]
@@ -263,7 +260,7 @@ why = "A block hides the character it sits on; a thin bar disappears."
 key = "cursor_shape"
 want = "underline"
 
-# The thickness half of "underline caret, 4pt thick" (preferences.md § Cursor).
+# The thickness half of the caret: an underline 4pt thick.
 [pref.caret.targets.kitty_thickness]
 target = "kitty"
 key = "cursor_underline_thickness"
@@ -290,20 +287,17 @@ probe = "sublime_caret_styles"
 value = "FiraCode Nerd Font Mono"
 why = "Nerd glyphs render in terminals, statuslines and file-tree icons. 'Fira Code' and 'FiraCode Nerd Font Mono' are separate installed families; the wrong one produces tofu rather than an error."
 
-# EXACT, since 10-09-2026, and the substring it replaced is the more
-# interesting half of the story. `want_contains` catches the tofu hazard the
+# EXACT, not a substring. `want_contains` would catch the tofu hazard the
 # `why` names — plain `Fira Code` is a different installed family — but four
 # OTHER installed families contain the wanted string as a strict PREFIX:
 # "… Light", "… Med", "… Ret", "… SemBd" (read from name ID 1 of every file in
 # the three font directories). Each carries its own PostScript name, and the
 # two font_features lines below index BY PostScript name — so a drift to a
-# sibling weight left `+calt +zero +onum` naming a face that was not in use,
-# with pref.ligatures and pref.figure_features both green and no tofu to
-# notice. That is the 14-08-2026 `+liga` defect rebuilt with the assertions in
-# place. The realistic writer is not a hand-edit: `kitten choose-fonts` writes
-# an extended spec back into kitty.conf, and `family="…" style=Retina` passes a
-# substring test.
-# The trade: this row is now coupled to kitty's font-spec syntax, so any
+# sibling weight leaves `+calt +zero +onum` naming a face not in use, with
+# pref.ligatures and pref.figure_features both green and no tofu to notice.
+# The realistic writer is `kitten choose-fonts`, which writes an extended spec
+# back into kitty.conf; `family="…" style=Retina` passes a substring test.
+# The trade: this row is coupled to kitty's font-spec syntax, so any
 # rewrite of the line turns it red even when equivalent. That red IS the event
 # — the kitten rewriting a link-mode managed file is the drift. Teaching the
 # reader to parse the spec and return the family alone was considered and is
@@ -315,10 +309,11 @@ want = 'family="FiraCode Nerd Font Mono"'
 
 # The faces the features lines name, asserted where the FAMILY is — because
 # that is the fact they depend on. The three font_features rows under
-# pref.ligatures and pref.figure_features check what every line SAYS; nothing
-# checked which faces were covered, so deleting one line left them green with
-# half the terminal unstyled. Substring-safe: the sibling PostScript names are
-# -Light/-Med/-Ret/-SemBd, and -Reg and -Ret differ in their last character.
+# pref.ligatures and pref.figure_features check what every line SAYS, not
+# which faces are covered: without these rows, deleting one line leaves them
+# green with half the terminal unstyled. Substring-safe: the sibling PostScript
+# names are -Light/-Med/-Ret/-SemBd, and -Reg and -Ret differ in their last
+# character.
 [pref.nerd_font_where_glyphs_render.targets.kitty_features_regular]
 target = "kitty"
 key = "font_features"
@@ -340,9 +335,8 @@ want = "FiraCode Nerd Font Mono"
 key = "view_settings.font_face"
 want = "FiraCode Nerd Font Mono"
 
-# Terminus requires the font in BOTH files. Its own settings file calls setting
-# only one of the two "the failure mode" — and until 14-08-2026 that was the one
-# thing the spec did not check.
+# Terminus requires the font in BOTH files; its own settings file calls setting
+# only one of the two "the failure mode".
 [pref.nerd_font_where_glyphs_render.targets.sublime_terminus_view]
 key = "font_face"
 want = "FiraCode Nerd Font Mono"
@@ -352,12 +346,9 @@ state = "n_a"
 evidence = "editor buffer renders no Nerd glyphs; plain Fira Code is correct there — asserted separately by [pref.editor_typeface]"
 
 # ── Typeface where NO glyphs render ────────────────────────────────────────────
-# preferences.md makes the family the most emphasised typography preference and
-# warns the wrong one "produces tofu rather than an error" — and until
-# 14-08-2026 not one editor BUFFER surface asserted it. The block above covers
-# the terminals; this covers the four surfaces that render no Nerd glyphs and so
-# want plain `Fira Code`, which is a SEPARATE installed family from
-# `FiraCode Nerd Font Mono` rather than another name for it.
+# The block above covers the terminals; this covers the surfaces that render no
+# Nerd glyphs and so want plain `Fira Code`, a SEPARATE installed family from
+# `FiraCode Nerd Font Mono`, not another name for it.
 
 [pref.editor_typeface]
 value = "Fira Code"
@@ -371,7 +362,7 @@ want = "Fira Code"
 key = "font_face"
 want = "Fira Code"
 
-# ── Size (this machine — see preferences.md for the per-device rule) ───────────
+# ── Size (this machine) ────────────────────────────────────────────────────────
 
 [pref.font_size_mac]
 value = "16"
@@ -417,15 +408,14 @@ key = "copy_on_select"
 want = "yes"
 
 # Copies drop trailing spaces; smart leaves rectangular selections intact.
-# Adopted 26-08-2026 from the 0.48.2 reference sweep.
 # A double-click takes a path WHOLE — `alpha_beta`, `foo.bar`, `/a/b/c` — which
 # is kitty's shipped set and is kept by ruling, 10-09-2026. It contradicts the
-# SSH side on purpose: tmux's `word-separators` was aligned to the prompt's
-# empty WORDCHARS the day before, so the same gesture stops at every separator
-# there. Selection and motion are different jobs. You double-click a path to
-# copy it, so whole is the useful answer; you option+arrow through a path to
-# edit it, so segments are the useful answer there. Pinned because an unruled
-# shipped default that contradicts a ruling is what a later cleanup "fixes".
+# prompt on purpose: the prompt's empty WORDCHARS makes every separator a word
+# boundary, and so does a tmux whose `word-separators` is aligned to it.
+# Selection and motion are different jobs. You double-click a path to copy it,
+# so whole is the useful answer; you option+arrow through a path to edit it,
+# so segments are the useful answer there. Pinned because an unruled shipped
+# default that contradicts a ruling is what a later cleanup "fixes".
 [pref.copy_on_select.targets.kitty_word_selection]
 target = "kitty"
 key = "select_by_word_characters"
@@ -450,7 +440,7 @@ evidence = "Terminus does not implement copy-on-select — absent from its sourc
 # The SSH half: MouseDragEnd1Pane pipes the selection to pbcopy. `mouse on` is
 # the gate — without it there is no drag to copy from — so it carries the teeth
 # here; the bind line itself is asserted by pref.tmux_keys through the binding
-# reader, which did not exist when this row was written.
+# reader.
 [pref.copy_on_select.targets.tmux]
 key = "mouse"
 want = "on"
@@ -468,18 +458,17 @@ evidence = "man tmux 3.7c: no trailing-space option exists in copy-mode; only ca
 value = "on"
 why = "-> and => and !== read as the single operators they are."
 
-# `calt` is the WHOLE mechanism for this font, not half of it. No installed Fira
-# Code variant declares a `liga` feature, so the `+liga` kitty.conf carried until
-# 14-08-2026 asserted nothing — which is why nothing here ever checked for it.
+# `calt` is the WHOLE mechanism for this font, not half of it: no installed
+# Fira Code variant declares a `liga` feature, so a `+liga` in kitty.conf would
+# assert nothing.
 [pref.ligatures.targets.kitty]
 key = "font_features"
 accumulate = true
 want_all_contain = "+calt"
 
 # Sublime states this NEGATIVELY: liga/clig/calt are on by default and are
-# switched off by no_liga/no_clig/no_calt. This asserted `dlig` until
-# 14-08-2026 — a different, optional feature — so adding "no_liga" would have
-# turned the stated preference off while the check stayed green.
+# switched off by no_liga/no_clig/no_calt. `no_calt` is the one that turns this
+# font's ligatures off, since `calt` is its whole mechanism (above).
 [pref.ligatures.targets.sublime]
 key = "font_options"
 want_absent = "no_calt"
@@ -507,12 +496,9 @@ key = "font_features"
 accumulate = true
 want_all_contain = "+zero"
 
-# Symmetric with `+zero` above as of 14-08-2026. This used to assert only that
-# SOME face carried `+onum`, because Bold lacked it and nothing recorded why.
-# The font binaries settled it: Bold's GSUB feature list is byte-identical to
-# Regular's, so the omission was transcribed from kitty's own doc example, not
-# forced by the face. Both faces carry it now, so the weaker matcher is gone —
-# the evidence is in kitty.conf's `# ── Font ──` section.
+# Every face carries `+onum`, as with `+zero` above: Bold's GSUB feature list
+# is byte-identical to Regular's, so nothing in the face forces an omission —
+# kitty.conf's `# ── Font ──` section has the measurement.
 [pref.figure_features.targets.kitty_onum]
 target = "kitty"
 key = "font_features"
@@ -540,10 +526,8 @@ key = "sticky_scroll.enabled"
 want = "true"
 
 # The PREFERENCE is met on Zed, by sticky scroll above. What is unreachable is
-# the specific mechanism IDEA uses, and preferences.md listed that ceiling while
-# nothing here carried it — so it was outside the "if one ever lifts, it is
-# noticed" promise. Listed now, which is also what makes the two lists
-# comparable: every row of that table is one entry here, and vice versa.
+# the mechanism IDEA uses, listed here so every run's warn prompts a manual
+# re-check.
 [pref.enclosing_context.targets.zed_method_separators]
 state = "unreachable"
 recheck = "manual"
@@ -552,8 +536,13 @@ evidence = "Zed draws no horizontal rule between functions and offers no setting
 
 [pref.terminal_palette]
 value = "Gruvbox Dark Hard"
-why = "The Mac terminal's identity: dark where code runs, light where it is read, hard for contrast. Settled 25-08-2026 over a same-day Gruvbox Material trial on measured contrast (fg 11.95:1 vs 9.07:1, accent range 4.90 vs 2.24) and family consistency. The three asserted hexes are the ones preferences.md § Colour names."
+why = "The Mac terminal's identity: dark where code runs, light where it is read, hard for contrast. Chosen over Gruvbox Material on measured contrast (fg 11.95:1 vs 9.07:1, accent range 4.90 vs 2.24) and family consistency (ruled 25-08-2026)."
 
+# `background` is set only in current-theme.conf, so asserting it THROUGH
+# kitty.conf re-proves the include chain live on every run — a stronger claim
+# than preen doctor's the-files-sit-together check. kitty compares colours
+# case-insensitively, but these assertions read the file's text, so the
+# theme file's hexes keep the casing the `want` fields use.
 [pref.terminal_palette.targets.kitty]
 key = "background"
 want = "#1d2021"
@@ -573,13 +562,13 @@ want = "#fabd2f"
 # The hand-tuned tab/border block in current-theme.conf is the part a
 # `kitten themes` run destroys: the collection's autogenerated replacement
 # puts the palette's own selection orange (#d65d0e) on the active tab —
-# off-ACCENT — plus two hexes from no Gruvbox palette (#eeeeee/#171a1a),
-# and carries NO border
-# directives, so active_border_color reverts to kitty's default #00ff00 —
-# measured 26-08-2026 against the collection's own --dump-theme. The manifest
-# copy-row check sees the rewrite, but its remedy (preen pull) then captures the
-# loss into the repo with every palette assertion still green. These two pin
-# the accent carriers — the same aqua tmux's active-window pill asserts.
+# off-ACCENT — plus two hexes from no Gruvbox palette (#eeeeee/#171a1a), and
+# carries NO border directives, so active_border_color reverts to kitty's
+# default #00ff00 — measured 26-08-2026 against the collection's own
+# --dump-theme. A copy-row check sees that the file changed, not what changed:
+# taken back into the repo, the rewrite would carry the loss with every palette
+# assertion still green. These two pin the accent carriers — the same aqua
+# tmux's active-window pill asserts.
 [pref.terminal_palette.targets.kitty_active_tab]
 target = "kitty"
 key = "active_tab_background"
@@ -590,13 +579,12 @@ target = "kitty"
 key = "active_border_color"
 want = "#8ec07c"
 
-# The rest of current-theme.conf's hand-tuned tab/border block, asserted
-# 10-09-2026. The 26-08-2026 ruling pinned the two accent CARRIERS, and its own
-# argument reaches the rest unchanged: this block lives in the one `copy`-mode
-# file, a `kitten themes` run rewrites it WHOLESALE, and the file's own comment
-# says the collection autogenerates it with off-palette values. Guarding the
-# accent carriers alone meant a themes run could be reviewed as clean while the
-# emphasis hierarchy the accent exists to create had inverted.
+# The rest of current-theme.conf's hand-tuned tab/border block, pinned on the
+# accent carriers' argument: this block lives in kitty's one `copy`-mode file, a
+# `kitten themes` run rewrites it WHOLESALE, and the file's own comment says the
+# collection autogenerates it with off-palette values. Guarding the carriers
+# alone lets a themes run review as clean while the emphasis hierarchy the
+# accent exists to create has inverted.
 #
 # active_tab_foreground is the legibility half of an already-asserted colour —
 # asserting the aqua background without the ink on it asserts half a pair. The
@@ -624,18 +612,17 @@ key = "inactive_border_color"
 want = "#3c3836"
 
 # On the block argument alone, NOT because it protects the bell: the audio bell
-# was silenced 10-09-2026 and this is not what replaced it — bell_border_color
-# tints the border of INACTIVE windows, which kitty draws only when more than
-# one is visible, so it never renders in a one-window-per-tab layout. The bell's
-# live signal is the tab title's {bell_symbol}.
+# is off and this does not replace it — bell_border_color tints the border of
+# INACTIVE windows, which kitty draws only when more than one is visible, so it
+# never renders in a one-window-per-tab layout. The bell's live signal is the
+# tab title's {bell_symbol}.
 [pref.terminal_palette.targets.kitty_bell_border]
 target = "kitty"
 key = "bell_border_color"
 want = "#fb4934"
 
-# The hex § Colour's contrast measurement was actually taken on — fg 11.95:1
-# against the ground, the number that decided Gruvbox Dark Hard over a same-day
-# Material trial — and the half nothing read.
+# The hex the contrast measurement was taken on — fg 11.95:1 against the
+# ground, the number that decided Gruvbox Dark Hard over Gruvbox Material.
 [pref.terminal_palette.targets.kitty_foreground]
 target = "kitty"
 key = "foreground"
@@ -643,19 +630,18 @@ want = "#ebdbb2"
 
 # The titlebar rides the ground BY REFERENCE — `background` is kitty for "the
 # active window's background colour" — so a theme swap recolours the chrome
-# with no second copy of the hex anywhere. Adopted 26-08-2026.
+# with no second copy of the hex anywhere.
 [pref.terminal_palette.targets.kitty_titlebar]
 target = "kitty"
 key = "macos_titlebar_color"
 want = "background"
 
 # Terminus is a terminal too — dark where code runs, even inside a light
-# editor (flipped 25-08-2026). Same identity trio, read from its GENERATED
-# scheme. The generator bumps variables.background one blue step (#1d2022 —
-# Sublime's add_regions inversion workaround), so the ground is asserted on
-# globals.background and on the source dict below; gold and aqua ride the
-# bright-tier variables (light_brown / light_cyan), which pass through
-# unchanged.
+# editor. Same identity trio, read from its GENERATED scheme. The generator
+# bumps variables.background one blue step (#1d2022 — Sublime's add_regions
+# inversion workaround), so the ground is asserted on globals.background and on
+# the source dict below; gold and aqua ride the bright-tier variables
+# (light_brown / light_cyan), which pass through unchanged.
 [pref.terminal_palette.targets.sublime_terminus_scheme]
 key = "globals.background"
 want = "#1d2021"
@@ -682,15 +668,13 @@ want = "#1d2021"
 # everything but that table. Values are style strings ("bold #fabd2f"), so these
 # match on the hex and survive a weight change rather than failing on one.
 #
-# ⚠️ These are NOT all always-rendered, and this comment claimed they were until
-# 25-08-2026. `starship_gold` (show_always = true) and `cship_aqua` (the context
-# bar's base style) are. `starship_aqua` paints only inside a git repo, and
-# `cship_gold` only above usage_limits' 70% warn threshold — because those files
-# use that accent NOWHERE else: aqua appears exactly once in starship.toml, and
-# every gold in cship.toml is a warn tier, an effort tier, or the account label.
-# The picks are the only ones available; the claim was the error. The account
-# module stopped being that last exception on 11-09-2026: gold there is the same
-# rule as starship's $username — gold marks whose session this is.
+# ⚠️ These are NOT all always-rendered. `starship_gold` (show_always = true) and
+# `cship_aqua` (the context bar's base style) are. `starship_aqua` paints only
+# inside a git repo — aqua appears exactly once in starship.toml, so no other
+# key carries it — and `cship_gold` only above usage_limits' 70% warn
+# threshold. Every gold in cship.toml is a warn tier, an effort tier, or the
+# account label, whose gold follows starship's $username: gold marks whose
+# session this is.
 
 [pref.terminal_palette.targets.starship_ground]
 state = "n_a"
@@ -722,12 +706,12 @@ target = "cship"
 key = "cship.context_bar.style"
 want_contains = "#8ec07c"
 
-# tmux, the SSH-side terminal — the third surface preferences.md § Colour names.
-# It draws its own status bar, so all three identity hexes land here: the ground
-# on the bar itself, gold on the session pill, aqua on the active-window pill
-# (which is deliberately the same aqua as kitty's active tab). Three separate
-# directives, two of them `set` and one `setw`, so no single edit can carry all
-# three green past a partial re-theme.
+# tmux, the SSH-side terminal — the third terminal surface after kitty and
+# Terminus. It draws its own status bar, so all three identity hexes land
+# here: the ground on the bar itself, gold on the session pill, aqua on the
+# active-window pill (which is deliberately the same aqua as kitty's active
+# tab). Three separate directives, two of them `set` and one `setw`, so no
+# single edit can carry all three green past a partial re-theme.
 [pref.terminal_palette.targets.tmux]
 key = "status-style"
 want_contains = "#1d2021"
@@ -755,7 +739,7 @@ want_contains = "bg=#8ec07c"
 
 [pref.editor_theme]
 value = "Gruvbox Light Hard"
-why = "Light where code is read, hard for contrast — standing since 25-08-2026. IDEA is the deliberate exception: its theme is an executable plugin, where upstream maintenance IS load-bearing, so it runs a Gruvbox Material Light Island variant instead. Which variant is the idea_laf/idea_colors `want` below and is not restated here — this line named one until 07-09-2026 and was stale the moment the theme moved."
+why = "Light where code is read, hard for contrast. IDEA is the deliberate exception: its theme is an executable plugin, where upstream maintenance IS load-bearing, so it runs a Gruvbox Material Light Island variant instead."
 
 [pref.editor_theme.targets.zed]
 key = "theme.light"
@@ -773,8 +757,7 @@ want_contains = "gruvbox-light-hard"
 
 # ── Surfaces that follow the terminal palette ──────────────────────────────────
 # The palette is stated once, in the kitty theme; a surface that can ride the
-# 16 ANSI slots does. bat joined 26-08-2026 — it was the one unasserted rider,
-# blocked only on a flag-per-line reader, which `flags` now is.
+# 16 ANSI slots does.
 
 [pref.follow_terminal_palette]
 value = "ansi"
@@ -809,8 +792,8 @@ key = "params"
 accumulate = true
 want_any = "HL_OFF_PALETTE=none"
 
-# The one shell tool that CANNOT ride the palette. Its ceiling row is in
-# preferences.md; the probe watches the half that could mechanically lift.
+# The one shell tool that CANNOT ride the palette; the probe watches the half
+# that could mechanically lift.
 [pref.follow_terminal_palette.targets.fd]
 state = "unreachable"
 recheck = "auto"
@@ -821,8 +804,7 @@ probe = "fd_colour_modes"
 # fp's preview pane, the one surface here that cannot ride the terminal's 16:
 # it highlights through the kitten's embedded Chroma styles, so the nearest
 # reachable thing is the palette FAMILY — gruvbox is one of the styles it
-# embeds. Adopted 10-09-2026 evening, on the audit's question, after the pass
-# had declined it on usage rather than capability.
+# embeds.
 [pref.follow_terminal_palette.targets.kitty_choose_files_preview]
 target = "kitty_choose_files"
 key = "dark_pygments_style"
@@ -859,16 +841,16 @@ target = "kitty"
 key = "scrollback_pager_history_size"
 want = "64"
 
-# Adopted 26-08-2026 from the 0.48.2 reference sweep: an enlarged window
-# refills its new rows from history instead of opening them blank.
+# An enlarged window refills its new rows from history instead of opening them
+# blank.
 [pref.scrollback.targets.kitty_fill_enlarged]
 target = "kitty"
 key = "scrollback_fill_enlarged_window"
 want = "yes"
 
-# tmux's own number, four times kitty's 50k and stated nowhere until
-# 27-08-2026: SSH sessions persist across attach cycles for days, and tmux
-# has no second tier — no scrollback_pager_history_size behind it.
+# tmux's own number, four times kitty's 50k: SSH sessions persist across attach
+# cycles for days, and tmux has no second tier — no
+# scrollback_pager_history_size behind it.
 [pref.scrollback.targets.tmux]
 key = "history-limit"
 want = "200000"
@@ -893,8 +875,8 @@ want_any = "cmd+q combine : save_as_session --save-only ~/.config/kitty/last-ses
 
 # The SSH half the why names — resurrect is the save/restore mechanism, and
 # continuum is what makes it automatic (10-minute autosave, restore on
-# server start). Stated nowhere until 27-08-2026: without continuum the
-# "tmux-resurrect does it over SSH" claim describes a manual keystroke.
+# server start). Without continuum the why's "tmux-resurrect does the same
+# over SSH" describes a manual keystroke.
 [pref.session_persistence.targets.tmux_resurrect]
 target = "tmux"
 key = "@plugin"
@@ -923,15 +905,14 @@ want = "2"
 
 [pref.deterministic_geometry]
 value = "a window opens at the declared size, every time"
-why = "Remembered geometry drifts — so size is declared, never inherited from the last session. The statusline does not depend on it: cship follows the live width (traps.md)."
+why = "Remembered geometry drifts — so size is declared, never inherited from the last session. The statusline does not depend on it: cship follows the live width."
 
 [pref.deterministic_geometry.targets.kitty]
 key = "remember_window_size"
 want = "no"
 
-# The declared size itself. cship's `width = 129` was believed coupled to this
-# until 02-09-2026 (traps.md); it is a fallback a terminal never reaches, so
-# only the geometry is pinned here.
+# The declared size itself. cship's `width = 129` is a fallback a terminal
+# never reaches, not a copy of this, so only the geometry is pinned here.
 [pref.deterministic_geometry.targets.kitty_width]
 target = "kitty"
 key = "initial_window_width"
@@ -975,7 +956,7 @@ want = "left"
 
 # The SSH half of the same taste: with extended-keys off, a TUI inside tmux
 # cannot even request the modifier combos kitty sends — the Alt layer would
-# stop at the tmux border. Opt-in per application; adopted 27-08-2026.
+# stop at the tmux border. Opt-in per application.
 [pref.option_key.targets.tmux]
 key = "extended-keys"
 want = "on"
@@ -988,10 +969,10 @@ why = "Index plus working directory: the index is what cmd+N jumps to, and the d
 key = "tab_title_template"
 want_contains = "active_wd"
 
-# The template carries BOTH halves of the stated taste and only the directory
-# half was read. `{index}` is the number cmd+N jumps to, so a template that
-# dropped it would leave the tab bar naming places with no way to see which
-# key reaches them — with the row below still green on the binding.
+# The template carries BOTH halves of the stated taste; the row above reads
+# only the directory half. `{index}` is the number cmd+N jumps to, so a
+# template that dropped it would leave the tab bar naming places with no way to
+# see which key reaches them — with the row below still green on the binding.
 [pref.tab_identity.targets.kitty_index_in_title]
 target = "kitty"
 key = "tab_title_template"
@@ -1006,23 +987,22 @@ key = "map"
 accumulate = true
 want_any_contain = "goto_tab 1"
 
-# A new tab starts where the current one is (06-09-2026). kitty's default
-# new_tab starts at kitty's own launch directory — home, from the Dock — so
-# the directory the bar names for the new tab was never the one being
-# worked in. new_tab_with_cwd is launch --type=tab --cwd=current: at a
-# prompt that is the shell integration's OSC 7 report (gates /
-# kitty_shell_integration keeps `no-cwd` out), mid-command the foreground
-# process's directory by syscall — kitty 0.48.2's window.py, not its page.
+# A new tab starts where the current one is. kitty's default new_tab starts at
+# kitty's own launch directory — home, from the Dock — so the directory the bar
+# names for the new tab is not the one being worked in. new_tab_with_cwd is
+# launch --type=tab --cwd=current: at a prompt that is the shell integration's
+# OSC 7 report (gates / kitty_shell_integration keeps `no-cwd` out),
+# mid-command the foreground process's directory by syscall — kitty 0.48.2's
+# window.py, not its page.
 [pref.tab_identity.targets.kitty_new_tab_cwd]
 target = "kitty"
 key = "map"
 accumulate = true
 want_any = "cmd+t new_tab_with_cwd"
 
-# The tmux twin, stated nowhere until 27-08-2026: windows are named by their
-# directory basename and numbered from 1 with no gaps — index plus working
-# directory, the same identity rule. set-titles-string hands the same answer
-# up to kitty's titlebar.
+# The tmux twin: windows are named by their directory basename and numbered
+# from 1 with no gaps — index plus working directory, the same identity rule.
+# set-titles-string hands the same answer up to kitty's titlebar.
 [pref.tab_identity.targets.tmux]
 key = "automatic-rename-format"
 want = "#{b:pane_current_path}"
@@ -1046,10 +1026,7 @@ want_contains = "pane_current_path"
 value = "bottom"
 why = "A left sidebar was trialled 25-08-2026 and declined: ~30 of the window's 129 content columns for information the tab title already carries."
 
-# Three want_absent rows — left, right, top — said this until 10-09-2026, and
-# none of them was case-folded while kitty lowercases the value before matching
-# it, so `tab_bar_edge TOP` put the bar on top with all three green. The
-# preference is a position, so it is now stated as one; `unset_reads_default`
+# The preference is a position, so it is stated as one; `unset_reads_default`
 # reads kitty's own default for a key the config leaves unwritten. Same trade as
 # the allow_hyperlinks gate: `Bottom` reads red though kitty would honour it.
 [pref.horizontal_tab_bar.targets.kitty]
@@ -1077,11 +1054,9 @@ key = "tab_title_max_length"
 want = "30"
 
 # ── Gates: switches that decide whether a value applies at all ────────────────
-# Three assertions elsewhere in this file read a VALUE while the switch that
-# makes it take effect went unchecked. Flip any of these and the corresponding
-# check stays green over a setting the application is ignoring — the same
-# "assertion does not match its own scope" defect that the ligature and caret
-# entries had.
+# A row here pins a switch that decides whether a value asserted elsewhere
+# takes effect: flip one and that value's check stays green over a setting the
+# application is ignoring.
 
 [pref.gates]
 value = "the switches that make other asserted values effective"
@@ -1093,8 +1068,8 @@ key = "show_wrap_guides"
 want = "true"
 
 # Without no-cursor the shell fights kitty for the caret shape, so
-# `cursor_shape underline` stops being what you see. preferences.md states this
-# as part of the cursor preference, not as a separate setting.
+# `cursor_shape underline` stops being what you see. It is part of the cursor
+# preference, not a separate setting.
 [pref.gates.targets.kitty]
 key = "shell_integration"
 want_contains = "no-cursor"
@@ -1103,7 +1078,7 @@ want_contains = "no-cursor"
 # enabled bar the cursor: its OSC 133 prompt marks power jump-to-prompt, the
 # last-command-output pager, click-to-move-cursor and glitch-free redraw of
 # the starship prompt on resize; its OSC 2 report keeps the cwd in the window
-# title and OSC 7 lets a new window inherit it (preferences.md § Interaction).
+# title and OSC 7 lets a new window inherit it.
 # The caret gate above only checks that `no-cursor` is PRESENT (want_contains),
 # so any of the integration's other keywords — no-prompt-mark, no-cwd,
 # no-title, no-complete, no-sudo — would switch a capability off and stay green
@@ -1121,11 +1096,10 @@ want = "enabled no-cursor"
 # line discards it — the shipped reference's own words are "Remove all mouse
 # action definitions up to this point. Useful, for instance, to remove the
 # default mouse actions" — with no error anywhere, leaving every hyperlink and
-# selection row in this file green over gestures that do nothing. That is the
-# identical shape the allow_hyperlinks gate below exists for, and the repo
-# already reasoned this exact gate through on the tmux side. Sharpest instance:
-# the row further down pins the value that shapes a double-click while the
-# double-click itself was unpinned.
+# selection row in this file green over gestures that do nothing: the shape the
+# allow_hyperlinks gate below exists for. Sharpest instance: the
+# select_by_word_characters row above pins the value that shapes a double-click;
+# this row pins the double-click itself.
 [pref.gates.targets.kitty_mouse_table]
 target = "kitty"
 key = "clear_all_mouse_actions"
@@ -1138,12 +1112,11 @@ unset_reads_default = true
 # spelled `grabbed`, `ungrabbed` or both, so one absent-substring row holds
 # while the config names no mouse_map at all — which IS the preference here.
 # kitty lowercases the modes before it checks them (`parse_mouse_map`, frozen
-# bytecode, 10-09-2026), so `UNGRABBED` is the same unbind — and it passed
-# this row until want_absent was case-folded the same day. The
-# `clear_all_mouse_actions` row beside it is the exact one, which is why this
-# one is the second line of defence and not the first. Adding a deliberate
-# mouse_map is a decision, and this row going red is the prompt to record it
-# here.
+# bytecode, 10-09-2026), so `UNGRABBED` is the same unbind, which the
+# case-folded want_absent catches. The `clear_all_mouse_actions` row beside it
+# is the exact one, which is why this one is the second line of defence and not
+# the first. Adding a deliberate mouse_map is a decision, and this row going red
+# is the prompt to record it here.
 [pref.gates.targets.kitty_mouse_map]
 target = "kitty"
 key = "mouse_map"
@@ -1152,15 +1125,13 @@ want_absent = "grabbed"
 
 # Every OSC 8 link — eza's, rg's, the open-actions entries they feed — rides
 # allow_hyperlinks, kitty's default and therefore a key this file never names.
-# This was TWO want_absent rows, `no` and `ask`, until 10-09-2026, and they
-# were passed by every other spelling of the same thing: want_absent is a
-# substring test over an un-lowercased read, while kitty's own parser (read off
-# the frozen bytecode) is `if x == 'ask': ask; return to_bool(x)`, and to_bool
-# lowercases and accepts y/yes/true — so `n`, `false`, `0`, `off` and `NO` all
-# switched the links off with both rows green. One positive statement replaces
-# them, and `unset_reads_default` is what lets it be positive about a key that
-# is absent: kitty's shipped reference conf supplies the default, so the row
-# also fails the day upstream changes it.
+# A positive statement, not absence rows on `no` and `ask`: kitty's own parser
+# (read off the frozen bytecode) is `if x == 'ask': ask; return to_bool(x)`,
+# and to_bool lowercases and accepts only y/yes/true, so `n`, `false`, `0` and
+# `off` all switch the links off — spellings an absence row has to think of.
+# `unset_reads_default` is what lets it be positive about a key that is absent:
+# kitty's shipped reference conf supplies the default, so the row also fails
+# the day upstream changes it.
 # The trade this makes deliberately: kitty case-folds and accepts y/true, this
 # row does not, so a compliant-but-oddly-spelled `Yes` reads red. Nobody writes
 # that, and a red says "look at this line" — which is the right answer to a
@@ -1171,17 +1142,15 @@ key = "allow_hyperlinks"
 want = "yes"
 unset_reads_default = true
 
-# The history-FILE assertions below § Shell ride on where HISTFILE points
-# (atuin's sqlite store and the in-memory HISTSIZE do not). The
-# first draft of this comment claimed "zsh persists nothing unless HISTFILE
-# is set" — refuted by its own mutation battery: macOS /etc/zshrc supplies
-# the same ${ZDOTDIR:-$HOME}/.zsh_history fallback, so DELETING the line
-# changes nothing here. What the gate really pins is the destination: a
-# .local overlay or a ZDOTDIR move redirecting history elsewhere fails the
-# live twin (the capture prints it expanded, hence the absolute-path match),
-# and the text half fails on any explicit override, last-wins. The live
-# want anchors the full expanded path — a bare '/.zsh_history' would pass a
-# same-basename move (its own audit's catch).
+# The history-file assertions below (pref.shell_history) ride on where
+# HISTFILE points (atuin's sqlite store and the in-memory HISTSIZE do not).
+# macOS /etc/zshrc supplies the same ${ZDOTDIR:-$HOME}/.zsh_history fallback,
+# so deleting the line changes nothing: what the gate pins is the destination.
+# A .local overlay or a ZDOTDIR move redirecting history elsewhere fails the
+# live twin, and the text half fails on any explicit override, last-wins. The
+# capture prints the path expanded, so the live want is the full absolute path
+# — a bare '/.zsh_history' would pass a same-basename move — and a path naming
+# one home directory has no place in this shared file.
 [pref.gates.targets.zshrc_histfile]
 target = "zshrc"
 key = "HISTFILE"
@@ -1189,7 +1158,7 @@ want = "~/.zsh_history"
 
 # The compinit staleness check rides (#q…) extended-glob syntax; without this
 # option the guard never fires and the cached fast path never runs — silently,
-# with completions still working (traps.md's compinit entry). Text-half only:
+# with completions still working. Text-half only:
 # the realistic failure is the setopt line being edited away, not an overlay
 # unsetting it.
 [pref.gates.targets.zshrc_extended_glob]
@@ -1198,11 +1167,10 @@ key = "setopt"
 accumulate = true
 want_any = "EXTENDED_GLOB"
 
-# `disabled = true` is how the account module spent 06-08-2026 to 11-09-2026,
-# and it renders nothing while set — every pref.session_account row would stay
-# green. Absent is enabled, so this is want_absent rather than a value: cship
-# offers no positive spelling, and an upstream flip of that default is what the
-# [surfaces] EVENT on a version bump is there to catch.
+# `disabled = true` renders nothing while set, so every pref.session_account
+# row would stay green. Absent is enabled, so this is want_absent rather than a
+# value: cship offers no positive spelling, and an upstream flip of that
+# default is what the [surfaces] EVENT on a version bump is there to catch.
 [pref.gates.targets.cship_account]
 target = "cship"
 key = "cship.account.disabled"
@@ -1247,9 +1215,8 @@ want_any_contain = "HISTSIZE=100000"
 
 # History hygiene beyond the headline: leading space keeps a command out of
 # the record, blank runs collapse, search never repeats a line, expansions
-# preview before running. Set since 06-08-2026, stated nowhere until
-# 26-08-2026. The last two are the sweep's adoptions of that date: fcntl
-# locking for the shared file, dedupe at write-out.
+# preview before running, the shared file is written under fcntl locks, and
+# duplicates are dropped at write-out.
 [pref.shell_history.targets.zshrc_space]
 target = "zshrc"
 key = "setopt"
@@ -1315,8 +1282,8 @@ want_any_contain = '"^[[B" history-beginning-search-forward-end'
 # The same two keys in application-cursor mode (SS3 A/B) — what a TUI that
 # died without resetting the terminal leaves behind. /etc/zshrc binds these
 # from terminfo to up-line-or-search, the first-word search the zshrc block
-# exists to replace, so until 02-09-2026 the protected binding held on one
-# encoding and silently degraded on the other.
+# exists to replace, so both encodings are bound and asserted: with one alone
+# the other silently degrades.
 [pref.prefix_history_search.targets.zshrc_app_up]
 target = "zshrc"
 key = "bindkey"
@@ -1343,7 +1310,7 @@ want_any_contain = '"^[OB" history-beginning-search-forward-end'
 
 [pref.keymap_declared]
 value = "the emacs keymap, by declaration"
-why = "Non-modal per the criteria, and pinned rather than inferred — a future nvim fallback in .zshenv would otherwise flip the prompt into modal editing with no line in .zshrc changing (02-09-2026). It precedes every binding: a binding made while main pointed at viins lives in viins and is lost when the keymap switches (measured the same day — Shift+Tab bound before `bindkey -e` read back undefined)."
+why = "Non-modal per the criteria, and pinned rather than inferred — a future nvim fallback in .zshenv would otherwise flip the prompt into modal editing with no line in .zshrc changing. It precedes every binding: a binding made while main pointed at viins lives in viins and is lost when the keymap switches (measured 02-09-2026 — Shift+Tab bound before `bindkey -e` read back undefined)."
 
 [pref.keymap_declared.targets.zshrc]
 key = "bindkey"
@@ -1370,8 +1337,8 @@ accumulate = true
 want_any_contain = '"^R" atuin-search'
 
 # The search UI shows the two facts the why above says atuin was hired for —
-# where a command ran and whether it worked. The shipped default displayed
-# neither (adopted 27-08-2026, with workspaces and the tmux popup).
+# where a command ran and whether it worked. The shipped default displays
+# neither.
 [pref.history_search_tool.targets.atuin]
 key = "ui.columns"
 want_contains = "exit"
@@ -1393,7 +1360,7 @@ want = "true"
 
 [pref.fuzzy_finder]
 value = "Ctrl+T files, Alt+C directories, fed by fd"
-why = "fd honours .gitignore and skips the heavy build directories, so the finder searches what the repo considers real — by an explicit, asserted command rather than whatever fzf's built-in walker decides. (A 'shells out to find' premise here was refuted 26-08-2026.)"
+why = "fd honours .gitignore and skips the heavy build directories, so the finder searches what the repo considers real — by an explicit, asserted command rather than whatever fzf's built-in walker decides."
 
 [pref.fuzzy_finder.targets.zshrc]
 key = "source"
@@ -1406,7 +1373,6 @@ key = "FZF_DEFAULT_COMMAND"
 want_contains = "fd --type f --hidden"
 
 # The directories half of the stated taste — "Alt+C directories, fed by fd".
-# Asserted 27-08-2026; until then only the files half had teeth.
 [pref.fuzzy_finder.targets.zshrc_fd_dirs]
 target = "zshrc"
 key = "FZF_ALT_C_COMMAND"
@@ -1416,8 +1382,8 @@ want_contains = "fd --type d --hidden"
 # runs with FZF_DEFAULT_COMMAND=${FZF_CTRL_T_COMMAND:-} (key-bindings.zsh
 # 0.74.3, read 02-09-2026), so an unset FZF_CTRL_T_COMMAND EMPTIES the
 # default and the built-in walker runs, .gitignore ignored — while zshrc_fd
-# above stays green. Unasserted until 02-09-2026. Text pins the mirror; live
-# pins the expanded value a real shell exports.
+# above stays green. Text pins the mirror; live pins the expanded value a real
+# shell exports.
 [pref.fuzzy_finder.targets.zshrc_ctrl_t]
 target = "zshrc"
 key = "FZF_CTRL_T_COMMAND"
@@ -1429,9 +1395,9 @@ key = "params"
 accumulate = true
 want_any = "FZF_CTRL_T_COMMAND=fd --type f --hidden --exclude .git"
 
-# Previews answer "is this the one I mean?" before Enter — adopted
-# 27-08-2026 from the fzf 0.74 sweep. Both ride the palette: bat via its
-# asserted --theme=ansi, eza via its measured 4-bit defaults.
+# Previews answer "is this the one I mean?" before Enter. Both ride the
+# palette: bat via its asserted --theme=ansi, eza via its measured 4-bit
+# defaults.
 [pref.fuzzy_finder.targets.zshrc_preview_files]
 target = "zshrc"
 key = "FZF_CTRL_T_OPTS"
@@ -1456,8 +1422,8 @@ want_any_contain = '"^[c" fzf-cd-widget'
 # `**<TAB>` — fzf's path completion — walks with fd through two hooks fzf
 # looks up BY NAME at call time (completion.zsh 0.74.3, measured
 # 02-09-2026). Without them it falls back to its built-in walker, which
-# knows nothing of .gitignore, so `zed **<TAB>` and Ctrl+T disagreed about
-# what exists. Text asserts the walker each hook runs; live asserts the
+# knows nothing of .gitignore, so `zed **<TAB>` and Ctrl+T would disagree
+# about what exists. Text asserts the walker each hook runs; live asserts the
 # hook exists, which is the only thing fzf checks.
 [pref.fuzzy_finder.targets.zshrc_compgen]
 target = "zshrc"
@@ -1492,7 +1458,7 @@ want_any = "__zoxide_z"
 
 [pref.autosuggestions]
 value = "atuin's store ghosts the rest of the command"
-why = "The cheapest possible recall: the suggestion is already typed, accepting it is one keystroke. The plugin is the SOLE implementation — zshzle's POSTDISPLAY is the paint primitive it rides, but zsh 5.9 ships no native suggestion engine, so if upstream dies the taste has no fallback (ruled from the 27-08-2026 sweep). The SOURCE is atuin's store, not zsh's in-memory history: atuin's init sets ZSH_AUTOSUGGEST_STRATEGY=(atuin) — in its script since 18.19 at least — so this has been live since atuin was adopted and recorded nowhere until 02-09-2026; kept, because one store then answers both Ctrl+R and the ghost text."
+why = "The cheapest possible recall: the suggestion is already typed, accepting it is one keystroke. The plugin is the SOLE implementation — zshzle's POSTDISPLAY is the paint primitive it rides, but zsh 5.9 ships no native suggestion engine, so if upstream dies the taste has no fallback. The SOURCE is atuin's store, not zsh's in-memory history: atuin's init sets ZSH_AUTOSUGGEST_STRATEGY=(atuin) (in its script since atuin 18.19 at least) — kept, because one store then answers both Ctrl+R and the ghost text."
 
 # Live because the gate is a guarded `[ -f ... ] && source` line whose first
 # word is `[` — text cannot see it; the widget existing is the honest test.
@@ -1528,18 +1494,18 @@ want_any = "ZSH_AUTOSUGGEST_MANUAL_REBIND=1"
 
 [pref.syntax_highlighting]
 value = "an unknown command turns red before Enter"
-why = "Errors caught at the prompt cost nothing; the same mistake after Enter costs a round trip. Must be sourced LAST (upstream rule) — preen doctor's semantic check owns the ordering half. Sole implementation: zshzle's highlight contexts do not include command validity, and region_highlight — exactly what z-sy-h drives — is the only route (ruled from the 27-08-2026 sweep)."
+why = "Errors caught at the prompt cost nothing; the same mistake after Enter costs a round trip. Must be sourced LAST (upstream rule) — preen doctor's semantic check owns the ordering half. Sole implementation: zshzle's highlight contexts do not include command validity, and region_highlight — exactly what z-sy-h drives — is the only route."
 
 [pref.syntax_highlighting.targets.zsh_live]
 key = "widgets"
 accumulate = true
 want_any_contain = "_zsh_highlight"
 
-# Two highlighters beside main, adopted 02-09-2026: brackets colours each
-# bracket by nesting level and marks the one matching the cursor — the
-# visible-guides taste at the prompt; pattern paints one shape red before
-# Enter — the NO_CLOBBER file-safety family. Text pins the list and the
-# pattern; live pins the list the plugin actually consults.
+# Two highlighters beside main: brackets colours each bracket by nesting level
+# and marks the one matching the cursor — the visible-guides taste at the
+# prompt; pattern paints one shape red before Enter — the NO_CLOBBER
+# file-safety family. Text pins the list and the pattern; live pins the list
+# the plugin actually consults.
 [pref.syntax_highlighting.targets.zshrc_brackets]
 target = "zshrc"
 key = "ZSH_HIGHLIGHT_HIGHLIGHTERS"
@@ -1563,7 +1529,7 @@ want_any = "ZSH_HIGHLIGHT_HIGHLIGHTERS=main brackets pattern"
 
 [pref.completion_style]
 value = "menu-select, case-insensitive, coloured by file type in the terminal's 16 colours"
-why = "Completion is a picker, not a guessing game: navigate candidates visually, match regardless of case, colour by file type. The colour codes live on the zstyle itself — an exported LS_COLORS would override eza's richer built-ins (this value said 'LS_COLORS-coloured' until 27-08-2026, when the variable turned out empty live — never set by any managed file)."
+why = "Completion is a picker, not a guessing game: navigate candidates visually, match regardless of case, colour by file type. The colour codes live on the zstyle itself — an exported LS_COLORS would override eza's richer built-ins."
 
 [pref.completion_style.targets.zshrc]
 key = "zstyle"
@@ -1576,10 +1542,10 @@ key = "zstyle"
 accumulate = true
 want_any_contain = "m:{a-zA-Z}={A-Za-z}"
 
-# Anchored on the first colour code, not just the directive name — the bare
-# "list-colors" match was vacuously green over an empty ${(s.:.)LS_COLORS}
-# expansion until 27-08-2026. The live twin reads the RESOLVED style, so a
-# .local overlay clearing it fails the check the text half cannot see.
+# Anchored on the first colour code, not just the directive name: a bare
+# "list-colors" match is vacuously green over an empty ${(s.:.)LS_COLORS}
+# expansion. The live twin reads the RESOLVED style, so a .local overlay
+# clearing it fails the check the text half cannot see.
 [pref.completion_style.targets.zshrc_colors]
 target = "zshrc"
 key = "zstyle"
@@ -1593,8 +1559,7 @@ accumulate = true
 want_any_contain = "di=01;34"
 
 # Labelled sections, a deterministic no-match message, immediate completion
-# of freshly installed commands, and both-ends mid-word completion — the
-# 27-08-2026 zshcompsys/zshoptions adoptions.
+# of freshly installed commands, and both-ends mid-word completion.
 [pref.completion_style.targets.zshrc_groups]
 target = "zshrc"
 key = "zstyle"
@@ -1625,12 +1590,10 @@ key = "setopt"
 accumulate = true
 want_any = "COMPLETE_IN_WORD"
 
-# ssh <TAB> offers the hosts ~/.ssh/config names (8 at the 03-08-2026
-# measurement), not 129 macOS daemon accounts —
-# measured 03-08-2026 (preferences.md § Interaction carries the numbers). Two zstyles
-# because two completers contribute candidates; asserted separately so a
-# "cleanup" of either one fails alone. Set since 06-08-2026, asserted
-# 27-08-2026.
+# ssh <TAB> offers the hosts ~/.ssh/config names, not 129 macOS daemon
+# accounts (8 hosts, measured 03-08-2026). Two zstyles because two completers
+# contribute candidates; asserted separately so a "cleanup" of either one fails
+# alone.
 [pref.completion_style.targets.zshrc_ssh_users]
 target = "zshrc"
 key = "zstyle"
@@ -1643,24 +1606,22 @@ key = "zstyle"
 accumulate = true
 want_any_contain = "hosts $_ssh_config_hosts"
 
-# The text row above holds with the list EMPTY: on 17-09-2026 the named hosts
-# moved to ~/.ssh/config.local, the parse still read ~/.ssh/config alone, and
-# the style resolved to no hosts — completion off, every row green. The live
-# row that catches it names a host's first ssh alias, so it is the host's:
-# hosts/mac/preferences.toml, zsh_live_ssh_hosts.
+# The text row above holds with the list EMPTY: when the parse finds no hosts,
+# completion is off with every row green (seen 17-09-2026, when the hosts sat
+# in an included file the parse did not read). The live row that catches it
+# names one host's own ssh alias, so it has no place in this shared file.
 
-# The 02-09-2026 adoptions (zshcompsys, third pass). Shift+Tab walks the
-# menu backwards in BOTH keymaps — kitty sends ESC [ Z (terminfo kcbt), and
-# the menuselect keymap ships with only Tab, Enter and the arrows; the live
-# probe prints that keymap beside main so each binding is proven where it
-# lives. Partial-word matching: `f.b` reaches foo.bar, case-insensitively
-# still, because specs are tried in turn rather than merged. Directories
-# ahead of files, `//` read as one path, an existing directory prefix
-# accepted without re-scanning its parents, and a position line when a
-# menu outgrows the screen.
+# Shift+Tab walks the menu backwards in BOTH keymaps — kitty sends ESC [ Z
+# (terminfo kcbt), and the menuselect keymap ships with only Tab, Enter and the
+# arrows; the live probe prints that keymap beside main so each binding is
+# proven where it lives. Partial-word matching: `f.b` reaches foo.bar,
+# case-insensitively still, because specs are tried in turn rather than
+# merged. Directories ahead of files, `//` read as one path, an existing
+# directory prefix accepted without re-scanning its parents, and a position
+# line when a menu outgrows the screen.
 # Exact, because the menuselect line below repeats this text after `-M
-# menuselect` — a substring match on the main-keymap binding survived the
-# battery's rebinding of it.
+# menuselect`: a substring match stays green after the main-keymap binding is
+# rebound.
 [pref.completion_style.targets.zshrc_shift_tab]
 target = "zshrc"
 key = "bindkey"
@@ -1810,7 +1771,7 @@ probe = "mac_nano_is_pico"
 
 [pref.secrets_placement]
 value = "keychain-sourced secrets load per login, not per shell"
-why = "decisions.md law: keychain reads live in .zprofile.local (once per login SHELL — per kitty tab on this machine, corrected 27-08-2026); .zshenv runs for EVERY zsh and stays free. Watched on `ssh-add --apple-load-keychain` until 03-09-2026, when that line left with the move to Proton Pass's SSH agent (ssh_keys_in_pass); the `security` call behind __kc is the read that remains. The want_absent half fails the moment the expensive call migrates to the hot path."
+why = "Keychain reads live in .zprofile.local (once per login SHELL — per kitty tab on this machine); .zshenv runs for EVERY zsh and stays free. The `security` call behind __kc is the read watched here: the want_absent row fails the moment it migrates to the hot path."
 
 [pref.secrets_placement.targets.zshenv]
 key = "__kc()"
@@ -1818,7 +1779,7 @@ want_absent = "find-generic-password"
 
 [pref.ssh_keys_in_pass]
 value = "SSH private keys live in Proton Pass; every key-based host signs through its agent"
-why = "decisions.md law (SSH keys sign through Proton Pass): IdentityAgent in the config plus IdentityFile .pub and IdentitiesOnly per host is the mechanism the targets check; the zshenv export serves ssh-add -l and scripts, and the zprofile half guards the Apple agent's retirement. Custody, the account split, Unlock and the failure modes are reasoning, not checkable state — preferences.md and decisions.md carry them."
+why = "SSH keys sign through Proton Pass: IdentityAgent in the config plus IdentityFile .pub and IdentitiesOnly per host is the mechanism the targets check; the zshenv export serves ssh-add -l and scripts, and the zprofile row fails if .zprofile's ssh-add line names --apple-load-keychain (its short form -A is not caught)."
 
 [pref.ssh_keys_in_pass.targets.zshenv]
 key = "SSH_AUTH_SOCK"
@@ -1830,7 +1791,7 @@ want_absent = "apple-load-keychain"
 
 [pref.man_through_bat]
 value = "man pages render through bat, in the terminal palette"
-why = "bat already pages kitty's scrollback with --theme=ansi, so man inherits the palette instead of fighting it. (A MANROFFOPT=-c rode along until 26-08-2026 — macOS man is mandoc and never read it.)"
+why = "bat already pages kitty's scrollback with --theme=ansi, so man inherits the palette instead of fighting it. (No MANROFFOPT: macOS man is mandoc and never reads it.)"
 
 [pref.man_through_bat.targets.zshrc]
 key = "MANPAGER"
@@ -1844,7 +1805,7 @@ want_any_contain = "MANPAGER=sh -c 'col -bx | bat"
 
 [pref.listings_eza]
 value = "ls is eza — icons on, git-aware in long form, entries clickable"
-why = "A listing that shows file type and VCS state at a glance; set since 06-08-2026, stated nowhere until 26-08-2026. --hyperlink=auto (needs a known terminal width, which a pipe normally lacks; the man page's 'real terminals only' is wrong in both directions — traps.md, corrected 10-09-2026) joined 27-08-2026 — kitty turns every entry into an open-on-click link, the click instinct (pref.hyperlink_actions) applied to listings. The =auto is load-bearing: bare --hyperlink eats the next positional and breaks `ls <path>`. --group-directories-first joined 02-09-2026: completion had listed directories first since that morning and the listings still interleaved them — one rule, both surfaces. Each alias is pinned whole, so the flag has teeth on all three."
+why = "A listing that shows file type and VCS state at a glance. --hyperlink=auto (it needs a known terminal width, which a pipe normally lacks; the man page's 'real terminals only' is wrong in both directions) makes kitty turn every entry into an open-on-click link — the click instinct (pref.hyperlink_actions) applied to listings. The =auto is load-bearing: bare --hyperlink eats the next positional and breaks `ls <path>`. --group-directories-first because completion lists directories first — one rule, both surfaces. Each alias is pinned whole, so the flag has teeth on all three."
 
 [pref.listings_eza.targets.zshrc]
 key = "alias"
@@ -1858,8 +1819,7 @@ accumulate = true
 want_any_contain = 'll="eza -la --icons=auto --git --hyperlink=auto --group-directories-first --time-style=long-iso"'
 
 # The tree form, pruned by .gitignore — the same "search what the repo
-# considers real" instinct as fzf's fd walker. Set since 06-08-2026, asserted
-# 27-08-2026.
+# considers real" instinct as fzf's fd walker.
 [pref.listings_eza.targets.zshrc_tree]
 target = "zshrc"
 key = "alias"
@@ -1874,7 +1834,7 @@ want_any = "alias ls='eza --icons=auto --hyperlink=auto --group-directories-firs
 
 [pref.tmux_ssh_only]
 value = "SSH sessions auto-attach tmux; local shells never do"
-why = "decisions.md law: kitty owns tabs/layouts/sessions locally; tmux earns its prefix key only where a dropped TCP connection is a real failure mode."
+why = "kitty owns tabs/layouts/sessions locally; tmux earns its prefix key only where a dropped TCP connection is a real failure mode."
 
 [pref.tmux_ssh_only.targets.zshrc]
 # NOT as `exec`: a TERM the host's terminfo does not know would end the
@@ -1890,7 +1850,7 @@ want_absent = "tmux"
 
 [pref.tmux_prefix]
 value = "C-Space, not the default C-b"
-why = "Set since the conf's import; the reasoning was never recorded and is not fabricated here."
+why = "The reasoning was never recorded and is not fabricated here."
 
 [pref.tmux_prefix.targets.tmux]
 key = "prefix"
@@ -1916,7 +1876,7 @@ want = "C-Space"
 #   would slip past; a substring matcher cannot say "is unset".
 [pref.tmux_keys]
 value = "the shipped keys wherever tmux already ships the guessable one; a letter only where it ships nothing"
-why = "prefix+arrow selects a pane and prefix+option+arrow resizes it, on both 3.7c and 3.5a, out of the box. An hjkl/HJKL block restated all of it under vim letters and cost `l` (last-window) and `L` (switch-client -l) doing so; it was also modal idiom outside copy-mode, the only place the non-modal criterion grants an exception. Deleted 09-09-2026. Splits keep `|` and `-` because those are pictures of the divider they make, and tmux's own `%`/`\"` are not."
+why = "prefix+arrow selects a pane and prefix+option+arrow resizes it, on both 3.7c and 3.5a, out of the box. An hjkl/HJKL block would restate all of it under vim letters and cost `l` (last-window) and `L` (switch-client -l), and it is modal idiom outside copy-mode, the only place the non-modal criterion grants an exception (ruled 09-09-2026). Splits keep `|` and `-` because those are pictures of the divider they make, and tmux's own `%`/`\"` are not."
 
 [pref.tmux_keys.targets.tmux_split_h]
 target = "tmux_keys"
@@ -1948,8 +1908,8 @@ target = "tmux_keys"
 key = "prefix/k"
 want_absent = "select-pane"
 
-# `l` and `L` are the two stock bindings the deleted block was costing, so
-# these two rows are the ones that would notice it coming back.
+# `l` and `L` are the stock bindings an hjkl block costs, so these two rows
+# notice one coming back.
 [pref.tmux_keys.targets.tmux_no_vim_motion_l]
 target = "tmux_keys"
 key = "prefix/l"
@@ -1976,8 +1936,8 @@ key = "prefix/K"
 want_absent = "resize-pane"
 
 # The shipped arrows, unshadowed — all eight that carry the taste, not a
-# sample: these are the keys the deleted letters duplicated, so a re-add is
-# most likely to arrive here. Rebinding one to what it already does is the
+# sample: these are the keys an hjkl block duplicates, so a re-add is most
+# likely to arrive here. Rebinding one to what it already does is the
 # "restates a default" mistake the header names.
 #
 # `prefix`+ctrl+arrow (resize by 1) and `prefix`+shift+arrow (pan the client)
@@ -2035,10 +1995,9 @@ target = "tmux_keys"
 key = "prefix/r"
 want_contains = "source-file ~/.config/tmux/tmux.conf"
 
-# The vi copy-mode pair, asserted here as BINDINGS for the first time. The
-# non-modal criterion's one documented exception (preferences.md § Interaction)
-# was pinned only by `mode-keys vi` until now — the setting that makes the
-# table vi-shaped, not the two bindings that carry the taste.
+# The vi copy-mode pair, asserted as BINDINGS: `mode-keys vi`
+# (pref.copy_mode_keys) makes the table vi-shaped, and these are the two
+# bindings that carry the taste.
 [pref.tmux_keys.targets.tmux_copy_begin]
 target = "tmux_keys"
 key = "copy-mode-vi/v"
@@ -2068,7 +2027,7 @@ want_contains = "copy-pipe-and-cancel pbcopy"
 
 [pref.quick_copy_hints]
 value = "URLs, paths and SHAs (among thumbs' default patterns) copy by hint letters — prefix+Space"
-why = "thumbs paints hint letters over on-screen matches; two keystrokes copy without touching the mouse or leaving the pane. The SSH twin of kitty's clickable affordances. Stated nowhere until 27-08-2026."
+why = "thumbs paints hint letters over on-screen matches; two keystrokes copy without touching the mouse or leaving the pane. The SSH twin of kitty's clickable affordances."
 
 [pref.quick_copy_hints.targets.tmux]
 key = "@plugin"
@@ -2094,7 +2053,7 @@ want = "vi"
 
 [pref.runtimes_mise]
 value = "mise owns node and python"
-why = "One binary, one config, per-directory versions; replaced pyenv and nvm plus the hand-written lazy-loading shim that existed only to defer a cost mise does not have."
+why = "One binary, one config, per-directory versions, and no startup cost to hide behind a lazy-loading shim."
 
 [pref.runtimes_mise.targets.zshrc]
 key = "eval"
@@ -2103,12 +2062,12 @@ want_any_contain = "mise activate zsh"
 
 # mise's activate script hooks precmd AND chpwd, and the precmd hook spawns
 # `mise hook-env` on every prompt but the first and the one after a cd:
-# 14.8 ms ± 1.5 (hyperfine, 02-09-2026).
-# Its own hook_env.chpwd_only setting is inert in 2026.9.0 (18.0 ms with
-# it, activate script byte-identical), so the hook is removed by hand and
-# the chpwd hook kept — a directory's tool set still switches on cd. Text
-# asserts the removal line; live asserts the hook list it leaves behind,
-# both halves: precmd without mise, chpwd still with it.
+# 14.7 ms ± 0.4 at mise 2026.9.3 (hyperfine, 09-09-2026). Its own
+# hook_env.chpwd_only and cache_ttl settings are inert (16.3 and 16.5 ms,
+# same run), so the hook is removed by hand and the chpwd hook kept — a
+# directory's tool set still switches on cd. Text asserts the removal line;
+# live asserts the hook list it leaves behind, both halves: precmd without
+# mise, chpwd still with it.
 [pref.runtimes_mise.targets.zshrc_no_precmd]
 target = "zshrc"
 key = "add-zsh-hook"
@@ -2142,7 +2101,7 @@ want_any = "PATH_DUPES=none"
 
 [pref.no_clobber]
 value = "> refuses to overwrite; >| is the deliberate override"
-why = "Deterministic file safety, same family as kitty's close-confirmation threshold. Adopted 26-08-2026 from the zshoptions(1) sweep."
+why = "Deterministic file safety, same family as kitty's close-confirmation threshold."
 
 [pref.no_clobber.targets.zshrc]
 key = "setopt"
@@ -2157,7 +2116,7 @@ want_any = "noclobber"
 
 [pref.shell_ergonomics]
 value = "a bare path is a cd; comments paste cleanly; nothing beeps — shell, readline, pager OR terminal"
-why = "Three small frictions removed at the prompt. Set since 06-08-2026, stated nowhere until 26-08-2026."
+why = "Three small frictions removed at the prompt."
 
 [pref.shell_ergonomics.targets.zshrc]
 key = "setopt"
@@ -2177,17 +2136,16 @@ accumulate = true
 want_any = "NO_BEEP"
 
 # The fourth layer, and the one that owns the speaker: zsh, readline and less
-# each silence themselves, and beneath all three kitty rang at its shipped
-# default for any program that writes BEL and was not silenced individually
-# (10-09-2026). The bell's remaining signal is the tab title's {bell_symbol}.
+# each silence themselves, and beneath all three, kitty rings at its shipped
+# default for any program that writes BEL and is not silenced individually.
+# The bell's remaining signal is the tab title's {bell_symbol}.
 [pref.shell_ergonomics.targets.kitty_quiet]
 target = "kitty"
 key = "enable_audio_bell"
 want = "no"
 
-# The 27-08-2026 additions to the same friction family: an accidental
-# Ctrl+S no longer wedges the terminal, and pasted text renders plain
-# instead of standout.
+# The same friction family: an accidental Ctrl+S does not freeze the terminal,
+# and pasted text renders plain instead of standout.
 [pref.shell_ergonomics.targets.zshrc_flow]
 target = "zshrc"
 key = "setopt"
@@ -2218,7 +2176,7 @@ want = "none"
 
 [pref.globs_see_dotfiles]
 value = "a glob matches dotfiles without being asked"
-why = "The same scope on both search paths: fd walks with --hidden for fzf, so a bare glob refusing dotfiles would make * and Ctrl+T disagree about what exists. Set since 06-08-2026, stated nowhere until 27-08-2026."
+why = "The same scope on both search paths: fd walks with --hidden for fzf, so a bare glob refusing dotfiles would make * and Ctrl+T disagree about what exists."
 
 [pref.globs_see_dotfiles.targets.zshrc]
 key = "setopt"
@@ -2233,22 +2191,12 @@ want_any = "globdots"
 
 [pref.prompt_starship]
 value = "the prompt is starship"
-why = "Bespoke over generic: preferences.md § Colour already treats starship as the prompt surface and asserts its accents; this pins the program those assertions assume. (cship renders its first line with the same binary and config, but on its own invocation — not through this eval.)"
+why = "Bespoke over generic: the palette rows treat starship as the prompt surface and assert its accents; this pins the program those assertions assume. (cship renders its first line with the same binary and config, but on its own invocation — not through this eval.)"
 
 [pref.prompt_starship.targets.zshrc]
 key = "eval"
 accumulate = true
 want_any_contain = "starship init zsh"
-
-# The central starship opinion, stated nowhere until 27-08-2026: format is a
-# curated allowlist, so a module absent from it can never render —
-# suppression is as deliberate as inclusion. Pinned exactly: an edit to the
-# prompt's composition is a preferences change first, config second.
-# git_state, kotlin, gradle and jobs joined 27-08-2026 (the 1.26 sweep).
-# The allowlist exists TWICE: cship's statusline line 1 repeats it minus the
-# shell-only modules, because cship runs `starship module` per token and never
-# reads starship's format. Line 1 sat on the pre-sweep list until 02-09-2026 —
-# hence the second target.
 
 [pref.prompt_starship.targets.zsh_live]
 # The eval's END STATE: starship's init defines this precmd hook, so the
@@ -2258,9 +2206,16 @@ key = "functions"
 accumulate = true
 want_any = "prompt_starship_precmd"
 
+# The central starship opinion: format is a curated allowlist, so a module
+# absent from it can never render — suppression is as deliberate as inclusion.
+# Pinned exactly: an edit to the prompt's composition is a preferences change
+# first, config second. The allowlist exists TWICE: cship's statusline line 1
+# repeats it minus the shell-only modules, because cship runs `starship module`
+# per token and never reads starship's format — hence the cship_line1 row,
+# which catches the copies parting.
 [pref.prompt_curated]
 value = "a curated module allowlist, not $all"
-why = "The prompt was silent mid-rebase, named java but not the Kotlin·Gradle work stack, and hid backgrounded jobs — all three suppressed by omission, which is why the allowlist is asserted as a whole, in both places it lives. username shows always because gold marks whose session this is (§ Colour)."
+why = "A module left out is suppressed silently — no rebase in progress, no Kotlin·Gradle beside java, no backgrounded jobs — which is why the allowlist is asserted as a whole, in both places it lives. username shows always because gold marks whose session this is."
 
 [pref.prompt_curated.targets.starship]
 key = "format"
@@ -2286,18 +2241,17 @@ target = "cship"
 key = "cship.lines.2"
 want_contains = "$cship.usage_limits.session   $cship.usage_limits.weekly"
 
-# Two lines since 16-09-2026: the width left for typing never depends on the
-# directory or the branch. In one deep repo the one-line prompt took 70 cells
-# before the cursor, at any width — half of this 134-column window. $fill — a
-# space, not starship's shipped "." —
-# anchors the toolchain at the right margin; the context line separates
-# commands, so the blank line goes and the prompt still costs two rows. A
-# right prompt was declined the same day (preferences.md § Interaction). The
-# format itself is pinned exactly by prompt_curated above, $fill and
-# $line_break$character included.
+# Two lines: the width left for typing never depends on the directory or the
+# branch. In one deep repo a one-line prompt took 70 cells before the cursor,
+# at any width — half of a 134-column window (measured 16-09-2026). $fill — a
+# space, not starship's shipped "." — anchors the toolchain at the right
+# margin; the context line separates commands, so there is no blank line and
+# the prompt costs two rows, the same as one line plus a blank. A right
+# prompt was declined (ruled 16-09-2026). The format itself is pinned exactly
+# by prompt_curated above, $fill and $line_break$character included.
 [pref.prompt_input_line]
 value = "the input line is bare — its width never depends on the directory"
-why = "Half the window was gone before a keystroke in the work repo, and a longer path or branch took more. A right prompt hides the toolchain while typing but leaves the cursor wherever the directory and branch end; two lines remove the dependence, and retiring the blank line keeps the row count."
+why = "Half the window was gone before a keystroke in the work repo, and a longer path or branch took more. A right prompt hides the toolchain while typing but leaves the cursor wherever the directory and branch end; two lines remove the dependence, and with no blank line they cost the same two rows as one line plus a blank."
 
 [pref.prompt_input_line.targets.starship_newline]
 target = "starship"
@@ -2404,14 +2358,14 @@ evidence = "starship 1.26.0 reads the Kotlin version from `kotlinc` on PATH — 
 # The one thing on the statusline that identifies the SESSION rather than the
 # work inside it. cship cannot source it: its own lookup reads the unsuffixed
 # `Claude Code-credentials` keychain entry whatever CLAUDE_CONFIG_DIR says
-# (cship#194, open at 1.8.3), so under the dual-account shim a work session
-# renders the PERSONAL organisation — both tabs did, seen 11-09-2026, which is
-# the symptom the issue was filed on. CSHIP_ACCOUNT (cship 1.8.2) moves the fact
-# to the process that already knows it, so this is one claim in two halves: the
-# module renders {label}, and the launcher supplies it on every exec path it owns.
+# (cship#194, open at 1.8.3), so with two accounts on one machine a work
+# session renders the PERSONAL organisation — seen 11-09-2026, the symptom the
+# issue was filed on. CSHIP_ACCOUNT (cship 1.8.2) moves the fact to the process
+# that already knows it, so this is one claim in two halves: the module renders
+# {label}, and whatever launches claude for an account supplies it.
 [pref.session_account]
 value = "the statusline names which account's session this is"
-why = "Gold marks whose session this is (preferences.md § Colour) — the rule starship's always-shown $username already follows, and the statusline had no equivalent. Two accounts share one settings.json, one terminal and one statusline, and routing is by directory, so the account is the one session fact no other module carries. Sourced from the launcher because cship's own lookup is not merely absent here, it is wrong."
+why = "Gold marks whose session this is — the rule starship's always-shown $username follows. Two accounts share one settings.json, one terminal and one statusline, and routing is by directory, so the account is the one session fact no other module carries. Sourced from whatever launches claude, because cship's own lookup is not merely absent here, it is wrong."
 
 [pref.session_account.targets.cship]
 target = "cship"
@@ -2429,7 +2383,8 @@ want_contains = "$cship.account"
 # with cwd = the session's directory but inherits claude's launch-time $PWD, so
 # a worktree session named the launch directory on line 1 — measured
 # 02-09-2026 (`PWD=/tmp starship module directory` printed /tmp from inside a
-# repo). Physical paths are safe here: no project or vault path is a symlink.
+# repo). Physical paths are safe here: no project path on this machine is a
+# symlink.
 [pref.prompt_physical_dir]
 value = "the prompt names the directory the process is in"
 why = "A statusline that names the launch directory inside a worktree is wrong in the one place it matters; logical paths bought nothing on this machine because nothing on the way to a project is a symlink."
@@ -2440,7 +2395,7 @@ want = "false"
 
 [pref.kittens_at_prompt]
 value = "a keyboard file picker, one alias away"
-why = "fp picks files with previews without leaving the keyboard — a kitty capability surfaced where the work happens, the prompt. Set since 06-08-2026, stated nowhere until 27-08-2026. Its sibling hg (the hyperlinked-grep kitten) retired 06-09-2026: rg has written the identical links since 29-08 (pref.search_clickable) and kitty's own page for the kitten says so. Spelled through the `kitten` launcher, kitty's current CLI, since the same day."
+why = "fp picks files with previews without leaving the keyboard — a kitty capability surfaced where the work happens, the prompt. No alias for the hyperlinked-grep kitten: rg writes the identical links itself (pref.search_clickable), as kitty's own page for the kitten says (ruled 06-09-2026). Spelled through the `kitten` launcher, kitty's current CLI."
 
 [pref.kittens_at_prompt.targets.zshrc_picker]
 target = "zshrc"
@@ -2456,7 +2411,7 @@ want_any = "alias fp='kitten choose-files'"
 
 [pref.word_motion]
 value = "platform-standard word boundaries at the prompt"
-why = "option+arrow stops at path segments and Ctrl+W kills one segment — zsh's default WORDCHARS glues whole paths into one word, the opposite of the native macOS motion the criteria name. WORDCHARS adopted 27-08-2026 (zshparam sweep); the option+ARROW half was hollow until 02-09-2026 — kitty sends CSI 1;3D/C (its terminfo kLFT3/kRIT3) and nothing bound them, so the emptied WORDCHARS only ever reached option+b/f and Ctrl+W. Bound now, text and live."
+why = "option+arrow stops at path segments and Ctrl+W kills one segment — zsh's default WORDCHARS glues whole paths into one word, the opposite of the native macOS motion the criteria name. kitty sends option+arrow as CSI 1;3D/C (its terminfo kLFT3/kRIT3), which zsh leaves unbound, so an empty WORDCHARS alone reaches only option+b/f and Ctrl+W; the bindings below carry option+arrow, text and live."
 
 [pref.word_motion.targets.zshrc]
 key = "WORDCHARS"
@@ -2504,6 +2459,13 @@ want_any_contain = '"^[[3;3~" kill-word'
 value = "Home/End, cmd+arrow and Delete behave natively at the prompt"
 why = "The native line motion beside the word motion above. A Home key that does nothing at the prompt is the modal-editing tax paid without the editing. The application-mode pair and fn+delete are pinned here too rather than left to /etc/zshrc, so the taste does not depend on a system file."
 
+# zsh never puts the terminal into application-cursor mode, so /etc/zshrc's
+# terminfo-derived Home/End bindings (SS3 H/F) never fire at a zsh prompt
+# unless a dead TUI left the mode on, and nothing else binds the CSI H/F kitty
+# sends there. cmd+arrow is CSI 1;9 D/C by kitty's keyboard-protocol doc
+# (legacy functional keys: CSI 1;<1 + modifier bits>, super = 8), confirmed
+# at the keyboard 02-09-2026 — these assertions prove the binding, not the
+# terminal.
 [pref.line_motion.targets.zshrc]
 key = "bindkey"
 accumulate = true
@@ -2563,11 +2525,11 @@ key = "bindkey"
 accumulate = true
 want_any_contain = '"^[[1;9C" end-of-line'
 
-# fn+delete, pinned 02-09-2026. /etc/zshrc binds the same key from terminfo,
-# so the live half stays green without the managed line — the text half is
-# the one with teeth here, and it exists so the taste survives a ZDOTDIR
-# move or a system file that stops binding it. Exact on both: a substring
-# would survive a rebind to delete-char-or-list.
+# fn+delete. /etc/zshrc binds the same key from terminfo, so the live half
+# stays green without the managed line — the text half is the one with teeth
+# here, and it exists so the taste survives a ZDOTDIR move or a system file
+# that stops binding it. Exact on both: a substring would survive a rebind to
+# delete-char-or-list.
 [pref.line_motion.targets.zshrc_delete]
 target = "zshrc"
 key = "bindkey"
@@ -2582,7 +2544,7 @@ want_any = 'bindkey "^[[3~" delete-char'
 
 [pref.slow_command_report]
 value = "commands over 10s of CPU time report timing unasked"
-why = "The question after a slow command is 'how slow was that?' — answered passively, in-terminal. Distinct from kitty's declined notify_on_cmd_finish, which is a desktop notification. CPU time, not wall clock: a network wait never reports. Adopted 27-08-2026 (zshparam sweep)."
+why = "The question after a slow command is 'how slow was that?' — answered passively, in-terminal. Distinct from kitty's declined notify_on_cmd_finish, which is a desktop notification. CPU time, not wall clock: a network wait never reports."
 
 [pref.slow_command_report.targets.zshrc]
 key = "REPORTTIME"
@@ -2596,7 +2558,7 @@ want_any = "REPORTTIME=10"
 
 [pref.buffer_to_editor]
 value = "Ctrl+X Ctrl+E edits the buffer in $EDITOR"
-why = "A multi-line command belongs in the editor EDITOR names (zed --wait), not nursed through ZLE. Text asserts the binding as written; live asserts the widget exists and the key resolves after every init has had its chance to bind. Adopted 27-08-2026 (zshcontrib)."
+why = "A multi-line command belongs in the editor EDITOR names (zed --wait), not nursed through ZLE. Text asserts the binding as written; live asserts the widget exists and the key resolves after every init has had its chance to bind."
 
 [pref.buffer_to_editor.targets.zshrc]
 key = "bindkey"
@@ -2616,17 +2578,11 @@ want_any_contain = "edit-command-line"
 
 [pref.correction_scope]
 value = "correction never offers completion functions"
-why = "CORRECT itself stays a preference-not-decision (decisions.md); this only stops _git being offered as the fix for a git typo. Adopted 27-08-2026 (zshparam sweep)."
+why = "The shared zshrc sets CORRECT without a ruling behind it, and a host may decline it; this only stops _git being offered as the fix for a git typo."
 
 [pref.correction_scope.targets.zshrc]
 key = "CORRECT_IGNORE"
 want = "_*"
-
-# Esc-h is bound to run-help by zsh's defaults, but run-help ships as an
-# alias to plain man — `git commit` opened man git. The autoloaded function
-# plus zsh's shipped helpers (zshcontrib) resolve the subcommand; the alias
-# would shadow the function, so its absence is asserted live, the
-# want_absent shape on a list section. Adopted 02-09-2026.
 
 [pref.correction_scope.targets.zsh_live]
 target = "zsh_live"
@@ -2634,6 +2590,11 @@ key = "params"
 accumulate = true
 want_any = "CORRECT_IGNORE=_*"
 
+# Esc-h is bound to run-help by zsh's defaults, but run-help ships as an alias
+# to plain man, so on `git commit` it opens man git. The autoloaded function
+# plus zsh's shipped helpers (zshcontrib) resolve the subcommand; the alias
+# would shadow the function, so its absence is asserted live, the want_absent
+# shape on a list section.
 [pref.help_at_cursor]
 value = "Esc-h opens the manual for the command under the cursor, subcommand-aware"
 why = "Proactive assistance at the prompt: the question after an unfamiliar subcommand is its manual, and MANPAGER already renders one through bat in the terminal palette."
@@ -2667,7 +2628,7 @@ want_any_contain = '"^[h" run-help'
 
 [pref.glob_order]
 value = "* sorts numerically"
-why = "file2 before file10 — the order the names read in, not the bytes. Adopted 02-09-2026 (zshoptions, third pass)."
+why = "file2 before file10 — the order the names read in, not the bytes."
 
 [pref.glob_order.targets.zshrc]
 key = "setopt"
@@ -2681,14 +2642,13 @@ want_any = "numericglobsort"
 
 [pref.search_scope]
 value = "every searcher sees the same world — hidden yes, .git no"
-why = "extends the glob/fd agreement (GLOB_DOTS for *, fd --hidden --exclude .git for fzf — pref.globs_see_dotfiles, pref.fuzzy_finder) to rg, adopted 29-08-2026. The zshenv entry is the gate: rg reads a config only when RIPGREP_CONFIG_PATH names one, so without it every ripgrep entry below is green about dead text. zsh_live proves the export survives to a real shell's end state."
+why = "extends the glob/fd agreement (GLOB_DOTS for *, fd --hidden --exclude .git for fzf — pref.globs_see_dotfiles, pref.fuzzy_finder) to rg. The zshenv entry is the gate: rg reads a config only when RIPGREP_CONFIG_PATH names one, so without it every ripgrep entry below is green about dead text. zsh_live proves the export survives to a real shell's end state."
 
-# `fp` is the fourth searcher, and it disagreed with the other three. The
-# kitten's two SCOPE switches ship as the literal `last` — remember the last
-# toggled value — as do its sort key and its preview toggle, so the picker's
-# idea of what exists was per-machine mutable state with no declared value,
-# starting hidden-files-OFF. Three rows, because
-# no single one of them is the preference: show_hidden alone starts surfacing
+# `fp` is the fourth searcher. The kitten's two SCOPE switches ship as the
+# literal `last` — remember the last toggled value — as do its sort key and its
+# preview toggle, so, left undeclared, the picker's idea of what exists is
+# per-machine mutable state, starting hidden-files-OFF. Three rows, because no
+# single one of them is the preference: show_hidden alone starts surfacing
 # .git/, which fd is explicitly told to exclude, and `ignore` is honoured only
 # while respect_ignores is on, so that is declared rather than left remembering.
 [pref.search_scope.targets.kitty_choose_files]
@@ -2722,7 +2682,7 @@ want_contains = ".config/ripgrep/config"
 
 [pref.search_case]
 value = "search folds case until the pattern carries a capital"
-why = "completion's case-insensitivity (pref.completion_style case matcher), applied to search — adopted 29-08-2026. --smart-case only engages when no case flag is given, so an explicit -s/-i still wins at any call site."
+why = "completion's case-insensitivity (pref.completion_style case matcher), applied to search. --smart-case only engages when no case flag is given, so an explicit -s/-i still wins at any call site."
 
 [pref.search_case.targets.ripgrep]
 key = "smart-case"
@@ -2730,7 +2690,7 @@ want = "on"
 
 [pref.search_clickable]
 value = "grep matches are kitty-clickable"
-why = "the eza --hyperlink instinct (pref.listings_eza) for search: rg emits OSC 8 links only on a real terminal, so pipes and captures stay clean. Adopted 29-08-2026."
+why = "the eza --hyperlink instinct (pref.listings_eza) for search: rg emits OSC 8 links only on a real terminal, so pipes and captures stay clean."
 
 [pref.search_clickable.targets.ripgrep]
 key = "hyperlink-format"
@@ -2738,23 +2698,22 @@ want = "kitty"
 
 [pref.hyperlink_actions]
 value = "a search hit opens in Zed at its line; a directory opens as a new tab there; an extensionless executable and any other text file open in Zed; hovering with cmd shows where the click will land"
-why = "The link is the address of the thing the eye just found; the click should land there, not in whatever app owns the extension. Zed is the editor (pref.editor_env), a tab is named by where it is (pref.tab_identity), and the rest — images, PDFs, binaries — stays with the platform default. ⚠️ That last clause has one deliberate exception since 10-09-2026: the `inode/executable` entry sends extensionless executables to Zed, and it cannot tell a shell script from a compiled binary. The scripts are this repo's own bin/, clicked from a listing daily; a misclicked binary costs one garbage buffer. Entry ORDER is part of the preference, not presentation — kitty takes the first entry whose criteria all match, so `mime text/*` is last because it matches everything above it too."
+why = "The link is the address of the thing the eye just found; the click should land there, not in whatever app owns the extension. Zed is the editor (pref.editor_env), a tab is named by where it is (pref.tab_identity), and the rest — images, PDFs, binaries — stays with the platform default. ⚠️ That last clause has one deliberate exception: the `inode/executable` entry sends extensionless executables to Zed, and it cannot tell a shell script from a compiled binary. The scripts are this repo's own bin/, clicked from a listing daily; a misclicked binary costs one garbage buffer. Entry ORDER is part of the preference, not presentation — kitty takes the first entry whose criteria all match, so `mime text/*` is last because it matches everything above it too."
 
 # One row per behaviour the `why` names, each pinning a whole entry in file
-# order. This was SIX rows over the individual directives until 10-09-2026 —
-# fragment_matches, three actions, two mimes — and between them they asserted a
-# bag: the reader flattens the file, so swapping which action sat under which
-# criteria, or moving `mime text/*` ahead of the FRAGMENT entry — which carries
-# no mime at all, so a `.txt#42` link satisfies both — left all six green while
-# the click landed somewhere else. Order is the behaviour here, so the entry is
-# the unit. (`text/*` does not shadow the inode/* entries: a directory and an
+# order. Rows over the individual directives would assert a bag: the reader
+# flattens the file, so swapping which action sits under which criteria, or
+# moving `mime text/*` ahead of the FRAGMENT entry — which carries no mime at
+# all, so a `.txt#42` link satisfies both — would pass while the click lands
+# somewhere else. Order is the behaviour here, so the entry is the unit.
+# (`text/*` does not shadow the inode/* entries: a directory and an
 # executable type as `inode/directory` and `inode/executable`, neither of which
 # glob-matches it.)
 # Hovering shows where the click will land — the address half of "a link is the
 # address of what the eye just found". A modifier rather than `always`: a URL
 # painted permanently over every hovered filename in an `ll` listing is the
 # clutter tab_title_max_length exists to prevent, and cmd is free of any
-# default mouse action. Adopted 10-09-2026.
+# default mouse action.
 [pref.hyperlink_actions.targets.kitty_hover_target]
 target = "kitty"
 key = "show_hyperlink_targets"
@@ -2799,12 +2758,8 @@ want = "protocol file; mime text/*; action launch --type=background zed -- ${FIL
 # the first two measured 06-09-2026, the third 10-09-2026): without these a
 # listed source file falls past the text rule to `open`.
 #
-# A row per line, and that is the point. Three lines were pinned until
-# 10-09-2026 and the comment here closed with "the rest of the file is the same
-# shape" — which is exactly what licensed the hole: deleting text/x-gradle,
-# text/x-svelte, text/x-properties or text/x-shellscript left every row green
-# while § Interaction's own sentence names Gradle and Svelte out loud. A
-# promise nothing enforces is a wish, as the ceiling table's own callout says.
+# A row per line, and that is the point: a sample of lines plus "the rest is
+# the same shape" lets any unpinned line be deleted with every row green.
 # Each key is distinct, so there is nothing for an aggregate row to aggregate,
 # and a row per line names the promise it keeps in its own label.
 [pref.hyperlink_actions.targets.kitty_mime_kotlin]
@@ -2849,7 +2804,7 @@ want = "ts tsx"
 
 [pref.pager_less]
 value = "LESS='-iRF --incsearch --wordwrap' — one lever for every pager"
-why = "bat's less, delta's less and a bare pipe all read $LESS (brew has no pager path of its own — its routes are cat→bat and git commands→delta): -i folds case in pager search (completion's rule again), -R passes ANSI through on manual pipes, -F prints-and-exits on one-screen output, --incsearch moves the match as you type (less 668). Adopted 29-08-2026; --mouse deliberately declined — less grabbing the mouse breaks kitty copy-on-select inside pagers."
+why = "bat's less, delta's less and a bare pipe all read $LESS (brew has no pager path of its own — its routes are cat→bat and git commands→delta): -i folds case in pager search (completion's rule again), -R passes ANSI through on manual pipes, -F prints-and-exits on one-screen output, --incsearch moves the match as you type (less 668). --mouse deliberately declined (ruled 29-08-2026) — less grabbing the mouse breaks kitty copy-on-select inside pagers."
 
 [pref.pager_less.targets.zshrc]
 key = "LESS"
@@ -2873,7 +2828,7 @@ want_any = "READNULLCMD=less"
 
 [pref.brew_local_only]
 value = "Homebrew sends no analytics"
-why = "the atuin reasoning — no account, no sync, no telemetry — applied to the package manager. Analytics were measurably ON until 29-08-2026 (`brew analytics` reported enabled). zsh_live proves the export reaches a real login shell, the isolated-PTY read that no contaminated caller environment can fake."
+why = "the atuin reasoning — no account, no sync, no telemetry — applied to the package manager. Homebrew ships with analytics on (`brew analytics` reported enabled, 29-08-2026). zsh_live proves the export reaches a real login shell, the isolated-PTY read that no contaminated caller environment can fake."
 
 [pref.brew_local_only.targets.zprofile]
 key = "HOMEBREW_NO_ANALYTICS"
@@ -2886,7 +2841,7 @@ want_any_contain = "HOMEBREW_NO_ANALYTICS=1"
 
 [pref.brew_through_bat]
 value = "brew cat renders through bat"
-why = "the paged-through-bat family (pref.man_through_bat, kitty's scrollback pager) reaching the package manager — HOMEBREW_BAT is brew's own switch, and its only non-test consumer is dev-cmd/cat.rb (brew edit opens $EDITOR, untouched). Adopted 29-08-2026."
+why = "the paged-through-bat family (pref.man_through_bat, kitty's scrollback pager) reaching the package manager — HOMEBREW_BAT is brew's own switch, and its only non-test consumer is dev-cmd/cat.rb (brew edit opens $EDITOR, untouched)."
 
 [pref.brew_through_bat.targets.zprofile]
 key = "HOMEBREW_BAT"
@@ -2900,7 +2855,7 @@ want_any = "HOMEBREW_BAT=1"
 
 [pref.ncdu_palette]
 value = "ncdu renders its structure in the terminal palette"
-why = "ncdu ships colourless (--color off is its 2.9.2 default); dark renders usage bars and selection in curses base pairs — the terminal's own 16 colours, the rider rule. Visible structure over a wall of undifferentiated rows. Adopted 29-08-2026."
+why = "ncdu ships colourless (--color off is its 2.9.2 default); dark renders usage bars and selection in curses base pairs — the terminal's own 16 colours, the rider rule. Visible structure over a wall of undifferentiated rows."
 
 [pref.ncdu_palette.targets.ncdu]
 key = "color"
@@ -2908,7 +2863,7 @@ want = "dark"
 
 [pref.git_rebase_first]
 value = "pull rebases; a stack rebases as one"
-why = "Linear history by default (pull.rebase, set since the config's import). updateRefs and autosquash adopted 28-08-2026: rebasing a stacked branch updates its dependent refs — the work queue runs multi-PR stacks — and fixup! commits file themselves in interactive rebase."
+why = "Linear history by default (pull.rebase). updateRefs and autosquash: rebasing a stacked branch updates its dependent refs — multi-PR stacks are routine — and fixup! commits file themselves in interactive rebase."
 
 [pref.git_rebase_first.targets.gitcfg]
 key = "pull.rebase"
@@ -2926,7 +2881,7 @@ want = "true"
 
 [pref.git_diff_reading]
 value = "diffs read through delta: side-by-side, line-numbered, histogram-computed"
-why = "A diff is a reading surface, so it gets the reading affordances: two panes, line numbers, n/N navigation, and delta on interactive add's hunks too. histogram adopted 28-08-2026 — cleaner hunk boundaries than myers where lines repeat, correctness-first."
+why = "A diff is a reading surface, so it gets the reading affordances: two panes, line numbers, n/N navigation, and delta on interactive add's hunks too. histogram for cleaner hunk boundaries than myers where lines repeat, correctness-first."
 
 [pref.git_diff_reading.targets.gitcfg]
 key = "core.pager"
@@ -2964,7 +2919,7 @@ want_contains = "delta"
 # without any of these keys changing.
 [pref.git_ansi_ride]
 value = "delta rides the terminal's 16 ANSI colors"
-why = "§ Colour's rider rule: named 4-bit colors and pure attributes only, so a kitty theme swap recolors diffs for free. delta's own `brightblack` keyword breaks the rule — it encodes as 38;5;8 — hence `normal dim` for the zero style (measured 28-08-2026, delta 0.19.2)."
+why = "The rider rule: named 4-bit colors and pure attributes only, so a kitty theme swap recolors diffs for free. delta's own `brightblack` keyword breaks the rule — it encodes as 38;5;8 — hence `normal dim` for the zero style (measured 28-08-2026, delta 0.19.2)."
 
 [pref.git_ansi_ride.targets.gitcfg]
 key = "delta.syntax-theme"
@@ -3046,7 +3001,7 @@ want = "input"
 
 [pref.git_big_repo_status]
 value = "status caches the walk; it does not watch the tree"
-why = "untrackedCache keeps the win the 28-08-2026 sweep measured (`git status` in the largest repo here, 93.7ms ±1.1 → 26.7ms ±1.0 warm, hyperfine, 10 runs each, both settings adopted together). fsmonitor WITHDRAWN 15-09-2026: a prompt runs git with GIT_OPTIONAL_LOCKS=0, and git will not start the fsmonitor daemon under it — it attempts the IPC handshake, spends 1.088s, and falls back to the ordinary walk, every render, never self-healing, because the prompt is the one caller that cannot start the daemon it needs. Against that, fsmonitor's margin ON TOP of untrackedCache is 34.5ms ±4.0 vs 40.7ms ±1.8 in that repo (hyperfine, 15 runs, daemon warm) — 6ms bought for a 1.088s stall in every repo after every reboot. traps.md § 'A prompt cannot start the fsmonitor daemon' holds the mechanism."
+why = "untrackedCache alone: `git status` in the largest repo here takes 40.7ms ±1.8 warm with it (hyperfine, 15 runs, 15-09-2026), against 93.7ms ±1.1 with neither it nor fsmonitor, measured on another day (hyperfine, 10 runs, 28-08-2026). No fsmonitor (ruled 15-09-2026): a prompt runs git with GIT_OPTIONAL_LOCKS=0, and git will not start the fsmonitor daemon under it — it attempts the IPC handshake, spends 1.088s, and falls back to the ordinary walk, every render, never self-healing, because the prompt is the one caller that cannot start the daemon it needs. Against that, fsmonitor's margin ON TOP of untrackedCache is 34.5ms ±4.0 vs 40.7ms ±1.8 in that repo (hyperfine, 15 runs, daemon warm) — 6ms bought for a 1.088s stall in every repo after every reboot."
 
 # Absence, not a false: core.fsmonitor unset IS git's default, and this config
 # holds only non-defaults. want_absent therefore reads the FILE for the key
@@ -3065,7 +3020,7 @@ want = "true"
 
 [pref.gh_rides_git]
 value = "gh follows the choices git already made"
-why = "pager=delta so `gh pr diff` reads like `git diff` (non-diff gh output passes through delta unchanged — measured 28-08-2026); git_protocol ssh at BOTH layers, because hosts.yml overrides config.yml per host and the two disagreed silently until the same day (file said https, effective was ssh)."
+why = "pager=delta so `gh pr diff` reads like `git diff` (non-diff gh output passes through delta unchanged — measured 28-08-2026); git_protocol ssh at BOTH layers, because hosts.yml overrides config.yml per host, so the two can disagree silently (measured 28-08-2026: file said https, effective was ssh)."
 
 [pref.gh_rides_git.targets.gh_telemetry]
 target = "gh"
@@ -3083,15 +3038,14 @@ want = "ssh"
 
 [pref.update_signal]
 value = "each tool's own update check stays on"
-why = "A version bump is what re-enters a closed surface (§ Obsidian, Re-entry; § Interaction for kitty, § Shell for atuin), so the check that produces the signal is a gate on re-entry itself. Kept-on was prose only until 05-09-2026, when the same pass found that a recorded state nothing asserts is a wish. Obsidian writes updateDisabled only when its check is switched off, and its plugins' startup check is a live flag; kitty's interval and atuin's toggle are switched off by one line each, and text asserts that no line does."
+why = "A version bump is what re-enters a closed surface, so the check that produces the signal is a gate on re-entry itself. Obsidian writes updateDisabled only when its check is switched off, and its plugins' startup check is a live flag; kitty's interval and atuin's toggle are switched off by one line each, and text asserts that no line does."
 
-# update_check_interval is in hours and 0 disables. This was want_absent "0"
-# until 10-09-2026, with its own comment conceding that a substring test over a
-# number would also trip on 10 or 240. The preference § Interaction states is
-# the 24-hour check, so the row now says that, exactly, and reads kitty's own
-# default for the key the config leaves unwritten — which is the whole point
-# here: this notice IS the re-entry signal for the kitty surface, so an upstream
-# default of 0 would retire the signal with nothing to notice.
+# update_check_interval is in hours and 0 disables. The row states the
+# 24-hour check exactly — a want_absent "0" would also trip on 10 or 240 —
+# and reads kitty's own default for the key the config leaves unwritten.
+# That is the point here: this notice IS the re-entry signal for the kitty
+# surface, so an upstream default of 0 would retire the signal with nothing to
+# notice.
 [pref.update_signal.targets.kitty]
 key = "update_check_interval"
 want = "24"
