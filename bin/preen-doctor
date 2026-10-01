@@ -58,9 +58,8 @@ bare_shim() { # bare_shim <tool> → true when <tool> is macOS's /usr/bin stub w
   return 0
 }
 
-expand() { printf '%s' "${1/#\~/$HOME}"; }
-# The other direction, for printing. `${1/#$HOME/\~}` keeps the backslash in
-# bash, the trap preen apply's own short() names.
+# For printing, HOME as ~. `${1/#$HOME/\~}` keeps the backslash in bash, the
+# trap preen apply's own short() names.
 short() {
   case "$1" in
     "$HOME"|"$HOME"/*) printf '~%s' "${1#"$HOME"}" ;;
@@ -68,15 +67,15 @@ short() {
   esac
 }
 
-# Checks that assert a PREFERENCE of this repo's owner, rather than whether
-# something is broken, run only in the source repo: an adopter never agreed to
-# those decisions, and failing their correct setup over one is how a
-# verification step loses its meaning.
+# Checks that assert a PREFERENCE of this repo's owner, or read files only the
+# source repo has, run only there: an adopter never agreed to those decisions,
+# and failing their correct setup over one is how a verification step loses
+# its meaning. Inside the source repo, such a file missing is a warn.
 SOURCE_REPO=no
-# The source repo is the one with hosts/, which never ships. Testing for a
-# directory an adopter might add, such as docs/, would assert this repo's taste
-# on them.
-[ -d "$REPO/hosts" ] && SOURCE_REPO=yes
+# The one test: the list of what ships, which never ships itself. A directory
+# is no test — an adopter's clone may grow a hosts/, a publish/ or a .githooks/
+# of its own, and this repo's taste would then be asserted on it.
+[ -f "$REPO/bin/lib/stage-mirror.sh" ] && SOURCE_REPO=yes
 
 # preen pull, which reconciles a copy row back into the repo, is named only
 # where it exists; a copy of this repo without it gets the manual remedy.
@@ -91,7 +90,8 @@ rows_seen=0
 while IFS=$'\t' read -r src tgt mode perms; do
   case "$src" in ''|'#'*) continue ;; esac
   rows_seen=$((rows_seen + 1))
-  abs_tgt="$(expand "$tgt")"
+  # Not `${tgt/#\~/$HOME}`: bash 5.2 reads an `&` in HOME as the matched `~`.
+  case "$tgt" in '~'|'~/'*) abs_tgt="$HOME${tgt#\~}" ;; *) abs_tgt="$tgt" ;; esac
   case "$mode" in
     link)
       if [ ! -L "$abs_tgt" ]; then
@@ -163,10 +163,12 @@ if [ "$rows_seen" -ne "$expected_rows" ]; then
 fi
 
 # preen apply, bootstrap and the drop-ins move an adopter's file aside as
-# <file>.unpreened[.N|.<stamp>] and say so once, so a copy row an application
-# keeps rewriting piles them up unseen. Every directory a row deploys into is
-# searched rather than each row's own name, so a backup outlives the row that
-# made it; the prompt drop-in's ~/.claude and the kitty drop-in's
+# <file>.unpreened.<stamp>[.N] — earlier versions of the first two as
+# <file>.unpreened[.N], which a machine may still hold — and say so once, so a
+# copy row an application keeps rewriting piles them up unseen. Every
+# directory a row deploys into is searched rather than each row's own name, so
+# a backup outlives the row that made it; the prompt drop-in's ~/.claude and
+# the kitty drop-in's
 # ~/.config/kitty/preen, which no row names, are added here. A function, not
 # inline: bash 3.2 reads a `case` pattern's `)` inside $( ) as the end of the
 # substitution.
@@ -175,7 +177,7 @@ backups_beside_rows() {
   {
     while IFS=$'\t' read -r src tgt _; do
       case "$src" in ''|'#'*) continue ;; esac
-      abs="${tgt/#\~/$HOME}"   # expand(), inlined: $( ) forks, and this runs for every row
+      case "$tgt" in '~'|'~/'*) abs="$HOME${tgt#\~}" ;; *) abs="$tgt" ;; esac
       printf '%s\n' "${abs%/*}"
     done < "$MANIFEST"
     printf '%s\n' "${CLAUDE_CONFIG_DIR:-$HOME/.claude}" "$HOME/.config/kitty/preen"
@@ -190,7 +192,9 @@ backups_beside_rows() {
 
 echo "== backups =="
 # Byte order keeps each original's backups adjacent: they share its name as a
-# prefix. One warn per original, its backups listed, never counted.
+# prefix. Stamped names sort by time; a bare or numbered one, written by an
+# earlier preen apply or bootstrap, carries no time, so where it lands says
+# nothing of its age. One warn per original, its backups listed, never counted.
 backups="$(backups_beside_rows)"
 if [ -z "$backups" ]; then
   ok "nothing moved aside beside a deployed file"
@@ -228,6 +232,19 @@ else
   bad "atuin has a session file — an account is logged in, against the local-only decision"
 fi
 
+# The fixtures below are made under one directory, each removed as its check
+# ends, and the directory on exit, however the run ends. This script sets no
+# other trap. Named, and in TMPDIR, which macOS's `mktemp -d` alone ignores.
+# Where TMPDIR cannot hold it, each check that needs a fixture warns and
+# skips: an empty path would run the excludes probe's `git init` in the
+# caller's directory.
+FIXTURES="$(mktemp -d "${TMPDIR:-/tmp}/preen-doctor.XXXXXX" 2>/dev/null)" || FIXTURES=""
+trap '[ -z "$FIXTURES" ] || rm -rf "$FIXTURES"' EXIT
+fixture() { # fixture <name> → a new directory under FIXTURES; fails when there is none
+  [ -n "$FIXTURES" ] && mktemp -d "$FIXTURES/$1.XXXXXX" 2>/dev/null
+}
+NO_FIXTURE="could not make a scratch directory in ${TMPDIR:-/tmp}"
+
 # eza rides the terminal's 16 ANSI colours BY DEFAULT (measured 27-08-2026:
 # only 4-bit SGR codes in its output) — a state no text reader can see, and
 # one a version bump could change silently. Proven behaviourally: a fixture
@@ -236,8 +253,11 @@ fi
 # theme.yml is checked by absence because it is palette-carrying by
 # construction. Control: the fixture guarantees coloured output exists (a
 # dir and an executable), so an empty capture fails rather than passing.
-if command -v eza >/dev/null 2>&1; then
-  eza_fixture="$(mktemp -d)"
+if ! command -v eza >/dev/null 2>&1; then
+  warn "eza not installed — skipping the ANSI-rider check"
+elif ! eza_fixture="$(fixture eza)"; then
+  warn "$NO_FIXTURE — skipping the eza ANSI-rider check"
+else
   mkdir "$eza_fixture/dir" && touch "$eza_fixture/exec" && chmod +x "$eza_fixture/exec"
   eza_out="$(eza --color=always -la "$eza_fixture" 2>/dev/null)"
   rm -rf "$eza_fixture"
@@ -250,8 +270,6 @@ if command -v eza >/dev/null 2>&1; then
   else
     ok "eza rides the 16 ANSI colours (4-bit output, no theme.yml)"
   fi
-else
-  warn "eza not installed — skipping the ANSI-rider check"
 fi
 
 # delta rides the 16 ANSI colours BY CONFIGURATION (the deployed gitconfig's
@@ -271,8 +289,9 @@ elif bare_shim git; then
 elif ! command -v delta >/dev/null 2>&1; then
   # The shipped gitconfig falls back to less when delta is absent, so git works.
   warn "delta not installed — git pages through less; skipping the delta ANSI-rider check"
+elif ! delta_fixture="$(fixture delta)"; then
+  warn "$NO_FIXTURE — skipping the delta ANSI-rider check"
 else
-  delta_fixture="$(mktemp -d)"
   printf 'line one\nline two\n' > "$delta_fixture/a"
   printf 'line one\nline TWO\n' > "$delta_fixture/b"
   delta_out="$(git diff --no-index "$delta_fixture/a" "$delta_fixture/b" 2>/dev/null | delta --width 100 2>/dev/null)"
@@ -293,8 +312,11 @@ fi
 # default or a --colors line creeping into the managed config. The
 # managed config is deliberately part of the run (RIPGREP_CONFIG_PATH),
 # so a palette-carrying line there fails here too.
-if command -v rg >/dev/null 2>&1; then
-  rg_fixture="$(mktemp -d)"
+if ! command -v rg >/dev/null 2>&1; then
+  warn "rg not installed — skipping the rg ANSI-rider check"
+elif ! rg_fixture="$(fixture rg)"; then
+  warn "$NO_FIXTURE — skipping the rg ANSI-rider check"
+else
   printf 'needle here\n' > "$rg_fixture/f.txt"
   rg_out="$(RIPGREP_CONFIG_PATH="$HOME/.config/ripgrep/config" rg --color=always -n needle "$rg_fixture" 2>/dev/null)"
   rm -rf "$rg_fixture"
@@ -305,8 +327,6 @@ if command -v rg >/dev/null 2>&1; then
   else
     ok "rg rides the 16 ANSI colours (4-bit output on a fixture match)"
   fi
-else
-  warn "rg not installed — skipping the rg ANSI-rider check"
 fi
 
 # The global excludes file is a manifest row; this proves git actually
@@ -317,8 +337,11 @@ fi
 # nothing about the two that were.
 if bare_shim git; then
   warn "git needs the Command Line Tools here (xcode-select --install) — skipping the global-excludes check"
-elif command -v git >/dev/null 2>&1; then
-  ign_fixture="$(mktemp -d)"
+elif ! command -v git >/dev/null 2>&1; then
+  :
+elif ! ign_fixture="$(fixture ignore)"; then
+  warn "$NO_FIXTURE — skipping the global-excludes check"
+else
   git -C "$ign_fixture" init -q 2>/dev/null
   mkdir -p "$ign_fixture/.claude"
   touch "$ign_fixture/.DS_Store" "$ign_fixture/.claude/settings.local.json" "$ign_fixture/control.txt"
@@ -382,10 +405,19 @@ fi
 # This repo owner's decision: the directory was deleted rather than wired in.
 # Source-repo only: the shipped zshrc adds only ~/.docker/completions to
 # fpath, so an adopter who HAS this directory could never pass. It also spends
-# a second launching an interactive login zsh.
+# a second launching an interactive login zsh. `script` fails on a stdin that
+# is a socket, an agent's shell, and prints nothing, so its stdin is pinned
+# and an empty capture is no answer. macOS's `script` echoes that stdin's EOF
+# as `^D` and two backspaces ahead of the capture, so they are stripped before
+# it can read as empty. The whole line is matched: inside kitty, fpath also
+# holds kitty's own shell-integration/zsh/completions.
 if [ "$SOURCE_REPO" = yes ]; then
   if [ -d "$HOME/.zsh/completions" ]; then
-    if grep -q '.zsh/completions' <<< "$(script -q /dev/null zsh -l -i -c 'print -l $fpath' 2>/dev/null | tr -d '\r')"; then
+    live_fpath="$(script -q /dev/null zsh -l -i -c 'print -l $fpath' </dev/null 2>/dev/null)" || live_fpath=""
+    live_fpath="${live_fpath//$'^D\b\b'/}"; live_fpath="${live_fpath//$'\r'/}"
+    if [ -z "$live_fpath" ]; then
+      warn "could not read fpath from a login zsh — ~/.zsh/completions unchecked"
+    elif grep -qxF "$HOME/.zsh/completions" <<< "$live_fpath"; then
       ok "~/.zsh/completions is in fpath"
     else
       bad "~/.zsh/completions exists but is not in fpath"
@@ -482,15 +514,17 @@ fi
 # The public mirror must not silently fall behind. Honours $PREEN_MIRROR, the
 # same override preen publish accepts — a doctor that checks a different
 # path than the tool that maintains it is its own drift.
-# The next two checks are SOURCE-REPO ONLY: this script ships, but
-# publish/.last-published and bin/lib/stage-mirror.sh, which it sources below,
-# exist only here.
-# `publish/` is the context signal — same guard style as the cship check
-# below.
-if [ -d "$REPO/publish" ]; then
+# The checks from here through the hosts/*/doctor.d/ loop are SOURCE-REPO
+# ONLY: this script ships, but what they read — publish/.last-published,
+# bin/lib/stage-mirror.sh, docs/blocked-upstream.md, .githooks/,
+# hosts/*/doctor.d/ — exists only here, and the gh account check guards this
+# repo's own gh operations.
+if [ "$SOURCE_REPO" = yes ]; then
   source "$REPO/bin/lib/stage-mirror.sh"   # here, not at the top: it does not ship
   MIRROR="${PREEN_MIRROR:-$HOME/Development/preen}"
-  if [ -d "$MIRROR/.git" ]; then
+  if [ -d "$MIRROR/.git" ] && [ ! -f "$REPO/publish/.last-published" ]; then
+    warn "publish/.last-published is missing — whether the public mirror is current goes unchecked"
+  elif [ -d "$MIRROR/.git" ]; then
     here=$(mirror_fingerprint "$REPO" 2>/dev/null || echo none)
     marker=$(cat "$REPO/publish/.last-published" 2>/dev/null || echo none)
     if [ "$here" = "$marker" ]; then
@@ -516,7 +550,11 @@ if [ -d "$REPO/publish" ]; then
 fi
 
 # A deferral must not become permanent by neglect.
-if [ -f "$REPO/docs/blocked-upstream.md" ]; then
+if [ "$SOURCE_REPO" = no ]; then
+  :
+elif [ ! -f "$REPO/docs/blocked-upstream.md" ]; then
+  warn "docs/blocked-upstream.md is missing — the cship deferral it records goes unchecked"
+else
   installed=$("$HOME/.local/bin/cship" --version 2>/dev/null | awk '{print $NF}')
   broken=$(awk -F'`' '/cship.*broken at/{print $2; exit}' "$REPO/docs/blocked-upstream.md")
   # An unparseable state (cship missing/erroring, or the awk pattern failing
@@ -533,8 +571,12 @@ fi
 
 # The pre-commit hook (glyph integrity, TOML parse) is opt-in PER CLONE via
 # `git config core.hooksPath .githooks`; this warns on a clone that has not
-# opted in. Only where .githooks exists: the mirror ships none.
-if [ -d "$REPO/.githooks" ]; then
+# opted in. The mirror ships none.
+if [ "$SOURCE_REPO" = no ]; then
+  :
+elif [ ! -d "$REPO/.githooks" ]; then
+  warn ".githooks/ is missing — the pre-commit hook this clone opts into is not there"
+else
   hooks_path="$(git -C "$REPO" config --get core.hooksPath 2>/dev/null || true)"
   if [ "$hooks_path" = ".githooks" ]; then
     ok "pre-commit hooks enabled (core.hooksPath=.githooks)"
@@ -548,14 +590,17 @@ fi
 # enumerates them, so adding one is adding a file. The extension point is
 # generic on purpose: a check written inline would ship in the mirror and
 # describe a private setup's shape, which no scan for secret strings catches.
-# The mirror carries no hosts/, so this loop finds nothing there and names
-# nothing.
+# An adopter's clone runs none, whatever hosts/ it grows.
 # Each module prints its own heading for the same reason run_pref_checks does:
 # a heading printed here would leave a bare section with nothing under it.
-for _mod in "$REPO"/hosts/*/doctor.d/*.sh; do
-  [ -f "$_mod" ] && source "$_mod"
-done
-unset _mod
+if [ "$SOURCE_REPO" = yes ]; then
+  _found=no
+  for _mod in "$REPO"/hosts/*/doctor.d/*.sh; do
+    if [ -f "$_mod" ]; then _found=yes; source "$_mod"; fi
+  done
+  [ "$_found" = yes ] || warn "no hosts/*/doctor.d/*.sh — the machine-specific checks did not run"
+  unset _mod _found
+fi
 
 # Asserts the preference spec against LIVE config — what the applications
 # actually render, not what this repo believes they were given. The manifest

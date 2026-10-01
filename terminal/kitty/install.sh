@@ -125,10 +125,10 @@ fi
 locate_sources kitty.conf
 if [ "$SRC" = "$WORK/src" ]; then
   # shellcheck disable=SC2086  # ROOT_FILES is a list of names, meant to split
-  for f in current-theme.conf $ROOT_FILES; do fetch "$f"; done
+  for f in current-theme.conf tab-title.awk $ROOT_FILES; do fetch "$f"; done
 fi
 # shellcheck disable=SC2086
-for f in kitty.conf current-theme.conf $ROOT_FILES; do
+for f in kitty.conf current-theme.conf tab-title.awk $ROOT_FILES; do
   [ -s "$SRC/$f" ] || die "$ORIGIN/$f is missing or empty"
 done
 # curl -f already refuses a 404; these refuse a 200 that is not the file, and a
@@ -142,6 +142,12 @@ grep -q '^globinclude local\.conf$' "$SRC/kitty.conf" \
   || die "$ORIGIN/kitty.conf is not this config — it must end with \`globinclude local.conf\`, which is what your own overrides ride on"
 grep -q '^background[[:space:]]' "$SRC/current-theme.conf" \
   || die "$ORIGIN/current-theme.conf is not a kitty colour scheme"
+# The program that writes the tab title. A download cut off between two rules
+# still parses, so it must end on its marker line; one cut mid-block fails to
+# parse, and a file that is not this program lacks the rule local.conf is read by.
+grep -q '^want == "local"' "$SRC/tab-title.awk" && awk -f "$SRC/tab-title.awk" </dev/null >/dev/null 2>&1 \
+  && [ "$(tail -n 1 "$SRC/tab-title.awk")" = '# end of tab-title.awk: install.sh refuses a copy whose last line is not this one' ] \
+  || die "$ORIGIN/tab-title.awk is not the program that writes the tab title, or did not arrive whole"
 
 # ── dependencies ─────────────────────────────────────────────────────────────
 # Each is a warning and never a refusal: the files are worth having before the
@@ -190,58 +196,21 @@ else
 fi
 
 # ── the tab title ────────────────────────────────────────────────────────────
-# kitty.conf's tab_title_template collapses the working directory to '~' with a
-# Python .replace() inside kitty's own config language, which expands no
-# environment variable in that option — so the home is a literal, authored for
-# one machine. The line is read out of kitty.conf rather than repeated here,
-# and rewritten with awk's index/substr, which match no pattern at all: a sed
-# expression built from $HOME turns a `|` in it into a different command and
-# an `&` into the whole match. HOME is read from ENVIRON: `awk -v` turns a `\t`
-# in it into a tab. kitty compiles the title as a Python f-string, where `\t` is
-# a tab too, so each backslash is written doubled.
+# kitty.conf's tab_title_template collapses the working directory to '~' for a
+# home that is a literal, authored for one machine. The line is read out of
+# kitty.conf rather than repeated here, and rewritten for this HOME by
+# tab-title.awk, the program bin/bootstrap runs too; it says why it is awk.
 echo
 echo "== tab title =="
 title_line=""
 if [ "$HOME" = "$AUTHORED_HOME" ]; then
   echo "this is the home the tab title was authored for — no tab-title.conf needed"
 else
-  title_line="$(awk -v old="$AUTHORED_HOME" '
-    /^tab_title_template / {
-      lit = ""; r = ENVIRON["HOME"]
-      while ((k = index(r, "\\")) > 0) {
-        lit = lit substr(r, 1, k - 1) "\\\\"
-        r = substr(r, k + 1)
-      }
-      lit = lit r
-      out = ""; rest = $0
-      while ((i = index(rest, old)) > 0) {
-        out = out substr(rest, 1, i - 1) lit
-        rest = substr(rest, i + length(old))
-      }
-      print out rest
-      exit
-    }' "$SRC/kitty.conf")"
-  # local.conf is read after tab-title.conf. Of its tab_title_template lines,
-  # awk takes the last with a value and prints its line number and, when it is
-  # `active_wd.replace('<path>', '~')` for a path other than this home, that
-  # path. Their file: named, never written. bin/bootstrap reads its local.conf
-  # by the same rule. A line has a value when kitty's whitespace follows the
-  # key — spaces, tabs, \v, \f, \x1c-\x1f; it ends a line at a lone \r — and
-  # then a byte that is not whitespace. kitty also counts multibyte spaces as
-  # whitespace; a line led or split by one, or with one for its value, is not
-  # modelled. LC_ALL=C: under a UTF-8 locale, macOS awk stops at a byte that
-  # is not UTF-8.
-  local_title="$(LC_ALL=C awk '
-    /^[[:space:]\034-\037]*tab_title_template[ \t\v\f\034-\037]+[^[:space:]\034-\037]/ { n = NR; t = $0 }
-    END {
-      if (!n) exit
-      p = ""; i = index(t, "active_wd.replace(")
-      if (i) {
-        s = substr(t, i + 18); q = substr(s, 1, 1); s = substr(s, 2); j = index(s, q)
-        if ((q == "\"" || q == "'\''") && j && substr(s, 1, j - 1) != ENVIRON["HOME"] && substr(s, j + 1) ~ /^, *.~.\)/) p = substr(s, 1, j - 1)
-      }
-      print n, p
-    }' "$PREEN_DIR/local.conf" 2>/dev/null)" || local_title=""
+  title_line="$(awk -v want=title -v authored="$AUTHORED_HOME" -f "$SRC/tab-title.awk" "$SRC/kitty.conf")"
+  # local.conf, read after tab-title.conf, may set a tab title of its own:
+  # tab-title.awk names its line, and the path it collapses when that is not
+  # this home. Their file: named, never written.
+  local_title="$(LC_ALL=C awk -v want=local -f "$SRC/tab-title.awk" "$PREEN_DIR/local.conf" 2>/dev/null)" || local_title=""
   local_line="${local_title%% *}"; local_path="${local_title#* }"
   # Said before the refusals and the write, so it is what a run writes, never
   # what the file holds.

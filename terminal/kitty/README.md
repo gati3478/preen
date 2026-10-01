@@ -8,8 +8,9 @@ scrollback page through [bat](https://github.com/sharkdp/bat); the audio bell
 is off and a bell shows as a red symbol in the tab title instead. It also
 carries the kitty half of a click seam — a file path printed by `rg` or `eza`
 opens in the editor, at its line, when you click it. Take it alone: the
-installer fetches one shared helper from this repository the way it fetches
-the configs, and nothing it installs points back here.
+installer fetches its helpers from this repository — the installer library
+the pieces share, and `tab-title.awk`, which writes the tab title — the way
+it fetches the configs, and nothing it installs points back here.
 
 ## What you need
 

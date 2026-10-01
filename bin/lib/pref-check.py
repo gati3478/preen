@@ -29,6 +29,7 @@ an argument error; 3 is --spec-files finding no spec. Never prints a tally — a
 count drifts between the checker and the checked and nobody notices.
 """
 
+import atexit
 import copy
 import glob
 import json
@@ -37,6 +38,7 @@ import plistlib
 import re
 import shlex
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -2816,6 +2818,8 @@ def _remote_fetch(host, targets):
     import base64, tempfile
     if not _REMOTE_DIR:
         _REMOTE_DIR = tempfile.mkdtemp(prefix="pref-check-remote.")
+        # It holds copies of another machine's config.
+        atexit.register(shutil.rmtree, _REMOTE_DIR, ignore_errors=True)
     files, cur, buf = {}, None, []
     def flush():
         if cur is not None:
@@ -3959,4 +3963,12 @@ def emit_assertions(spec, targets, came_from, read):
 
 
 if __name__ == "__main__":
+    # Exit handlers and `finally` blocks — the remote fetch's cleanup, --prove's
+    # scratch — run on any Python-level exit, Ctrl-C's KeyboardInterrupt
+    # included, but not on a SIGTERM or SIGHUP (a closed terminal), so those
+    # become SystemExit too. A signal ignored at startup, as under nohup, stays
+    # ignored.
+    for sig in (signal.SIGTERM, signal.SIGHUP):
+        if signal.getsignal(sig) == signal.SIG_DFL:
+            signal.signal(sig, lambda signum, _frame: sys.exit(128 + signum))
     sys.exit(main())

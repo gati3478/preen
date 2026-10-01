@@ -71,7 +71,8 @@ and bootstrap never modifies your clone. What it finds in the way:
 
 - a symlinked directory between `~` and a file it deploys, the layout stow
   leaves, is refused;
-- a plain file of yours is kept beside itself as `<file>.unpreened`;
+- a plain file of yours is kept beside itself as `<file>.unpreened.<stamp>`,
+  `<stamp>` the run's date and time;
 - a symlink is never written through: at a `link` row it is replaced and its
   old target printed, at a `copy` row it is moved aside;
 - a plain `~/.gitconfig`, or a `~/.ssh/config` plain or linked, becomes the
@@ -152,9 +153,13 @@ In this order:
    from `~/.claude/settings.json`, and any backup of that file: it predates
    what Claude Code wrote since.
 3. Remove the links: every `link` row of `manifest.tsv` points into `~/preen`.
-4. Move each backup back in its place. Where a file has several, the bare
-   `<file>.unpreened` is the oldest, what was there when the setup first
-   replaced the file; the numbered ones are later rewrites.
+4. Move each backup back in its place. Among a file's stamped backups the
+   earliest is the original, what was there before anything here replaced
+   the file, whichever wrote it — bootstrap, `preen apply`, or the statusline
+   or kitty installer; the later ones are rewrites. One with no stamp,
+   `<file>.unpreened` or a numbered `<file>.unpreened.1`, comes from an older
+   `preen apply` or bootstrap, and its name says nothing about when: where a
+   file has one beside stamped ones, look inside before choosing.
 5. Remove each `copy` row's file that had no backup and that you did not have
    before.
 6. Move `~/.gitconfig.local` to `~/.gitconfig` and `~/.ssh/config.local` to

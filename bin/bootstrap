@@ -42,6 +42,20 @@ done
 run() { [ "$dry_run" = yes ] || "$@"; }
 tell() { if [ "$dry_run" = yes ]; then printf '%s' "$2"; else printf '%s' "$1"; fi; }
 
+# Every writer in this setup, preen apply and the drop-ins included, names a
+# backup <file>.unpreened.<stamp>, the stamp taken once per run, so a file's
+# backups sort by time whichever of them wrote each. A dry run cannot know the
+# real run's second, so it names the stamp instead.
+if [ "$dry_run" = yes ]; then STAMP='<stamp>'; else STAMP="$(date +%Y%m%d-%H%M%S)"; fi
+backup_name() { # backup_name <file> → a name beside it that nothing holds yet
+  local b="$1.unpreened.$STAMP" n=1
+  while [ -e "$b" ] || [ -L "$b" ]; do
+    b="$1.unpreened.$STAMP.$n"
+    n=$((n + 1))
+  done
+  printf '%s' "$b"
+}
+
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Apple silicon's Homebrew prefix, then Intel's: shell/zprofile's order.
@@ -98,6 +112,7 @@ GITCONFIG="$HOME/.gitconfig"
 # The tab title is written for any home but the one kitty.conf's line names.
 AUTHORED_HOME="/Users/gati3478"
 KITTY_CONF="$REPO/terminal/kitty/kitty.conf"
+TAB_TITLE_AWK="$REPO/terminal/kitty/tab-title.awk"   # the kitty drop-in runs it too
 TAB_TITLE_CONF="$HOME/.config/kitty/tab-title.conf"
 refused=no
 if [ -L "$GITCONFIG_LOCAL" ]; then
@@ -348,16 +363,16 @@ echo
 echo "== git =="
 # The shipped gitconfig includes ~/.gitconfig.local last, and git keeps the
 # last value it reads, so a gitconfig of the adopter's own belongs there whole —
-# ssh's rule below. Left to preen apply it would be kept as .gitconfig.unpreened,
-# and its credential helpers, signing and includeIf would go quiet. One that
+# ssh's rule below. Left to preen apply it would be kept as a backup, and its
+# credential helpers, signing and includeIf would go quiet. One that
 # names gitconfig.local would, moved there, include itself, and git stops every
 # command on that ("exceeded maximum include depth").
 moved=""   # what moves onto its overlay, as ~ paths
 if [ -f "$GITCONFIG" ] && [ ! -L "$GITCONFIG" ]; then
   if [ -e "$GITCONFIG_LOCAL" ]; then
-    echo "~/.gitconfig.local is there, so ~/.gitconfig is not moved onto it — the deploy below keeps it as ~/.gitconfig.unpreened"
+    echo "~/.gitconfig.local is there, so ~/.gitconfig is not moved onto it — the deploy below keeps it as ~/.gitconfig.unpreened.<stamp>"
   elif grep -q 'gitconfig\.local' "$GITCONFIG"; then
-    echo "~/.gitconfig names gitconfig.local itself — the deploy below keeps it as ~/.gitconfig.unpreened"
+    echo "~/.gitconfig names gitconfig.local itself — the deploy below keeps it as ~/.gitconfig.unpreened.<stamp>"
   else
     run mv "$GITCONFIG" "$GITCONFIG_LOCAL"
     moved="~/.gitconfig"
@@ -423,8 +438,8 @@ echo "== ssh =="
 # The shipped ssh/config includes ~/.ssh/config.local on its first line, and
 # ssh keeps the first value it reads, so a config of the adopter's own belongs
 # there whole — the drop-ins' rule: their file becomes the overlay when none
-# exists. Left to preen apply it would be kept as config.unpreened, and every
-# host in it would go dark until someone moved it by hand. A symlink of theirs
+# exists. Left to preen apply it would be kept as a backup, and every host in
+# it would go dark until someone moved it by hand. A symlink of theirs
 # (a dotfiles repo's) moves as a link: it keeps pointing where it did, and
 # nothing is written through it.
 SSH_CONF="$HOME/.ssh/config"
@@ -432,7 +447,7 @@ SSH_LOCAL="$HOME/.ssh/config.local"
 if [ -L "$SSH_CONF" ]; then
   ssh_aside="replaces the link, and the file it points at stays as it is"
 else
-  ssh_aside="keeps it as ~/.ssh/config.unpreened"
+  ssh_aside="keeps it as ~/.ssh/config.unpreened.<stamp>"
 fi
 if [ -L "$SSH_CONF" ] && [ "$SSH_CONF" -ef "$REPO/ssh/config" ]; then
   echo "~/.ssh/config is already this setup's"
@@ -501,30 +516,13 @@ if [ "$HOME" = "$AUTHORED_HOME" ]; then
   echo "this is the home the tab title was authored for — no tab-title.conf needed"
 elif [ ! -f "$KITTY_CONF" ]; then
   echo "kitty.conf not found — skipped"
+elif [ ! -f "$TAB_TITLE_AWK" ]; then
+  echo "tab-title.awk not found — skipped"
 else
   # The line is read out of kitty.conf rather than repeated here: two copies
-  # of a taste value is the drift this repo exists to close. awk's index and
-  # substr match no pattern at all: a sed expression built from $HOME would
-  # turn a `|` in it into a different command and an `&` into the whole match.
-  # HOME is read from ENVIRON: `awk -v` turns a `\t` in it into a tab. kitty
-  # compiles the title as a Python f-string, where `\t` is a tab too, so each
-  # backslash is written doubled.
-  title_line="$(awk -v old="$AUTHORED_HOME" '
-    /^tab_title_template / {
-      lit = ""; r = ENVIRON["HOME"]
-      while ((k = index(r, "\\")) > 0) {
-        lit = lit substr(r, 1, k - 1) "\\\\"
-        r = substr(r, k + 1)
-      }
-      lit = lit r
-      out = ""; rest = $0
-      while ((i = index(rest, old)) > 0) {
-        out = out substr(rest, 1, i - 1) lit
-        rest = substr(rest, i + length(old))
-      }
-      print out rest
-      exit
-    }' "$KITTY_CONF")"
+  # of a taste value is the drift this repo exists to close. tab-title.awk
+  # says how it is rewritten, for the kitty drop-in too.
+  title_line="$(awk -v want=title -v authored="$AUTHORED_HOME" -f "$TAB_TITLE_AWK" "$KITTY_CONF")"
   if [ -z "$title_line" ]; then
     echo "kitty.conf has no tab_title_template line — no tab-title.conf needed" >&2
   else
@@ -543,8 +541,7 @@ else
         && awk 'NR == 1 { ok = /^tab_title_template / } END { exit !(NR == 1 && ok) }' "$TAB_TITLE_CONF" 2>/dev/null; then
         run rm -f "$TAB_TITLE_CONF"
       else
-        bak="$TAB_TITLE_CONF.unpreened"; n=1
-        while [ -e "$bak" ] || [ -L "$bak" ]; do bak="$TAB_TITLE_CONF.unpreened.$n"; n=$((n + 1)); done
+        bak="$(backup_name "$TAB_TITLE_CONF")"
         if [ -L "$TAB_TITLE_CONF" ]; then
           aside_line="$(tell 'moved aside     ' 'would move aside ')~/.config/kitty/tab-title.conf (a symlink -> $(readlink "$TAB_TITLE_CONF"))"
         else
@@ -559,26 +556,10 @@ else
     if [ "$title_state" != unchanged ] && [ "$dry_run" = no ]; then
       printf '%s\n' "$title_line" > "$TAB_TITLE_CONF"
     fi
-    # local.conf is read after tab-title.conf. Of its tab_title_template lines,
-    # awk takes the last with a value and prints its line number and, when it
-    # is `active_wd.replace('<path>', '~')` for a path other than this home,
-    # that path. Their file: named, never written. A line has a value when
-    # kitty's whitespace follows the key — spaces, tabs, \v, \f, \x1c-\x1f; it
-    # ends a line at a lone \r — and then a byte that is not whitespace. kitty
-    # also counts multibyte spaces as whitespace; a line led or split by one,
-    # or with one for its value, is not modelled. LC_ALL=C: under a UTF-8
-    # locale, macOS awk stops at a byte that is not UTF-8.
-    local_title="$(LC_ALL=C awk '
-      /^[[:space:]\034-\037]*tab_title_template[ \t\v\f\034-\037]+[^[:space:]\034-\037]/ { n = NR; t = $0 }
-      END {
-        if (!n) exit
-        p = ""; i = index(t, "active_wd.replace(")
-        if (i) {
-          s = substr(t, i + 18); q = substr(s, 1, 1); s = substr(s, 2); j = index(s, q)
-          if ((q == "\"" || q == "'\''") && j && substr(s, 1, j - 1) != ENVIRON["HOME"] && substr(s, j + 1) ~ /^, *.~.\)/) p = substr(s, 1, j - 1)
-        }
-        print n, p
-      }' "$HOME/.config/kitty/local.conf" 2>/dev/null)" || local_title=""
+    # local.conf, read after tab-title.conf, may set a tab title of its own:
+    # tab-title.awk names its line, and the path it collapses when that is not
+    # this home. Their file: named, never written.
+    local_title="$(LC_ALL=C awk -v want=local -f "$TAB_TITLE_AWK" "$HOME/.config/kitty/local.conf" 2>/dev/null)" || local_title=""
     local_line="${local_title%% *}"; local_path="${local_title#* }"
     # What tab-title.conf's title does is read back off the file, not assumed;
     # a dry run reads the line it would write.
@@ -613,7 +594,8 @@ echo "Each is read by a shipped file, and a line of yours there wins over it:"
 # shellcheck disable=SC2086  # OVERLAID is a list of ~ paths, meant to split and never expanded
 for t in $OVERLAID; do
   ov="$(overlay_of "$t")"
-  ov_abs="${ov/#\~/$HOME}"
+  # Not `${ov/#\~/$HOME}`: bash 5.2 reads an `&` in HOME as the matched `~`.
+  case "$ov" in '~'|'~/'*) ov_abs="$HOME${ov#\~}" ;; *) ov_abs="$ov" ;; esac
   if [ -e "$ov_abs" ] || [ -L "$ov_abs" ]; then
     printf '  %-28s yours\n' "$ov"
   else

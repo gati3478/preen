@@ -41,10 +41,8 @@ if [ "$(id -u)" -eq 0 ]; then
   exit 1
 fi
 
-expand() { printf '%s' "${1/#\~/$HOME}"; }
-# The other direction, for printing: bash 3.2 keeps the backslash in
-# `${1/#$HOME/\~}`, printing `\~/.config/kitty`, so the prefix is matched
-# instead.
+# For printing, HOME as ~: bash 3.2 keeps the backslash in `${1/#$HOME/\~}`,
+# printing `\~/.config/kitty`, so the prefix is matched instead.
 short() {
   case "$1" in
     "$HOME"|"$HOME"/*) printf '~%s' "${1#"$HOME"}" ;;
@@ -93,7 +91,8 @@ rows_seen=0
 while IFS=$'\t' read -r src tgt mode perms; do
   case "$src" in ''|'#'*) continue ;; esac
   rows_seen=$((rows_seen + 1))
-  abs_tgt="${tgt/#\~/$HOME}"   # expand(), inlined: $( ) forks, and this runs for every row
+  # Not `${tgt/#\~/$HOME}`: bash 5.2 reads an `&` in HOME as the matched `~`.
+  case "$tgt" in '~'|'~/'*) abs_tgt="$HOME${tgt#\~}" ;; *) abs_tgt="$tgt" ;; esac
 
   if [ ! -e "$REPO/$src" ]; then
     echo "MISSING SOURCE  $src" >&2
@@ -186,10 +185,24 @@ say() { # say <real-run words> <dry-run words> <facts>, the words padded to one 
 made=$'\n'
 dry_made() { case "$made" in *$'\n'"$1"$'\n'*|*$'\n'"$1"/*) return 0 ;; esac; return 1; }
 
+# Every writer in this setup, the drop-ins included, names a backup
+# <file>.unpreened.<stamp>, the stamp taken once per run, so a file's backups
+# sort by time whichever of them wrote each. A dry run cannot know the real
+# run's second, so it names the stamp instead.
+if [ -n "$DRY_RUN" ]; then STAMP='<stamp>'; else STAMP="$(date +%Y%m%d-%H%M%S)"; fi
+backup_name() { # backup_name <file> → a name beside it that nothing holds yet
+  local b="$1.unpreened.$STAMP" n=1
+  while [ -e "$b" ] || [ -L "$b" ]; do
+    b="$1.unpreened.$STAMP.$n"
+    n=$((n + 1))
+  done
+  printf '%s' "$b"
+}
+
 while IFS=$'\t' read -r src tgt mode perms; do
   case "$src" in ''|'#'*) continue ;; esac
   abs_src="$REPO/$src"
-  abs_tgt="$(expand "$tgt")"
+  case "$tgt" in '~'|'~/'*) abs_tgt="$HOME${tgt#\~}" ;; *) abs_tgt="$tgt" ;; esac
   [ -n "$DRY_RUN" ] || row="$tgt"
 
   # Creating a parent is legitimate on a fresh machine, but it must never be
@@ -221,8 +234,7 @@ while IFS=$'\t' read -r src tgt mode perms; do
       if [ -f "$abs_tgt" ] && [ ! -L "$abs_tgt" ]; then
         # Under a name nothing holds yet: a second plain file here — a tool
         # replaced the link — must not overwrite the first run's backup.
-        bak="$abs_tgt.unpreened"; n=1
-        while [ -e "$bak" ] || [ -L "$bak" ]; do bak="$abs_tgt.unpreened.$n"; n=$((n + 1)); done
+        bak="$(backup_name "$abs_tgt")"
         run cp "$abs_tgt" "$bak"
         say 'backed up' 'would back up' "$tgt -> $tgt${bak#"$abs_tgt"}"
       elif [ -L "$abs_tgt" ] && [ ! "$abs_tgt" -ef "$abs_src" ]; then
@@ -239,8 +251,7 @@ while IFS=$'\t' read -r src tgt mode perms; do
       # still reads as a link and every check says ok. Move the link aside,
       # link and all, as the drop-ins' shared place() does.
       if [ -L "$abs_tgt" ]; then
-        bak="$abs_tgt.unpreened"; n=1
-        while [ -e "$bak" ] || [ -L "$bak" ]; do bak="$abs_tgt.unpreened.$n"; n=$((n + 1)); done
+        bak="$(backup_name "$abs_tgt")"
         was="$(readlink "$abs_tgt")"
         run mv "$abs_tgt" "$bak"
         say 'moved aside' 'would move aside' "$tgt (a symlink -> $was)"
@@ -249,8 +260,7 @@ while IFS=$'\t' read -r src tgt mode perms; do
         # of an earlier copy, so it is kept beside itself under a name nothing
         # holds yet, as for a link row; identical content is left alone, so a
         # re-run backs up nothing.
-        bak="$abs_tgt.unpreened"; n=1
-        while [ -e "$bak" ] || [ -L "$bak" ]; do bak="$abs_tgt.unpreened.$n"; n=$((n + 1)); done
+        bak="$(backup_name "$abs_tgt")"
         run cp "$abs_tgt" "$bak"
         say 'backed up' 'would back up' "$tgt -> $tgt${bak#"$abs_tgt"}"
       fi
