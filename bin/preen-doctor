@@ -555,7 +555,7 @@ if [ "$SOURCE_REPO" = no ]; then
 elif [ ! -f "$REPO/docs/blocked-upstream.md" ]; then
   warn "docs/blocked-upstream.md is missing — the cship deferral it records goes unchecked"
 else
-  installed=$("$HOME/.local/bin/cship" --version 2>/dev/null | awk '{print $NF}')
+  installed=$("$HOME/.cargo/bin/cship" --version 2>/dev/null | awk '{print $NF}')
   broken=$(awk -F'`' '/cship.*broken at/{print $2; exit}' "$REPO/docs/blocked-upstream.md")
   # An unparseable state (cship missing/erroring, or the awk pattern failing
   # to match blocked-upstream.md's prose) warns: an "ok" there would assert
