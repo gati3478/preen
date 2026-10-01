@@ -41,14 +41,15 @@ Nothing is overwritten without a timestamped backup beside it, and a re-run
 with nothing changed rewrites nothing. Every refusal comes before the first
 write: a symlinked ~/.config, ~/.config/zsh or preen/, or ~/.config/atuin
 when its file would be copied, or a symlinked directory on the way to the
-.zshenv or .zshrc zsh reads; a symlinked .zshrc, .zshenv or ~/.inputrc,
-whose target should carry the line instead; one of them that cannot be read
-and appended to; a zsh file that would carry the appended line into its last
-command — its last line ends in a backslash, or its last command in &&, ||
-or a pipe — or ends inside a here-document, or that zsh cannot parse; and a
-zsh that gives no answer, or a ZDOTDIR that is not an absolute path. A
-.zshrc, .zshenv or ~/.inputrc linked into a clone of the whole setup already
-has this config, and the run says so and writes nothing.
+.zshenv or .zshrc zsh reads; a symlinked .zshrc, .zshenv or ~/.inputrc
+whose target lacks its line, which belongs in the target; one of them that
+lacks its line and cannot be read and appended to; a zsh file that would
+carry the appended line into its last command — its last line ends in a
+backslash, or its last command in &&, || or a pipe — or ends inside a
+here-document, or that zsh cannot parse; and a zsh that gives no answer, or
+a ZDOTDIR that is not an absolute path. A .zshrc, .zshenv or ~/.inputrc
+linked into a clone of the whole setup already has this config, and the run
+says so and writes nothing.
 
   --dry-run   print what the run would touch and stop, having written nothing
   -h, --help  print this and exit
@@ -261,13 +262,8 @@ else
 fi
 
 # ── what this run will touch, said before the first write ────────────────────
-# A symlinked rc whose target already holds its line needs no write, so it is
-# not refused: the advice a refusal gives below is to add the line there.
-needs_line() { # needs_line <rc> <line> → true when the run would append the line
-  ! { [ -f "$1" ] && grep -qxF -- "$2" "$1" 2>/dev/null; }
-}
 plan_line() { # plan_line <rc> <line>
-  if ! needs_line "$1" "$2"; then
+  if holds_line "$1" "$2"; then
     touching "$1" "already there: $2"
   elif [ -e "$1" ] || [ -L "$1" ]; then
     touching "$1" "one line appended: $2"
@@ -287,6 +283,7 @@ if [ ! -e "$INPUTRC" ] && [ ! -L "$INPUTRC" ] && [ -f "$SYSTEM_INPUTRC" ]; then 
 atuin_copy=no
 if [ ! -e "$ATUIN_CONF" ] && [ ! -L "$ATUIN_CONF" ]; then atuin_copy=yes; fi
 
+[ -d "$CONFIG_HOME" ] || touching "$CONFIG_HOME" "the directory configs live under, created"
 [ -d "$ZSH_DIR" ] || touching "$ZSH_DIR" "to hold this config's own directory, created"
 [ -d "$PREEN_DIR" ] || touching "$PREEN_DIR" "this config's own directory, created"
 touching "$PREEN_DIR/zshrc" "the interactive shell's config"
@@ -305,7 +302,8 @@ plan_line "$ZSHRC" "$ZSHRC_LINE"
 show_plan
 
 # ── the last refusals, before the first write ────────────────────────────────
-for d in "$CONFIG_HOME" "$ZSH_DIR" "$PREEN_DIR"; do refuse_linked_dir "$d"; done
+refuse_unwritable_dir "$CONFIG_HOME"
+for d in "$ZSH_DIR" "$PREEN_DIR"; do refuse_linked_dir "$d"; done
 if [ "$atuin_copy" = yes ]; then refuse_linked_dir "$ATUIN_DIR"; fi
 # The zshenv and zshrc zsh reads may sit under a ZDOTDIR: the policy holds for
 # every directory between ~ and it, or for the ZDOTDIR alone outside ~.
@@ -325,12 +323,6 @@ refuse_linked_path() { # refuse_linked_path <dir> — refuse_linked_dir for each
 }
 refuse_linked_path "$env_dir"
 refuse_linked_path "$rc_dir"
-if [ -e "$CONFIG_HOME" ]; then
-  [ -d "$CONFIG_HOME" ] || die "$(short "$CONFIG_HOME") is not a directory. Nothing was changed."
-  [ -w "$CONFIG_HOME" ] || die "$(short "$CONFIG_HOME") is not writable. Nothing was changed."
-else
-  [ -w "$HOME" ] || die "$(short "$HOME") is not writable, so $(short "$CONFIG_HOME") cannot be created. Nothing was changed."
-fi
 for d in "$ZSH_DIR" "$PREEN_DIR" "$ATUIN_DIR"; do
   [ "$d" != "$ATUIN_DIR" ] || [ "$atuin_copy" = yes ] || continue
   if [ -e "$d" ] && { [ ! -d "$d" ] || [ ! -w "$d" ]; }; then die "$(short "$d") is not a directory this run can write into. Nothing was changed."; fi
@@ -397,15 +389,10 @@ run_creates() { # run_creates <dir> → true when the run makes <dir> before its
   case "$1" in "$CONFIG_HOME"|"$ZSH_DIR"|"$PREEN_DIR") return 0 ;; esac
   [ "$1" = "$ATUIN_DIR" ] && [ "$atuin_copy" = yes ]
 }
-# append_line_once refuses a symlink of its own accord, but it refuses at the
-# END of this run, with the copies already on disk. Asking here keeps the
-# promise that a stopped run has changed nothing.
 refuse_rc() { # refuse_rc <rc> <line> <zsh|readline>
   local f="$1" line="$2" dir pending said
-  needs_line "$f" "$line" || return 0
-  if [ -L "$f" ]; then
-    die "$(short "$f") is a symlink to $(readlink "$f") — appending would write into that file, which something else manages. Add \`$line\` there instead, or replace the link. Nothing was changed."
-  fi
+  if holds_line "$f" "$line"; then return 0; fi
+  refuse_linked_rc "$f" "$line"
   if [ ! -e "$f" ]; then
     dir="$(dirname "$f")"
     if [ -d "$dir" ]; then
@@ -447,37 +434,24 @@ fi
 # ── the writes ───────────────────────────────────────────────────────────────
 echo
 echo "== installing =="
-# Made here, not by copy_into's mkdir -p below, so the run says it made it, as
-# the plan above did.
-if [ ! -d "$ZSH_DIR" ]; then
-  mkdir -p "$ZSH_DIR" || die "could not create $(short "$ZSH_DIR")"
-  record "created         $(short "$ZSH_DIR")"
-fi
 copy_into "$SRC/zshrc" "$PREEN_DIR/zshrc"
 copy_into "$SRC/zshenv" "$PREEN_DIR/zshenv"
 copy_into "$SRC/inputrc" "$PREEN_DIR/inputrc"
 copy_if_absent "$WORK/hushlogin" "$HUSHLOGIN"
 # copy_if_absent places a file, never a directory, so atuin's is made here — and
 # registered in the plan above, because it is a thing this run creates.
-if [ "$atuin_copy" = yes ] && [ ! -d "$ATUIN_DIR" ]; then
-  mkdir -p "$ATUIN_DIR" || die "could not create $(short "$ATUIN_DIR")"
-  record "created         $(short "$ATUIN_DIR")"
-fi
+if [ "$atuin_copy" = yes ]; then make_dir "$ATUIN_DIR"; fi
 copy_if_absent "$SRC/atuin/config.toml" "$ATUIN_CONF"
 # Last, so an rc only ever points at copies already on disk; the zshrc line
 # after the zshenv one, which every zsh reads first.
-wire() { # wire <rc> <line> — append it once; a symlinked rc that already holds it is left as it is
-  if [ -L "$1" ] && ! needs_line "$1" "$2"; then record "already there   $(short "$1")"; return 0; fi
-  append_line_once "$1" "$2"
-}
-wire "$ZSHENV" "$ZSHENV_LINE"
+append_line_once "$ZSHENV" "$ZSHENV_LINE"
 if [ "$inputrc_fresh" = yes ]; then
   printf '%s\n%s\n' "$SYSTEM_INPUTRC_LINE" "$INPUTRC_LINE" > "$INPUTRC" || die "could not write $(short "$INPUTRC")"
   record "created         $(short "$INPUTRC")"
 else
-  wire "$INPUTRC" "$INPUTRC_LINE"
+  append_line_once "$INPUTRC" "$INPUTRC_LINE"
 fi
-wire "$ZSHRC" "$ZSHRC_LINE"
+append_line_once "$ZSHRC" "$ZSHRC_LINE"
 
 echo
 echo "Next: open a new terminal tab, or run exec zsh in the one you have."

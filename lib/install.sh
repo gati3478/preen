@@ -34,12 +34,20 @@ ask() { # ask <prompt> → the line typed, possibly empty
 }
 
 # bash 3.2 (macOS) keeps the backslash in a `${x/#$HOME/\~}` replacement, so
-# the ~ is spelled by hand.
+# the ~ is spelled by hand. A HOME of /h/ names /h: under it, /h/x and the
+# /h//x that "$HOME/x" builds both print ~/x.
 short() { # short <path> → the path with $HOME written as ~
+  local home="$HOME" rest
+  while [ "${home%/}" != "$home" ]; do home="${home%/}"; done
+  # Stripped to nothing, a HOME of / would hold every path; it is matched as given.
+  [ -n "$home" ] || home="$HOME"
   case "$1" in
-    "$HOME"|"$HOME"/*) printf '~%s' "${1#"$HOME"}" ;;
-    *) printf '%s' "$1" ;;
+    "$home"|"$home"/*) rest="${1#"$home"}" ;;
+    *) printf '%s' "$1"; return 0 ;;
   esac
+  while [ "${rest#//}" != "$rest" ]; do rest="${rest#/}"; done
+  [ "$rest" != / ] || rest=""
+  printf '~%s' "$rest"
 }
 # A path that ends up inside a command line is quoted — and only such a path,
 # so the usual case reads bare.
@@ -69,6 +77,26 @@ bare_shim() { # bare_shim <tool> → true when <tool> is macOS's /usr/bin stub w
 refuse_linked_dir() { # refuse_linked_dir <dir> — stop the run when <dir> is a symlink, dangling or not; call it before the first write
   if [ -L "$1" ]; then
     die "$(short "$1") is a symlink to $(readlink "$1") — what this run writes under it would land in that directory, which something else manages. Replace the link with a directory of its own, or put the files there yourself. Nothing was changed."
+  fi
+}
+refuse_unwritable_dir() { # refuse_unwritable_dir <dir> — stop the run when <dir> is a symlink, is there but not a writable directory, or is absent under a directory it cannot be created in; call it before the first write
+  refuse_linked_dir "$1"
+  if [ -e "$1" ]; then
+    [ -d "$1" ] || die "$(short "$1") is not a directory. Nothing was changed."
+    [ -w "$1" ] || die "$(short "$1") is not writable. Nothing was changed."
+  else
+    [ -w "$(dirname "$1")" ] || die "$(short "$(dirname "$1")") is not writable, so $(short "$1") cannot be created. Nothing was changed."
+  fi
+}
+# An append through a symlink lands in the file it points at, which something
+# else manages, so the line belongs there. append_line_once refuses such a link
+# too, but at the end of a run, with the copies already on disk; asked before
+# the first write, a stopped run has changed nothing. A link whose file already
+# holds the line, as this refusal advises, needs no append, so a caller asks
+# only when holds_line says the line is missing.
+refuse_linked_rc() { # refuse_linked_rc <file> <line> — stop the run when <file>, which the run appends <line> to, is a symlink, dangling or not; call it before the first write
+  if [ -L "$1" ]; then
+    die "$(short "$1") is a symlink to $(readlink "$1") — appending would write into that file, which something else manages. Add \`$2\` there instead, or replace the link. Nothing was changed."
   fi
 }
 # The whole setup links its files into a clone of itself, and a clone's root
@@ -149,13 +177,15 @@ place() { # place <materialised file> <destination> — the destination becomes 
   cp "$src" "$dst" || die "could not write $(short "$dst")"
   record "copied          $(short "$dst")"
 }
-copy_into() { # copy_into <file> <destination> — place it under a directory this drop-in owns, creating the directory
-  local dir
-  dir="$(dirname "$2")"
-  if [ ! -d "$dir" ]; then
-    mkdir -p "$dir" || die "could not create $(short "$dir")"
-    record "created         $(short "$dir")"
-  fi
+# Each directory made is said, so none appears that the run did not name.
+make_dir() { # make_dir <dir> — create <dir> and each missing directory above it, outermost first
+  if [ -d "$1" ]; then return 0; fi
+  make_dir "$(dirname "$1")"
+  mkdir "$1" || die "could not create $(short "$1")"
+  record "created         $(short "$1")"
+}
+copy_into() { # copy_into <file> <destination> — place it, creating each directory missing above it
+  make_dir "$(dirname "$2")"
   place "$1" "$2"
 }
 # For a file the tool reads by a fixed name of its own: a drop-in cannot layer
@@ -170,12 +200,16 @@ copy_if_absent() { # copy_if_absent <file> <destination> — copy only when noth
   cp "$1" "$2" || die "could not write $(short "$2")"
   record "copied          $(short "$2")"
 }
+holds_line() { # holds_line <file> <line> → true when <file>, followed if a symlink, is a regular file holding that exact whole line
+  [ -f "$1" ] && grep -qxF -- "$2" "$1" 2>/dev/null
+}
 # A symlink is refused rather than followed: the target is a file something else
-# manages, and an append through the link lands in it.
+# manages, and an append through the link lands in it. One whose file already
+# holds the line needs no append.
 append_line_once() { # append_line_once <file> <line> — the file ends up holding that exact line, once
   local file="$1" line="$2"
+  if holds_line "$file" "$line"; then record "already there   $(short "$file")"; return 0; fi
   if [ -L "$file" ]; then die "$(short "$file") is a symlink to $(readlink "$file") — whatever manages that file should carry this line, not this installer"; fi
-  if [ -f "$file" ] && grep -qxF -- "$line" "$file"; then record "already there   $(short "$file")"; return 0; fi
   if [ -e "$file" ]; then
     # A last line with no newline of its own would otherwise take this one onto its end.
     [ -z "$(tail -c 1 "$file")" ] || printf '\n' >> "$file"

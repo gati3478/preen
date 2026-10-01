@@ -33,11 +33,11 @@ open-actions.conf, mime.types and choose-files.conf are read by kitty from
 ~/.config/kitty itself, under those names and no others, so a file of yours at
 one of them is left exactly as it is and said so. Nothing else is overwritten
 without a timestamped backup beside it, and a re-run with nothing changed
-rewrites nothing. Every refusal comes before the first write: a symlinked
-~/.config, ~/.config/kitty or preen/ is refused, and so is a symlinked
-kitty.conf, whose target should carry the line instead. A kitty.conf linked
-into a clone of the whole setup already has this config, and the run says so
-and writes nothing.
+rewrites nothing. Every refusal comes before the first write; among them, a
+symlinked ~/.config, ~/.config/kitty or preen/ is refused, and so is a
+symlinked kitty.conf whose target lacks the line, which belongs in the
+target. A kitty.conf linked into a clone of the whole setup already has this
+config, and the run says so and writes nothing.
 
   --dry-run   print what the run would touch and stop, having written nothing
   -h, --help  print this and exit
@@ -230,13 +230,14 @@ else
 fi
 
 # ── what this run will touch, said before the first write ────────────────────
+[ -d "$CONFIG_HOME" ] || touching "$CONFIG_HOME" "the directory configs live under, created"
 [ -d "$KITTY_DIR" ] || touching "$KITTY_DIR" "kitty's config directory, created"
 [ -d "$PREEN_DIR" ] || touching "$PREEN_DIR" "this config's own directory, created"
 touching "$PREEN_DIR/kitty.conf" "the config"
 touching "$PREEN_DIR/current-theme.conf" "the palette it includes"
 if [ -n "$title_line" ]; then touching "$PREEN_DIR/tab-title.conf" "the tab title for this home — ours; local.conf stays yours"; fi
 # The test append_line_once makes, so the plan says what the run will do.
-if [ ! -L "$KITTY_CONF" ] && [ -f "$KITTY_CONF" ] && grep -qxF -- "$INCLUDE_LINE" "$KITTY_CONF" 2>/dev/null; then
+if holds_line "$KITTY_CONF" "$INCLUDE_LINE"; then
   touching "$KITTY_CONF" "already there: $INCLUDE_LINE"
 else
   touching "$KITTY_CONF" "one line appended: $INCLUDE_LINE"
@@ -247,25 +248,19 @@ touching "$KITTY_DIR/choose-files.conf" "kitty's file picker, kitten choose-file
 show_plan
 
 # ── the last refusals, before the first write ────────────────────────────────
-for d in "$CONFIG_HOME" "$KITTY_DIR" "$PREEN_DIR"; do refuse_linked_dir "$d"; done
-if [ -e "$CONFIG_HOME" ]; then
-  [ -d "$CONFIG_HOME" ] || die "$(short "$CONFIG_HOME") is not a directory"
-  [ -w "$CONFIG_HOME" ] || die "$(short "$CONFIG_HOME") is not writable — nothing was changed"
-else
-  [ -w "$HOME" ] || die "$(short "$HOME") is not writable, so $(short "$CONFIG_HOME") cannot be created"
-fi
-# append_line_once refuses a symlink of its own accord, but it refuses at the
-# END of this run, with the copies already on disk. Asking here keeps the
-# promise that a stopped run has changed nothing.
-if [ -L "$KITTY_CONF" ]; then
-  die "$(short "$KITTY_CONF") is a symlink to $(readlink "$KITTY_CONF") — appending would write into that file, which something else manages. Add \`$INCLUDE_LINE\` there instead, or replace the link. Nothing was changed."
-fi
-# A kitty.conf that cannot be written — root-owned after a sudo edit, or a
-# directory — would stop the run at its last write, with the copies already on
-# disk. Asked here, beside the symlink refusals, so a stopped run has changed
-# nothing.
-if [ -e "$KITTY_CONF" ] && { [ ! -f "$KITTY_CONF" ] || [ ! -w "$KITTY_CONF" ]; }; then
-  die "$(short "$KITTY_CONF") is not a file this run can append to. Nothing was changed."
+refuse_unwritable_dir "$CONFIG_HOME"
+for d in "$KITTY_DIR" "$PREEN_DIR"; do refuse_linked_dir "$d"; done
+# Only a kitty.conf the run appends to is checked: one holding the line is
+# never written.
+if ! holds_line "$KITTY_CONF" "$INCLUDE_LINE"; then
+  refuse_linked_rc "$KITTY_CONF" "$INCLUDE_LINE"
+  # A kitty.conf that cannot be written — root-owned after a sudo edit, or a
+  # directory — would stop the run at its last write, with the copies already
+  # on disk. Asked here, beside the symlink refusals, so a stopped run has
+  # changed nothing.
+  if [ -e "$KITTY_CONF" ] && { [ ! -f "$KITTY_CONF" ] || [ ! -w "$KITTY_CONF" ]; }; then
+    die "$(short "$KITTY_CONF") is not a file this run can append to. Nothing was changed."
+  fi
 fi
 for d in "$KITTY_DIR" "$PREEN_DIR"; do
   if [ -e "$d" ] && { [ ! -d "$d" ] || [ ! -w "$d" ]; }; then die "$(short "$d") is not a directory this run can write into. Nothing was changed."; fi
@@ -280,13 +275,6 @@ fi
 # ── the writes ───────────────────────────────────────────────────────────────
 echo
 echo "== installing =="
-# copy_if_absent places a file, never a directory, so the config directory is
-# made here — and registered in the plan above, because it is a thing this run
-# creates.
-if [ ! -d "$KITTY_DIR" ]; then
-  mkdir -p "$KITTY_DIR" || die "could not create $(short "$KITTY_DIR")"
-  record "created         $(short "$KITTY_DIR")"
-fi
 copy_into "$SRC/kitty.conf" "$PREEN_DIR/kitty.conf"
 copy_into "$SRC/current-theme.conf" "$PREEN_DIR/current-theme.conf"
 # tab-title.conf is this installer's, written whole, so the line kitty reads

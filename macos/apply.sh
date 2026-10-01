@@ -203,7 +203,21 @@ echo "== will change =="
 cat "$WORK/plan"
 
 # ── the restore script, saved before the first write ─────────────────────────
-short() { case "$1" in "$HOME"/*) printf '~%s' "${1#"$HOME"}" ;; *) printf '%s' "$1" ;; esac; }
+# A HOME of /h/ names /h: under it, /h/x and the /h//x that "$HOME/x" builds
+# both print ~/x.
+short() { # short <path> → the path with $HOME written as ~
+  local home="$HOME" rest
+  while [ "${home%/}" != "$home" ]; do home="${home%/}"; done
+  # Stripped to nothing, a HOME of / would hold every path; it is matched as given.
+  [ -n "$home" ] || home="$HOME"
+  case "$1" in
+    "$home"|"$home"/*) rest="${1#"$home"}" ;;
+    *) printf '%s' "$1"; return 0 ;;
+  esac
+  while [ "${rest#//}" != "$rest" ]; do rest="${rest#/}"; done
+  [ "$rest" != / ] || rest=""
+  printf '~%s' "$rest"
+}
 # The checks below only read, so a dry run runs them too and refuses as the
 # run would. A symlinked directory between $HOME and the restore script would
 # put it wherever the link points, so the run stops instead. $HOME itself is

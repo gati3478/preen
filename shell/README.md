@@ -112,11 +112,12 @@ curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/shell/install.s
 ```
 
 Or from a clone of this repository, `./shell/install.sh`, with `--dry-run`
-for the plan alone. It asks nothing — there is nothing to ask. The plan for a
-home with no shell config yet, on a Mac:
+for the plan alone. It asks nothing — there is nothing to ask. The plan for an
+empty home, on a Mac:
 
 ```
 == will touch ==
+~/.config                                  the directory configs live under, created
 ~/.config/zsh                              to hold this config's own directory, created
 ~/.config/zsh/preen                        this config's own directory, created
 ~/.config/zsh/preen/zshrc                  the interactive shell's config
@@ -170,7 +171,8 @@ copied into it, or a directory between `~` and the zshenv or zshrc zsh reads
 is — the files would land in whatever it points at, which something else
 manages; the zshrc, the zshenv or `~/.inputrc` is a symlink without its line —
 the append would land in its target, so the line belongs there instead; one
-of them is there and cannot be read and appended to, or a directory the run
+of them lacks its line and cannot be read and appended to; `~/.config` is not a
+directory, is not writable, or cannot be created, or another directory the run
 writes into cannot be written; a zsh file would carry the appended line into
 its last command — its last line ends in a backslash, or the last line that
 is not blank or a comment ends in `&&`, `||` or a pipe — or ends inside a

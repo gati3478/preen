@@ -81,10 +81,11 @@ curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/terminal/kitty/
 
 Or from a clone of this repository, `./terminal/kitty/install.sh`, with
 `--dry-run` for the plan alone. It asks nothing — there is nothing to ask. The
-plan for a home with no kitty config yet:
+plan for a home with no `~/.config` yet:
 
 ```
 == will touch ==
+~/.config                                  the directory configs live under, created
 ~/.config/kitty                            kitty's config directory, created
 ~/.config/kitty/preen                      this config's own directory, created
 ~/.config/kitty/preen/kitty.conf           the config
@@ -132,12 +133,13 @@ come back `unchanged` and the include line `already there`.
 **Refusals**, all of them before the first write, so a stopped run has changed
 nothing: `~/.config`, `~/.config/kitty` or `~/.config/kitty/preen` is a
 symlink, dangling or not — everything here would land in whatever it points
-at, which something else manages; `~/.config/kitty/kitty.conf` is a symlink —
-the append would land in its target, so the include line belongs there
-instead; `kitty.conf` is there and cannot be appended to, or `~/.config/kitty`
+at, which something else manages; `~/.config/kitty/kitty.conf` is a symlink
+whose target lacks the include line — the append would land in that target,
+so the line belongs there instead, and a re-run then says `already there`;
+`kitty.conf` lacks the line and cannot be appended to, or `~/.config/kitty`
 or `preen/` cannot be written into — root-owned after a `sudo` edit, say;
-`~/.config` is not a directory or is not writable; a source file that is
-missing, empty, or not the file it claims to be.
+`~/.config` is not a directory, is not writable, or cannot be created; a
+source file that is missing, empty, or not the file it claims to be.
 
 ## Your overrides
 

@@ -84,11 +84,14 @@ read it first if that is your habit. It
    `xcode-select --install`), another tool's entry — the exact entry to paste
    is printed.
 
-Every refusal — no cship, or one below the floor; a `settings.json` that is
-not a JSON object, not writable, or a symlink to nothing; a directory or a
-read-only `~/.config` in the way; a `~/.config` that is a symlink, dangling
-or not, which would put the copies in whatever it points at — comes before
-the first write, so a stopped run has changed nothing.
+Every refusal — a run as root; no cship, or one below the floor; a
+`~/.claude` that is not a directory or not writable; a `settings.json` that
+is not a JSON object, not writable, a directory, or a symlink to nothing; a
+directory where a copy goes; a `~/.config` that is not a directory, is not
+writable, cannot be created, or is a symlink, dangling or not, which would
+put the copies in whatever it points at; a source file that is missing,
+empty, or not the file it claims to be — comes before the first write, so a
+stopped run has changed nothing.
 
 Under a pipe the questions still reach you through the terminal. Each flag
 answers one; with both answered nothing is asked, and with no terminal the

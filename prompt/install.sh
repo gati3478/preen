@@ -188,9 +188,9 @@ if [ -n "$python3_bin" ] && bare_shim python3; then
 fi
 if [ -n "$python3_bin" ] && ! "$python3_bin" -c 'import json' >/dev/null 2>&1; then python3_bin=""; fi
 if [ -z "$python3_bin" ]; then echo "$no_python — the statusLine entry will be printed for you to add, not written"; fi
-if [ -e "$CLAUDE_DIR" ] && [ ! -d "$CLAUDE_DIR" ]; then die "$(short "$CLAUDE_DIR") is not a directory"; fi
-if [ -L "$SETTINGS" ] && [ ! -e "$SETTINGS" ]; then die "$(short "$SETTINGS") is a symlink to nothing — fix it, then re-run; nothing was changed"; fi
-if [ -d "$SETTINGS" ]; then die "$(short "$SETTINGS") is a directory"; fi
+if [ -e "$CLAUDE_DIR" ] && [ ! -d "$CLAUDE_DIR" ]; then die "$(short "$CLAUDE_DIR") is not a directory. Nothing was changed."; fi
+if [ -L "$SETTINGS" ] && [ ! -e "$SETTINGS" ]; then die "$(short "$SETTINGS") is a symlink to nothing — fix it, then re-run. Nothing was changed."; fi
+if [ -d "$SETTINGS" ]; then die "$(short "$SETTINGS") is a directory. Nothing was changed."; fi
 # A linked ~/.claude or settings.json is followed, as Claude Code follows it
 # (see wire below), and the plan names where the write lands.
 one_hop() { # one_hop <link> → where it points, as an absolute path resolved against the link's real directory
@@ -248,23 +248,17 @@ PY
 )"
   settings_state="${probe%%$'\n'*}"; probe="${probe#*$'\n'}"
   existing_command="${probe%%$'\n'*}"; existing_refresh="${probe#*$'\n'}"
-  [ "$settings_state" = invalid ] && die "$(short "$SETTINGS") is not a JSON object — fix it, then re-run; nothing was changed"
+  [ "$settings_state" = invalid ] && die "$(short "$SETTINGS") is not a JSON object — fix it, then re-run. Nothing was changed."
 fi
 case "$settings_state" in absent|cship)   # the rewrite and its backup both need room
   if [ ! -w "$CLAUDE_DIR" ] || { [ -e "$SETTINGS" ] && [ ! -w "$SETTINGS" ]; }; then
-    die "$(short "$SETTINGS") or $(short "$CLAUDE_DIR") is not writable — nothing was changed"
+    die "$(short "$SETTINGS") or $(short "$CLAUDE_DIR") is not writable. Nothing was changed."
   fi
   ;;
 esac
 
 # ── ~/.config, refused before a question is asked ────────────────────────────
-refuse_linked_dir "$CONFIG_DIR"
-if [ -e "$CONFIG_DIR" ]; then
-  [ -d "$CONFIG_DIR" ] || die "$(short "$CONFIG_DIR") is not a directory"
-  [ -w "$CONFIG_DIR" ] || die "$(short "$CONFIG_DIR") is not writable — nothing was changed"
-else
-  [ -w "$HOME" ] || die "$(short "$HOME") is not writable, so $(short "$CONFIG_DIR") cannot be created"
-fi
+refuse_unwritable_dir "$CONFIG_DIR"
 
 # After the whole setup these are links into its clone: replacing one would
 # turn preen doctor red, and settings.json, which the setup never wires, is
@@ -328,7 +322,7 @@ fi
 wanted="cship.toml"
 if [ "$with_starship" = yes ]; then wanted="cship.toml starship.toml"; fi
 for f in $wanted; do
-  if [ -d "$CONFIG_DIR/$f" ] && [ ! -L "$CONFIG_DIR/$f" ]; then die "$(short "$CONFIG_DIR/$f") is a directory"; fi
+  if [ -d "$CONFIG_DIR/$f" ] && [ ! -L "$CONFIG_DIR/$f" ]; then die "$(short "$CONFIG_DIR/$f") is a directory. Nothing was changed."; fi
 done
 if [ "$with_starship" = yes ] && [ "$starship_linked" = no ] && [ "$SRC" = "$WORK/src" ]; then fetch starship.toml; fi
 
@@ -348,6 +342,7 @@ prepare_copy() { # prepare_copy <source> <copy> hide|keep
 }
 
 # ── what this run will touch, said before the first write ────────────────────
+[ -d "$CONFIG_DIR" ] || touching "$CONFIG_DIR" "the directory configs live under, created"
 if [ "$cship_linked" = yes ]; then
   echo "$(short "$CONFIG_DIR/cship.toml") is linked by the setup — left as it is"
 else
@@ -380,8 +375,7 @@ if [ "$cship_linked" = yes ] && [ "$starship_linked" = yes ]; then
 fi
 if [ "$cship_linked" = no ]; then
   if [ "$account_mode" = hide ]; then prepare_copy "$SRC/cship.toml" "$WORK/cship.toml" hide; else prepare_copy "$SRC/cship.toml" "$WORK/cship.toml" keep; fi
-  [ -d "$CONFIG_DIR" ] || { mkdir -p "$CONFIG_DIR"; echo "created         $(short "$CONFIG_DIR")"; }
-  place "$WORK/cship.toml" "$CONFIG_DIR/cship.toml"
+  copy_into "$WORK/cship.toml" "$CONFIG_DIR/cship.toml"
 fi
 if [ "$starship_linked" = no ]; then
   if [ "$with_starship" = yes ]; then

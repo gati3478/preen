@@ -91,8 +91,8 @@ bindkey -M menuselect '^[[Z' reverse-menu-complete
 
 zle_highlight=('paste:none')     # pasted text renders plain, not standout
 
-# Ctrl+X Ctrl+E edits the buffer in $EDITOR. Creates a widget: keep above
-# the z-sy-h source line.
+# Ctrl+X Ctrl+E edits the buffer in $VISUAL, else $EDITOR. Creates a
+# widget: keep above the z-sy-h source line.
 autoload -Uz edit-command-line
 zle -N edit-command-line
 bindkey '^X^E' edit-command-line
