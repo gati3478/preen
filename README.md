@@ -33,11 +33,23 @@ curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/terminal/kitty/
 curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/terminal/kitty/install.sh | bash
 ```
 
+The shell, [`shell/`](shell/README.md), the same way:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/shell/install.sh | bash -s -- --dry-run
+```
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/shell/install.sh | bash
+```
+
 Each installer prints its plan and makes every refusal before its first
-write. It copies its files into your config — copies, never symlinks, a file
-of yours it replaces backed up beside it — and wires one entry: the
-`statusLine` key of `~/.claude/settings.json`, merged into what is there; one
-`include` line appended to `~/.config/kitty/kitty.conf`. `--help` is each
+write, then copies its files into your config — copies, never symlinks, a
+file of yours it replaces backed up beside it. The statusline's installer
+merges its `statusLine` key into `~/.claude/settings.json`; kitty's appends
+one `include` line to `~/.config/kitty/kitty.conf`; the shell's appends one
+line each to the zshenv and zshrc zsh reads — `~/.zshenv` and `~/.zshrc`
+unless `ZDOTDIR` moves them — and to `~/.inputrc`. `--help` is each
 script's manual.
 
 ## Take the setup
@@ -80,7 +92,7 @@ and bootstrap never modifies your clone. What it finds in the way:
   reads that file last and ssh first, so every line of yours wins;
 - your `~/.zshenv`, `~/.zprofile` and `~/.zshrc`, set aside as above, go
   unread: their lines belong in the `.local` beside each, which the shipped
-  file sources.
+  file sources — never the shell piece's line, which bootstrap names.
 
 The shipped `ssh/config` names Proton Pass's agent socket for every host.
 Keys on disk still sign; `IdentityAgent SSH_AUTH_SOCK` under `Host *` in
@@ -97,10 +109,11 @@ they are the author's:
 
 ## What changes when you take the setup
 
-Some of the author's choices are felt at once. An undo line goes in an
-overlay, where it wins over the shipped file: the one its row names, or else
-its tool's — `~/.zshrc.local`, `~/.config/kitty/local.conf`,
-`~/.gitconfig.local` or `~/.ssh/config.local`.
+Some of the author's choices are felt at once. The zsh rows hold for the
+shell piece taken alone too; [its page](shell/README.md#what-changes) names
+the exceptions. An undo line goes in an overlay, where it wins over the
+shipped file: the one its row names, or else its tool's — `~/.zshrc.local`,
+`~/.config/kitty/local.conf`, `~/.gitconfig.local` or `~/.ssh/config.local`.
 
 | Tool | What you notice | Undo |
 | --- | --- | --- |
@@ -155,8 +168,8 @@ In this order:
 3. Remove the links: every `link` row of `manifest.tsv` points into `~/preen`.
 4. Move each backup back in its place. Among a file's stamped backups the
    earliest is the original, what was there before anything here replaced
-   the file, whichever wrote it — bootstrap, `preen apply`, or the statusline
-   or kitty installer; the later ones are rewrites. One with no stamp,
+   the file, whichever wrote it — bootstrap, `preen apply`, or a piece's
+   installer; the later ones are rewrites. One with no stamp,
    `<file>.unpreened` or a numbered `<file>.unpreened.1`, comes from an older
    `preen apply` or bootstrap, and its name says nothing about when: where a
    file has one beside stamped ones, look inside before choosing.
@@ -179,7 +192,7 @@ terminal/kitty/    the terminal; its own page and installer
 terminal/tmux/     tmux for SSH: true colour, mouse, a deep history, resurrect
 terminal/bat/      one line: bat in the terminal's palette
 terminal/ncdu/     one line: ncdu in the terminal's palette
-shell/             zsh in files split by cost, inputrc, hushlogin, atuin
+shell/             zsh, readline, hushlogin, atuin; its own page and installer
 editor/zed/        settings, a keymap on a JetBrains base, tasks
 editor/sublime/    settings, Terminus to match, a vendored light scheme
 git/               gitconfig, the global ignore; identity asked for, never here
@@ -212,9 +225,10 @@ file the first time it saved.
 includes last-wins, so `terminal/kitty/` lands under a directory of its own
 plus one `include` line in your `kitty.conf`, never an edit inside it; the
 files kitty reads by name from its config root are copied only where you
-have none. A tool with one file and no include — the statusline — is
-copied and tailored by its installer. Nothing installed either way points
-back here.
+have none. zsh's include is `source` and readline's `$include`, so `shell/`
+lands the same way, one line appended to each of your files. A tool with one
+file and no include — the statusline — is copied and tailored by its
+installer. Nothing installed either way points back here.
 
 **Themes are a family, not one scheme.** Gruvbox Dark Hard where code runs —
 kitty, the statusline — and Gruvbox Light Hard where it is read — Zed,

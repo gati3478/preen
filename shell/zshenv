@@ -34,8 +34,12 @@ export VISUAL="$EDITOR"
 # rg reads a config only when this names one. Here because rg's callers —
 # editor searches, scripts, agent tool calls — are not interactive shells,
 # and the scope agreement (--hidden, like GLOB_DOTS and fd) is for all of
-# them. Flags on the command line still override.
-export RIPGREP_CONFIG_PATH="$HOME/.config/ripgrep/config"
+# them. Flags on the command line still override. Guarded on the file:
+# in a home with the shell but not ripgrep's config, rg names the missing
+# file on every call.
+if [ -f "$HOME/.config/ripgrep/config" ]; then
+  export RIPGREP_CONFIG_PATH="$HOME/.config/ripgrep/config"
+fi
 
 # ── SSH agent ──────────────────────────────────────────────
 # Proton Pass's agent, at a fixed path. ssh reaches it through IdentityAgent

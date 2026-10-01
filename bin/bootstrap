@@ -611,6 +611,9 @@ done
 # The files this run set aside, in preen apply's words (bootstrap's own lines
 # use them too). A shell file's lines go in its overlay, and never a line that
 # sources that overlay: from inside it, it sources itself until zsh gives up.
+# Nor the shell piece's line in a zshrc or zshenv: it sources the piece's copy
+# in ~/.config/zsh/preen/, which sources the overlay. It is read off the file
+# set aside, still in place in a dry run, or the file a link pointed at.
 # A dry run has no log: it reads the lines it planned, preen apply's and the
 # tab title's, worded as done so the same parse reads them.
 if [ "$dry_run" = yes ]; then
@@ -620,16 +623,20 @@ else
   log_lines="$(cat "$deploy_log")"
 fi
 aside=""
+piece_seen=no
 while IFS= read -r line; do
   case "$line" in
     "backed up       "*)
       rest="${line#backed up       }"; orig="${rest%% -> *}"
+      held="${rest#* -> }"; [ "$dry_run" = no ] || held="$orig"
       what=" -> ${rest#* -> }, which nothing reads now" ;;
     "moved aside     "*)
       rest="${line#moved aside     }"; orig="${rest%% (a symlink -> *}"; target="${rest#* (a symlink -> }"
+      held="${target%)}"
       what=" was a symlink to ${target%)}, set aside beside it; nothing reads it now" ;;
     "replaced link   "*)
       rest="${line#replaced link   }"; orig="${rest%% (was -> *}"; target="${rest#* (was -> }"
+      held="${target%)}"
       what=" was a symlink to ${target%)}; nothing reads that file now" ;;
     *) continue ;;
   esac
@@ -637,8 +644,35 @@ while IFS= read -r line; do
   where=""
   if [ -n "$ov" ]; then where=": lines you want back go in $ov"; fi
   case "$orig" in "~/.zshenv"|"~/.zprofile"|"~/.zshrc") where="$where, never one that sources it" ;; esac
+  case "$orig" in
+    "~/.zshrc"|"~/.zshenv")
+      # A link's relative target is taken against the link's directory.
+      case "$held" in /*|'~'|'~/'*) ;; *) held="${orig%/*}/$held" ;; esac
+      case "$held" in '~'|'~/'*) held="$HOME${held#\~}" ;; esac
+      # Each line whose `source` or `.` names .config/zsh/preen/<this file>,
+      # quoted or not, up to a word-initial comment.
+      piece_lines="$(awk -v copy="${orig#\~/.}" '
+        { for (i = 1; i < NF; i++) {
+            if ($i ~ /^#/) break
+            w = $(i + 1); gsub("[\"\047;)]", "", w)
+            if (($i == "source" || $i == ".") && w ~ ("/[.]config/zsh/preen/" copy "$")) { n[++c] = NR; break }
+          } }
+        END { for (k = 1; k <= c; k++) printf "%s%s", (k == 1 ? "" : (k == c ? " and " : ", ")), n[k] }
+      ' "$held" 2>/dev/null)" || piece_lines=""
+      if [ -n "$piece_lines" ]; then
+        case "$piece_lines" in
+          *" "*) what="$what; its lines $piece_lines source"; where="$where, and never lines $piece_lines" ;;
+          *) what="$what; its line $piece_lines sources"; where="$where, and never line $piece_lines" ;;
+        esac
+        what="$what the shell piece's copy in ~/.config/zsh/preen/, which sources $ov"
+        piece_seen=yes
+      fi ;;
+  esac
   aside="$aside  $orig$what$where"$'\n'
 done <<< "$log_lines"
+if [ "$piece_seen" = yes ] && [ -d "$HOME/.config/zsh/preen" ]; then
+  aside="$aside  ~/.config/zsh/preen/ holds the shell piece's copies, which nothing reads once this setup's files are linked"$'\n'
+fi
 if [ -n "$aside" ]; then
   echo
   echo "== set aside by $(tell 'this run' 'the real run') =="
