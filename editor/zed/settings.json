@@ -75,6 +75,8 @@
   "seed_search_query_from_cursor": "selection",
   "colorize_brackets": true,
   "code_lens": "off",
+  // Blurs the values in .env and similar files on screen only: the file
+  // still holds them, so an agent reading it over ACP sees them.
   "redact_private_values": true,
   "diagnostics": { "inline": { "enabled": true } },
   "indent_guides": { "coloring": "indent_aware" },
