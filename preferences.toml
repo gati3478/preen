@@ -1993,7 +1993,7 @@ want = "send-prefix"
 [pref.tmux_keys.targets.tmux_reload]
 target = "tmux_keys"
 key = "prefix/r"
-want_contains = "source-file ~/.config/tmux/tmux.conf"
+want_contains = "source-file -q ~/.tmux.conf ~/.config/tmux/tmux.conf"
 
 # The vi copy-mode pair, asserted as BINDINGS: `mode-keys vi`
 # (pref.copy_mode_keys) makes the table vi-shaped, and these are the two

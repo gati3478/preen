@@ -91,11 +91,14 @@ plan for a home with no `~/.config` yet:
 ~/.config/kitty/preen/kitty.conf           the config
 ~/.config/kitty/preen/current-theme.conf   the palette it includes
 ~/.config/kitty/preen/tab-title.conf       the tab title for this home — ours; local.conf stays yours
-~/.config/kitty/kitty.conf                 one line appended: include preen/kitty.conf
+~/.config/kitty/kitty.conf                 created: include preen/kitty.conf
 ~/.config/kitty/open-actions.conf          what a click on a link does — copied if absent
 ~/.config/kitty/mime.types                 the file types behind it — copied if absent
 ~/.config/kitty/choose-files.conf          kitty's file picker, kitten choose-files — copied if absent
 ```
+
+A `kitty.conf` of yours without the line reads `one line appended: <line>`
+instead.
 
 It
 

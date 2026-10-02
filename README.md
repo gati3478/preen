@@ -43,14 +43,25 @@ curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/shell/install.s
 curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/shell/install.sh | bash
 ```
 
+The multiplexer, [`terminal/tmux/`](terminal/tmux/README.md), the same way:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/terminal/tmux/install.sh | bash -s -- --dry-run
+```
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/terminal/tmux/install.sh | bash
+```
+
 Each installer prints its plan and makes every refusal before its first
 write, then copies its files into your config — copies, never symlinks, a
 file of yours it replaces backed up beside it. The statusline's installer
 merges its `statusLine` key into `~/.claude/settings.json`; kitty's appends
 one `include` line to `~/.config/kitty/kitty.conf`; the shell's appends one
 line each to the zshenv and zshrc zsh reads — `~/.zshenv` and `~/.zshrc`
-unless `ZDOTDIR` moves them — and to `~/.inputrc`. `--help` is each
-script's manual.
+unless `ZDOTDIR` moves them — and to `~/.inputrc`; tmux's appends one line
+to `~/.config/tmux/tmux.conf`, or to `~/.tmux.conf` where only that is there.
+`--help` is each script's manual.
 
 ## Take the setup
 
@@ -111,9 +122,11 @@ they are the author's:
 
 Some of the author's choices are felt at once. The zsh rows hold for the
 shell piece taken alone too; [its page](shell/README.md#what-changes) names
-the exceptions. An undo line goes in an overlay, where it wins over the
-shipped file: the one its row names, or else its tool's — `~/.zshrc.local`,
-`~/.config/kitty/local.conf`, `~/.gitconfig.local` or `~/.ssh/config.local`.
+the exceptions. [tmux's page](terminal/tmux/README.md#what-changes) lists the
+rest of its choices; they hold for the setup too. An undo line goes in an
+overlay, where it wins over the shipped file: the one its row names, or else
+its tool's — `~/.zshrc.local`, `~/.config/kitty/local.conf`,
+`~/.config/tmux/local.conf`, `~/.gitconfig.local` or `~/.ssh/config.local`.
 
 | Tool | What you notice | Undo |
 | --- | --- | --- |
@@ -129,6 +142,7 @@ shipped file: the one its row names, or else its tool's — `~/.zshrc.local`,
 | kitty | the left Option key is Alt, so characters typed with Option take the right one (`macos_option_as_alt`) | `macos_option_as_alt no` |
 | kitty | selecting text copies it, replacing the clipboard (`copy_on_select`) | `copy_on_select no` |
 | kitty | cmd+q saves the session and the next launch restores it (`startup_session`); before the first save, kitty logs that it cannot read the file and opens its usual window | `startup_session none`<br>`map cmd+q quit` |
+| tmux | the prefix is C-Space, and C-b does nothing | `set -g prefix C-b`<br>`bind -N "Send the prefix key" C-b send-prefix`<br>`unbind C-Space` |
 | git | `git pull` rebases, and refuses while the working tree has local edits (`pull.rebase`) | `rebase = false` under `[pull]` |
 | git | git pages through delta, side by side, or through less without it | `pager = less` under `[core]` |
 | ssh | ssh asks Proton Pass's agent for every host (`IdentityAgent`) | `IdentityAgent SSH_AUTH_SOCK` under `Host *` |
@@ -189,7 +203,7 @@ back the settings it changed.
 ```
 prompt/            the Claude Code statusline; its own page and installer
 terminal/kitty/    the terminal; its own page and installer
-terminal/tmux/     tmux for SSH: true colour, mouse, a deep history, resurrect
+terminal/tmux/     tmux for SSH: true colour, mouse, a deep history, resurrect; its own page and installer
 terminal/bat/      one line: bat in the terminal's palette
 terminal/ncdu/     one line: ncdu in the terminal's palette
 shell/             zsh, readline, hushlogin, atuin; its own page and installer
@@ -226,15 +240,16 @@ includes last-wins, so `terminal/kitty/` lands under a directory of its own
 plus one `include` line in your `kitty.conf`, never an edit inside it; the
 files kitty reads by name from its config root are copied only where you
 have none. zsh's include is `source` and readline's `$include`, so `shell/`
-lands the same way, one line appended to each of your files. A tool with one
+lands the same way, one line appended to each of your files; tmux's is
+`source-file`, so `terminal/tmux/` does too. A tool with one
 file and no include — the statusline — is copied and tailored by its
 installer. Nothing installed either way points back here.
 
 **Themes are a family, not one scheme.** Gruvbox Dark Hard where code runs —
-kitty, the statusline — and Gruvbox Light Hard where it is read — Zed,
+kitty, tmux, the statusline — and Gruvbox Light Hard where it is read — Zed,
 Sublime; Fira Code throughout, the Nerd Font build in the terminal.
 kitty's palette is its own included file, so a swap touches one file, and
-each piece's page carries its palette table.
+the statusline's and kitty's pages each carry a palette table.
 
 ## Make it yours
 

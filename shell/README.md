@@ -131,7 +131,7 @@ empty home, on a Mac:
 ~/.zshrc                                   created: source ~/.config/zsh/preen/zshrc
 ```
 
-A file of yours already there reads `one line appended: <line>` instead.
+A file of yours without the line reads `one line appended: <line>` instead.
 
 Where `/etc/inputrc` exists, as on most Linux systems, readline stops reading
 it once `~/.inputrc` exists, so a new `~/.inputrc` includes it first:
@@ -201,9 +201,9 @@ for this piece, with these exceptions:
 
 - the `~/.zprofile` row does not apply: this piece leaves your `~/.zprofile`
   alone;
-- nothing here reads a `~/.zprofile.local`, so the tmux row's undo,
-  `unset SSH_CONNECTION`, goes above the appended line in your zshrc, before
-  this config's tmux block runs.
+- nothing here reads a `~/.zprofile.local`, so the undo of the zsh row on
+  tmux over ssh, `unset SSH_CONNECTION`, goes above the appended line in
+  your zshrc, before this config's tmux block runs.
 
 Where an undo line goes in `~/.zshrc.local`, a line below the appended one
 works as well.

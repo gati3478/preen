@@ -176,10 +176,10 @@ fi
 # copy row an application keeps rewriting piles them up unseen. Every
 # directory a row deploys into is searched rather than each row's own name, so
 # a backup outlives the row that made it; the prompt drop-in's ~/.claude, the
-# kitty drop-in's ~/.config/kitty/preen and the shell drop-in's
-# ~/.config/zsh/preen, which no row names, are added here. A function, not
-# inline: bash 3.2 reads a `case` pattern's `)` inside $( ) as the end of the
-# substitution.
+# kitty drop-in's ~/.config/kitty/preen, the shell drop-in's
+# ~/.config/zsh/preen and the tmux drop-in's ~/.config/tmux/preen, which no
+# row names, are added here. A function, not inline: bash 3.2 reads a `case`
+# pattern's `)` inside $( ) as the end of the substitution.
 backups_beside_rows() {
   local src tgt abs dir
   {
@@ -188,7 +188,7 @@ backups_beside_rows() {
       case "$tgt" in '~'|'~/'*) abs="$HOME${tgt#\~}" ;; *) abs="$tgt" ;; esac
       printf '%s\n' "${abs%/*}"
     done < "$MANIFEST"
-    printf '%s\n' "${CLAUDE_CONFIG_DIR:-$HOME/.claude}" "$HOME/.config/kitty/preen" "$HOME/.config/zsh/preen"
+    printf '%s\n' "${CLAUDE_CONFIG_DIR:-$HOME/.claude}" "$HOME/.config/kitty/preen" "$HOME/.config/zsh/preen" "$HOME/.config/tmux/preen"
   } | sort -u | while IFS= read -r dir; do
     # -H: find does not descend a starting point that is a symlink, and HOME
     # or ~/.claude may be one.

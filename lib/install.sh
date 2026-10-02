@@ -88,6 +88,9 @@ refuse_unwritable_dir() { # refuse_unwritable_dir <dir> — stop the run when <d
     [ -w "$(dirname "$1")" ] || die "$(short "$(dirname "$1")") is not writable, so $(short "$1") cannot be created. Nothing was changed."
   fi
 }
+refuse_unwritable_if_there() { # refuse_unwritable_if_there <dir> — stop the run when <dir> is there but is not a directory it can write into; an absent <dir> passes; call it before the first write
+  if [ -e "$1" ] && { [ ! -d "$1" ] || [ ! -w "$1" ]; }; then die "$(short "$1") is not a directory this run can write into. Nothing was changed."; fi
+}
 # An append through a symlink lands in the file it points at, which something
 # else manages, so the line belongs there. append_line_once refuses such a link
 # too, but at the end of a run, with the copies already on disk; asked before
@@ -218,5 +221,16 @@ append_line_once() { # append_line_once <file> <line> — the file ends up holdi
   else
     printf '%s\n' "$line" > "$file"
     record "created         $(short "$file")"
+  fi
+}
+# A file append_line_once will write is registered by the tests it makes, so
+# the plan says what the run will do.
+touching_line() { # touching_line <file> <line> — register <file> for the plan as append_line_once will leave it: already there, one line appended, or created
+  if holds_line "$1" "$2"; then
+    touching "$1" "already there: $2"
+  elif [ -e "$1" ] || [ -L "$1" ]; then
+    touching "$1" "one line appended: $2"
+  else
+    touching "$1" "created: $2"
   fi
 }

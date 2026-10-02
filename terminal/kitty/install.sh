@@ -236,12 +236,7 @@ fi
 touching "$PREEN_DIR/kitty.conf" "the config"
 touching "$PREEN_DIR/current-theme.conf" "the palette it includes"
 if [ -n "$title_line" ]; then touching "$PREEN_DIR/tab-title.conf" "the tab title for this home — ours; local.conf stays yours"; fi
-# The test append_line_once makes, so the plan says what the run will do.
-if holds_line "$KITTY_CONF" "$INCLUDE_LINE"; then
-  touching "$KITTY_CONF" "already there: $INCLUDE_LINE"
-else
-  touching "$KITTY_CONF" "one line appended: $INCLUDE_LINE"
-fi
+touching_line "$KITTY_CONF" "$INCLUDE_LINE"
 touching "$KITTY_DIR/open-actions.conf" "what a click on a link does — copied if absent"
 touching "$KITTY_DIR/mime.types" "the file types behind it — copied if absent"
 touching "$KITTY_DIR/choose-files.conf" "kitty's file picker, kitten choose-files — copied if absent"
@@ -262,9 +257,7 @@ if ! holds_line "$KITTY_CONF" "$INCLUDE_LINE"; then
     die "$(short "$KITTY_CONF") is not a file this run can append to. Nothing was changed."
   fi
 fi
-for d in "$KITTY_DIR" "$PREEN_DIR"; do
-  if [ -e "$d" ] && { [ ! -d "$d" ] || [ ! -w "$d" ]; }; then die "$(short "$d") is not a directory this run can write into. Nothing was changed."; fi
-done
+for d in "$KITTY_DIR" "$PREEN_DIR"; do refuse_unwritable_if_there "$d"; done
 
 if [ "$dry_run" = yes ]; then
   echo

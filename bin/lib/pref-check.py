@@ -930,12 +930,14 @@ def _tmux_follow_path(head, parts, path, host):
     Everything else is refused, each because what it brings in is not a function
     of the text here: another flag (-F, -n, -v, -t) changes what is read or how,
     a glob or a `#{format}` resolves against the filesystem or the server rather
-    than the file, and a relative path resolves against the SERVER's cwd — the
-    same fixture answered RELATIVE-FOUND from one directory and NOTFOUND from
-    another, and nothing in the file says which. A `host` target is refused
-    outright: its file is fetched off the remote host to a local temp path, so
-    following anything would read THIS machine's overlay and report it as the
-    host's — a wrong answer that looks right.
+    than the file, and a relative path resolves against a directory the file
+    does not name — a command-line client's cwd, an attached client's
+    session's, the starting client's as the server starts, or `~` where no
+    client sends it, as for a `session-created` hook's; the same fixture
+    answered RELATIVE-FOUND from one directory, NOTFOUND from another. A
+    `host` target is refused outright: its file is fetched off the remote host
+    to a local temp path, so following anything would read THIS machine's
+    overlay and report it as the host's — a wrong answer that looks right.
 
     ⚠️ One refusal is scope, not parity: tmux DOES read several paths from one
     `source-file -q a b`, in order — measured, both options came back set. The
@@ -971,8 +973,8 @@ def _tmux_follow_path(head, parts, path, host):
         )
     if not os.path.isabs(target):
         raise ReadError(
-            f"{where} -q {args[0]}`, a relative path — tmux resolves it against the "
-            "server's cwd, which this file does not say"
+            f"{where} -q {args[0]}`, a relative path — tmux resolves it against a "
+            "directory this file does not name"
         )
     return target
 

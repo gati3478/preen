@@ -262,15 +262,6 @@ else
 fi
 
 # ── what this run will touch, said before the first write ────────────────────
-plan_line() { # plan_line <rc> <line>
-  if holds_line "$1" "$2"; then
-    touching "$1" "already there: $2"
-  elif [ -e "$1" ] || [ -L "$1" ]; then
-    touching "$1" "one line appended: $2"
-  else
-    touching "$1" "created: $2"
-  fi
-}
 # readline reads /etc/inputrc only when ~/.inputrc is absent, so a new
 # ~/.inputrc holding our line alone would drop it: measured on Ubuntu 24.04's
 # bash 5.2, its Home and End in the \e[1~ form and its word-motion keys went
@@ -292,13 +283,13 @@ touching "$PREEN_DIR/inputrc" "readline's settings, for bash and the rest"
 touching "$HUSHLOGIN" "silences login's Last login line — copied if absent"
 if [ "$atuin_copy" = yes ] && [ ! -d "$ATUIN_DIR" ]; then touching "$ATUIN_DIR" "atuin's config directory, created"; fi
 touching "$ATUIN_CONF" "atuin's settings — copied if absent"
-plan_line "$ZSHENV" "$ZSHENV_LINE"
+touching_line "$ZSHENV" "$ZSHENV_LINE"
 if [ "$inputrc_fresh" = yes ]; then
   touching "$INPUTRC" "created: $SYSTEM_INPUTRC_LINE, then $INPUTRC_LINE"
 else
-  plan_line "$INPUTRC" "$INPUTRC_LINE"
+  touching_line "$INPUTRC" "$INPUTRC_LINE"
 fi
-plan_line "$ZSHRC" "$ZSHRC_LINE"
+touching_line "$ZSHRC" "$ZSHRC_LINE"
 show_plan
 
 # ── the last refusals, before the first write ────────────────────────────────
@@ -323,10 +314,8 @@ refuse_linked_path() { # refuse_linked_path <dir> — refuse_linked_dir for each
 }
 refuse_linked_path "$env_dir"
 refuse_linked_path "$rc_dir"
-for d in "$ZSH_DIR" "$PREEN_DIR" "$ATUIN_DIR"; do
-  [ "$d" != "$ATUIN_DIR" ] || [ "$atuin_copy" = yes ] || continue
-  if [ -e "$d" ] && { [ ! -d "$d" ] || [ ! -w "$d" ]; }; then die "$(short "$d") is not a directory this run can write into. Nothing was changed."; fi
-done
+for d in "$ZSH_DIR" "$PREEN_DIR"; do refuse_unwritable_if_there "$d"; done
+if [ "$atuin_copy" = yes ]; then refuse_unwritable_if_there "$ATUIN_DIR"; fi
 if [ ! -e "$HUSHLOGIN" ] && [ ! -L "$HUSHLOGIN" ] && [ ! -w "$HOME" ]; then
   die "$(short "$HOME") is not writable, so $(short "$HUSHLOGIN") cannot be created. Nothing was changed."
 fi
