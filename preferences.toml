@@ -924,12 +924,12 @@ key = "initial_window_height"
 want = "840"
 
 [pref.window_margin]
-value = "0.5"
-why = "Half a cell between text and the window edge — text should not touch chrome."
+value = "half a cell"
+why = "Text should not touch chrome. kitty takes the gap in points: half of Fira Code's 9.85 pt cell at 16 pt."
 
 [pref.window_margin.targets.kitty]
-key = "window_margin_width"
-want = "0.5"
+key = "window_padding_width"
+want = "5"
 
 [pref.window_margin.targets.tmux]
 state = "unreachable"

@@ -1784,6 +1784,10 @@ _ZSHCAP_PROBE = (
 )
 
 _ZSHCAP_HOSTS = {}
+# host -> (variables kept through env -i, TERM), from its zshcap target's
+# probe_keep and probe_term: a host whose PATH comes from the app that starts
+# its shells, not from a login file (Termux), keeps what a session there has.
+_ZSHCAP_REMOTE_OPTS = {}
 
 _ZSHCAP_MARKERS = {
     "--BINDKEY--": "bindkey",
@@ -1807,8 +1811,10 @@ def _zshcap_remote(host):
     host that does not answer is a ReadSkip, never a ReadError: offline is
     not drift.
     """
-    cmd = ('env -i HOME="$HOME" USER="$USER" LOGNAME="$USER" TERM=tmux-256color LANG=en_US.UTF-8 '
-           'zsh -l -i -c ' + shlex.quote(_ZSHCAP_PROBE))
+    keep, term = _ZSHCAP_REMOTE_OPTS.get(host, ([], "tmux-256color"))
+    cmd = ('env -i HOME="$HOME" USER="$USER" LOGNAME="$USER" '
+           + "".join('%s="$%s" ' % (k, k) for k in keep)
+           + 'TERM=%s LANG=en_US.UTF-8 zsh -l -i -c ' % term + shlex.quote(_ZSHCAP_PROBE))
     try:
         proc = subprocess.run(["ssh", "-tt", *_SSH_OPTS, host, cmd],
                               capture_output=True, text=True, timeout=60, stdin=subprocess.DEVNULL)
@@ -1960,6 +1966,90 @@ def read_nanorc(path, key, accumulate=False, **_opts):
     if not found:
         return None
     return found if accumulate else found[-1]
+
+
+_PROPS_ESCAPES = {"t": "\t", "n": "\n", "r": "\r", "f": "\f"}
+
+
+def _props_unescape(s):
+    out, i = [], 0
+    while i < len(s):
+        c = s[i]
+        if c != "\\" or i + 1 >= len(s):
+            out.append(c)
+            i += 1
+            continue
+        nxt = s[i + 1]
+        if nxt == "u" and re.fullmatch(r"[0-9A-Fa-f]{4}", s[i + 2:i + 6]):
+            out.append(chr(int(s[i + 2:i + 6], 16)))
+            i += 6
+            continue
+        out.append(_PROPS_ESCAPES.get(nxt, nxt))
+        i += 2
+    return "".join(out)
+
+
+def read_javaprops(path, key, accumulate=False, **_opts):
+    """A `.properties` file the way java.util.Properties.load reads it — the
+    loader Termux hands termux.properties and colors.properties to.
+
+    A natural line ending in an odd run of backslashes continues on the next,
+    whose leading blanks are dropped. A logical line whose first non-blank
+    character is `#` or `!` is a comment. The key runs to the first unescaped
+    `=`, `:` or blank; blanks, then at most one `=` or `:`, then blanks are the
+    separator, and the rest is the value. `\\t \\n \\r \\f`, `\\uXXXX` and a
+    backslash before any other character are the escapes. A later key
+    replaces an earlier one, as Properties.put does, so the last line wins.
+    """
+    with open(path, encoding="utf-8") as fh:
+        natural = re.split(r"\r\n|\r|\n", fh.read())
+    props, i, blanks = {}, 0, " \t\f"
+    while i < len(natural):
+        line = natural[i].lstrip(blanks)
+        i += 1
+        if not line or line[0] in "#!":
+            continue
+        while len(line) - len(line.rstrip("\\")) & 1:
+            line = line[:-1]
+            if i >= len(natural):
+                break
+            line += natural[i].lstrip(blanks)
+            i += 1
+        j = 0
+        while j < len(line) and line[j] not in "=:" + blanks:
+            j += 2 if line[j] == "\\" else 1
+        k = min(j, len(line))
+        rest = line[k:].lstrip(blanks)
+        if rest[:1] in ("=", ":"):
+            rest = rest[1:].lstrip(blanks)
+        props[_props_unescape(line[:k])] = _props_unescape(rest)
+    if key not in props:
+        return None
+    return [props[key]] if accumulate else props[key]
+
+
+def read_androidprefs(path, key, accumulate=False, **_opts):
+    """An Android app's SharedPreferences file: a <map> of
+    `<string name="K">V</string>` and `<int|long|float|boolean name="K"
+    value="V"/>`. Termux keeps its font size there (`fontsize`, in pixels),
+    set by a pinch and by no file of its own.
+    """
+    with open(path, "rb") as fh:
+        raw = fh.read()
+    # The app never writes a DTD; one here could only expand entities.
+    if b"<!DOCTYPE" in raw or b"<!ENTITY" in raw:
+        raise ReadError("not SharedPreferences XML: it carries a DOCTYPE or an ENTITY")
+    try:
+        root = ET.fromstring(raw)
+    except ET.ParseError as exc:
+        raise ReadError(f"not SharedPreferences XML: {exc}")
+    if root.tag != "map":
+        raise ReadError(f"not SharedPreferences XML: the root is <{root.tag}>, not <map>")
+    for el in root:
+        if el.get("name") == key:
+            val = (el.text or "") if el.tag == "string" else el.get("value")
+            return [val] if accumulate else val
+    return None
 
 
 def read_gitcfg(path, key, accumulate=False, **_opts):
@@ -2292,6 +2382,8 @@ READERS = {
     "sshcfg": read_sshcfg,
     "obsidiancap": read_obsidiancap,
     "nanorc": read_nanorc,
+    "javaprops": read_javaprops,
+    "androidprefs": read_androidprefs,
 }
 
 
@@ -2777,9 +2869,17 @@ def resolve_target(name, entry, targets, where="the spec"):
         if not re.fullmatch(r"[A-Za-z0-9._-]+", t["host"]):
             return None, None, f"target '{tname}' has an unusable host '{t['host']}'"
         # The path is interpolated into a program that runs on the remote
-        # machine, so only a plain ~/-relative path is accepted.
-        if (t["format"] != "zshcap" and not re.fullmatch(r"~/[A-Za-z0-9._/-]+", t["path"])) or ".." in t["path"]:
-            return None, None, f"target '{tname}' on {t['host']} needs a plain ~/-relative path, got '{t['path']}'"
+        # machine, so only a plain path is accepted: ~/-relative, or absolute
+        # for a file the host keeps outside its home (Termux's app settings).
+        if (t["format"] != "zshcap" and not re.fullmatch(r"(~/|/)[A-Za-z0-9._/-]+", t["path"])) or ".." in t["path"]:
+            return None, None, f"target '{tname}' on {t['host']} needs a plain ~/-relative or absolute path, got '{t['path']}'"
+        if t["format"] == "zshcap":
+            keep, term = t.get("probe_keep", []), t.get("probe_term", "tmux-256color")
+            if not (isinstance(keep, list) and all(isinstance(k, str) and re.fullmatch(r"[A-Z_][A-Z0-9_]*", k) for k in keep)):
+                return None, None, f"target '{tname}': probe_keep is a list of environment variable names"
+            if not (isinstance(term, str) and re.fullmatch(r"[A-Za-z0-9._-]+", term)):
+                return None, None, f"target '{tname}': probe_term is a terminfo name"
+            _ZSHCAP_REMOTE_OPTS[t["host"]] = (keep, term)
         return t, t["path"], None
     return t, os.path.expanduser(t["path"]), None
 
@@ -2804,8 +2904,9 @@ def _remote_fetch(host, targets):
                     if isinstance(t, dict) and t.get("host") == host and t.get("format") != "zshcap"})
     prog = "set -u\n"
     for p in paths:
-        prog += ('p="$HOME/%s"\nif [ -r "$p" ]; then echo "=== FILE %s ==="; base64 "$p"; '
-                 'else echo "=== MISSING %s ==="; fi\n' % (p[2:], p, p))
+        where = '"$HOME/%s"' % p[2:] if p.startswith("~/") else '"%s"' % p
+        prog += ('p=%s\nif [ -r "$p" ]; then echo "=== FILE %s ==="; base64 "$p"; '
+                 'else echo "=== MISSING %s ==="; fi\n' % (where, p, p))
     prog += 'echo "--- end ---"\n'
     try:
         proc = subprocess.run(["ssh", "-n", *_SSH_OPTS, host, prog],
@@ -2825,7 +2926,7 @@ def _remote_fetch(host, targets):
     files, cur, buf = {}, None, []
     def flush():
         if cur is not None:
-            local = os.path.join(_REMOTE_DIR, host + "__" + cur[2:].replace("/", "__"))
+            local = os.path.join(_REMOTE_DIR, host + "__" + cur.replace("/", "__"))
             with open(local, "wb") as fh:
                 fh.write(base64.b64decode("".join(buf)))
             files[cur] = local
