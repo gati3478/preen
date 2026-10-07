@@ -1841,6 +1841,17 @@ key = "aliases"
 accumulate = true
 want_any = "alias ls='eza --icons=auto --hyperlink=auto --group-directories-first'"
 
+[pref.file_icons]
+value = "a file list shows each entry's type as a coloured icon"
+why = "The listing instinct of pref.listings_eza, in the editor's sidebar: the type is read at a glance, not off the extension."
+
+# A File Icon 4.0 draws through Sublime's own file icon themes; with the key
+# unset it opens a picker at every launch, and dismissing it saves [] — no
+# icons, which a reader that took the default would call fine.
+[pref.file_icons.targets.sublime]
+key = "file_icon_theme"
+want = "A File Icon.sublime-file-icons"
+
 [pref.tmux_ssh_only]
 value = "SSH sessions auto-attach tmux; local shells never do"
 why = "kitty owns tabs/layouts/sessions locally; tmux earns its prefix key only where a dropped TCP connection is a real failure mode."

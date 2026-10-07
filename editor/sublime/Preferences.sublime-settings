@@ -30,6 +30,9 @@
   // Packages/User/ path is deliberate: a bare filename would resolve against
   // any package that happens to ship the same name.
   "color_scheme": "Packages/User/gruvbox-light-hard.sublime-color-scheme",
+  // A File Icon 4.0 draws through Sublime's file icon themes (Build 4213+),
+  // and opens its theme picker at every launch until this key exists.
+  "file_icon_theme": "A File Icon.sublime-file-icons",
   "open_files_in_new_window": false,
   "added_words":
   [
