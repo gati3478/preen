@@ -281,6 +281,15 @@ recheck = "auto"
 evidence = "caret_style accepts smooth|phase|blink|solid plus a block_caret bool"
 probe = "sublime_caret_styles"
 
+[pref.caret_motion]
+value = "the caret glides to where it moves"
+why = "A jump — a search hit, go-to-definition, a page move — slides the caret to where it landed instead of teleporting it, so the eye follows it rather than hunting for it."
+
+[pref.caret_motion.targets.zed]
+state = "unreachable"
+recheck = "manual"
+evidence = "cursor_animation (Zed 1.20) animates bar and block carets only — cursor_shape_supports_cursor_animation in crates/editor/src/element.rs at 1.23.2, with a test asserting the underline is excluded — and pref.caret's underline outranks the glide"
+
 # ── Typeface ───────────────────────────────────────────────────────────────────
 
 [pref.nerd_font_where_glyphs_render]
@@ -2062,9 +2071,9 @@ want_any_contain = "mise activate zsh"
 
 # mise's activate script hooks precmd AND chpwd, and the precmd hook spawns
 # `mise hook-env` on every prompt but the first and the one after a cd:
-# 14.7 ms ± 0.4 at mise 2026.9.3 (hyperfine, 09-09-2026). Its own
-# hook_env.chpwd_only and cache_ttl settings are inert (16.3 and 16.5 ms,
-# same run), so the hook is removed by hand and the chpwd hook kept — a
+# 7.3 ms at mise 2026.10.4 (hyperfine, 08-10-2026). Its own
+# hook_env.chpwd_only and cache_ttl settings cost more (13.5 and 13.6 ms,
+# same runs), so the hook is removed by hand and the chpwd hook kept — a
 # directory's tool set still switches on cd. Text asserts the removal line;
 # live asserts the hook list it leaves behind, both halves: precmd without
 # mise, chpwd still with it.
@@ -2697,7 +2706,7 @@ key = "hyperlink-format"
 want = "kitty"
 
 [pref.hyperlink_actions]
-value = "a search hit opens in Zed at its line; a directory opens as a new tab there; an extensionless executable and any other text file open in Zed; hovering with cmd shows where the click will land"
+value = "a search hit, or a path:line in plain output, opens in Zed at its line; a directory opens as a new tab there; an extensionless executable and any other text file open in Zed; hovering with cmd shows where the click will land"
 why = "The link is the address of the thing the eye just found; the click should land there, not in whatever app owns the extension. Zed is the editor (pref.editor_env), a tab is named by where it is (pref.tab_identity), and the rest — images, PDFs, binaries — stays with the platform default. ⚠️ That last clause has one deliberate exception: the `inode/executable` entry sends extensionless executables to Zed, and it cannot tell a shell script from a compiled binary. The scripts are this repo's own bin/, clicked from a listing daily; a misclicked binary costs one garbage buffer. Entry ORDER is part of the preference, not presentation — kitty takes the first entry whose criteria all match, so `mime text/*` is last because it matches everything above it too."
 
 # One row per behaviour the `why` names, each pinning a whole entry in file
@@ -2743,12 +2752,28 @@ target = "kitty_open_action_blocks"
 key = "block3"
 want = "protocol file; mime inode/executable; action launch --type=background zed -- ${FILE_PATH}"
 
+# A compiler's or test runner's path:line is plain text; this makes it a link.
+# The extension must start with a letter, so an IP:port stays text. kitty
+# tries every detect_url_regex line, so the row asks for this one among them.
+[pref.hyperlink_actions.targets.kitty_file_reference]
+target = "kitty"
+key = "detect_url_regex"
+accumulate = true
+want_any = '[[:alnum:]_./-]+\.[[:alpha:]][[:alnum:]]*:[0-9]+(:[0-9]+)?'
+
+# What a click on that link does. --cwd=current starts Zed in the clicked
+# window's directory, where a relative path from a tool run there resolves.
+[pref.hyperlink_actions.targets.kitty_file_reference_editor]
+target = "kitty_open_action_blocks"
+key = "block4"
+want = 'url ^[\w./-]+\.[A-Za-z]\w*:\d+(:\d+)?$; action launch --type=background --cwd=current zed -- ${URL}'
+
 # LAST, and that is the whole of its correctness — specifically behind the
 # fragment entry, which tests no mime, so a text file's `#line` link matches
 # both and text-first would drop the line number.
 [pref.hyperlink_actions.targets.kitty_text_editor]
 target = "kitty_open_action_blocks"
-key = "block4"
+key = "block5"
 want = "protocol file; mime text/*; action launch --type=background zed -- ${FILE_PATH}"
 
 # The stack's extensions that Python's mimetypes table lacks (Kotlin, Gradle,

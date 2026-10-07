@@ -1,7 +1,8 @@
 // Zed keymap — additive only.
 //
-// `base_keymap: "JetBrains"` already provides the verbs that matter, and they
-// were checked against Zed 1.14.2's own keymap files rather than assumed:
+// `base_keymap: "JetBrains"`, layered over Zed's default macOS keymap,
+// already provides the verbs that matter, and they were checked against Zed
+// 1.23.2's own keymap files rather than assumed:
 //
 //   cmd-alt-l              editor::Format          (IDEA "Reformat Code")
 //   ctrl-alt-r / shift-f10 task::Spawn             (IDEA "Run Anything")
@@ -9,6 +10,10 @@
 //   alt-f12                terminal_panel::Toggle
 //   cmd-?                  agent::ToggleFocus
 //   cmd-shift-e            project_panel::ToggleFocus
+//
+// cmd-shift-e toggles the panel from the workspace; inside a full editor
+// (not an agent thread) the default macOS keymap binds it to
+// pane::RevealInProjectPanel instead.
 //
 // ⚠️ Left out of the list: cmd-shift-b -> outline_panel and ctrl-shift-g ->
 // git_panel, which hold only while focus is OUTSIDE an editor. The
