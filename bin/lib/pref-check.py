@@ -2368,9 +2368,39 @@ def read_defaults(path, key, **_opts):
     return _defaults_array(text) or text
 
 
+_LSHANDLERS = {}
+
+
+def read_lshandler(path, key, **_opts):
+    """Which app opens a content type: LaunchServices' handler table.
+
+    `path` is the domain holding the table
+    (com.apple.LaunchServices/com.apple.launchservices.secure), `key` a content
+    type such as public.zip-archive. The answer is that entry's
+    LSHandlerRoleAll, the bundle id NSWorkspace's setDefaultApplication writes,
+    lowercased as LaunchServices stores it. A type
+    with no entry, or one set for a single role only, reads None: its default is
+    then whatever LaunchServices ranks first, which nothing on disk states.
+    Parsed as a plist, not as `defaults read` text, which prints a nested
+    LSHandlerPreferredVersions `-` beside the value (docs/traps.md § "Files,
+    links, and vendored content"). One export per process.
+    """
+    if path not in _LSHANDLERS:
+        # A domain that does not exist exports as an empty dict, exit 0.
+        proc = _tool_run(["defaults", "export", path, "-"], stdin=subprocess.DEVNULL)
+        if proc.returncode != 0:
+            raise ReadError(f"defaults export {path}: {proc.stderr.strip() or 'failed'}")
+        _LSHANDLERS[path] = plistlib.loads(proc.stdout.encode()).get("LSHandlers", [])
+    for entry in _LSHANDLERS[path]:
+        if entry.get("LSHandlerContentType", "").lower() == key.lower():
+            return entry.get("LSHandlerRoleAll")
+    return None
+
+
 READERS = {
     "jsonc": read_jsonc,
     "defaults": read_defaults,
+    "lshandler": read_lshandler,
     "toml": read_toml,
     "kitty": read_kitty,
     "kittyblocks": read_kitty_blocks,
@@ -3592,10 +3622,10 @@ def emit(status, message, kind=""):
 
 
 # Formats whose "path" is not a file this checker could empty: two run the
-# application's own resolver over a live process, and a `defaults` path is a
-# preferences DOMAIN. A row on one of them is out of --prove's scope, and said
-# so rather than dropped.
-LIVE_FORMATS = ("zshcap", "obsidiancap", "defaults")
+# application's own resolver over a live process, and a `defaults` or
+# `lshandler` path is a preferences DOMAIN. A row on one of them is out of
+# --prove's scope, and said so rather than dropped.
+LIVE_FORMATS = ("zshcap", "obsidiancap", "defaults", "lshandler")
 
 # The emptiest document each reader still accepts, MEASURED by handing one to
 # every reader with a key out of the real spec: each answered "absent" rather
@@ -3933,7 +3963,7 @@ def emit_assertions(spec, targets, came_from, read):
                 if path is None:
                     emit("warn", f"{label}: {t['path']} not on {host} — skipped")
                     continue
-            elif not host and t["format"] != "defaults" and not os.path.exists(path):   # a defaults domain is not a file
+            elif not host and t["format"] not in ("defaults", "lshandler") and not os.path.exists(path):   # a defaults domain is not a file
                 emit("warn", f"{label}: {t['path']} not deployed — skipped")
                 continue
 
