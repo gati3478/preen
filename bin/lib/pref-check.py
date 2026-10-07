@@ -2193,8 +2193,10 @@ OBSIDIAN_ASAR_GLOB = os.path.expanduser("~/Library/Application Support/obsidian/
 
 # Every vault-config key the spec may ask for. getConfig answers the DEFAULT
 # for a key app.json omits, which is the whole point of reading it here.
+# The font size is not one: 1.14 keeps it per device in the app's local
+# storage, and getConfig has no default for it (`fontSize` below).
 OBSIDIAN_CONFIG_KEYS = (
-    "textFontFamily", "monospaceFontFamily", "interfaceFontFamily", "baseFontSize",
+    "textFontFamily", "monospaceFontFamily", "interfaceFontFamily",
     "theme", "cssTheme", "enabledCssSnippets", "accentColor",
     "vimMode", "showLineNumber", "showIndentGuide", "readableLineLength",
     "foldHeading", "foldIndent", "livePreview", "spellcheck",
@@ -2216,7 +2218,9 @@ _OBSCAP_PROBE = (
     "ffs[n]=getComputedStyle(d).fontFeatureSettings;d.remove()});"
     "return JSON.stringify({"
     "version:(navigator.userAgent.match(/obsidian\\/([\\d.]+)/)||[])[1]||null,"
-    "config:cfg,css:css,ffs:ffs,"
+    # The size the app's own Font size control reads. Null when the method is
+    # missing, so a rename fails this one line rather than every live line.
+    "config:cfg,fontSize:typeof app.getBaseFontSize==='function'?app.getBaseFontSize():null,css:css,ffs:ffs,"
     "theme:app.customCss.theme,themes:Object.keys(app.customCss.themes||{}),"
     "snippets:{all:app.customCss.snippets,enabled:Array.from(app.customCss.enabledSnippets||[])},"
     "body:{classes:Array.from(document.body.classList)},"
@@ -2291,7 +2295,8 @@ def read_obsidiancap(path, key, accumulate=False, **_opts):
     `path` names the vault's appearance.json (it keeps the spec's shape and
     locates the vault); the read itself is one `obsidian eval` per process,
     cached like zshcap's PTY. `key` is a dotted path into the probe's JSON:
-    config.<vault key> is getConfig's answer (defaults included), css.<var>
+    config.<vault key> is getConfig's answer (defaults included), fontSize
+    app.getBaseFontSize()'s (the per-device size, default included), css.<var>
     a computed body variable, ffs.<view> the resolved font-feature-settings,
     body.classes / snippets.enabled / community.enabled lists (pair with
     accumulate + want_any), core.<plugin id> a core module's on/off,
