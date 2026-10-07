@@ -149,10 +149,10 @@ autoload -Uz run-help run-help-git run-help-sudo run-help-openssl
 # jset guards against java_home's silent fallback.
 if (( $+commands[mise] )); then
   eval "$(mise activate zsh)"
-  # Its precmd hook spawns `mise hook-env` on most prompts and its
-  # chpwd_only knob is inert, so the hook is cut by hand. The chpwd hook
-  # stays: a directory's tool set still switches on cd, and a config edited
-  # in place applies on the next one (`cd .`).
+  # Its precmd hook spawns `mise hook-env` on most prompts, and its
+  # chpwd_only knob makes that call slower, not rarer, so the hook is cut by
+  # hand. The chpwd hook stays: a directory's tool set still switches on cd,
+  # and a config edited in place applies on the next one (`cd .`).
   add-zsh-hook -d precmd _mise_hook_precmd
 fi
 
