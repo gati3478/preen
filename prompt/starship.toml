@@ -14,6 +14,13 @@
 add_newline = false
 format = "$username$directory$git_branch$git_commit$git_state$git_status$fill$python$java$kotlin$gradle$rust$nodejs$jobs$cmd_duration$line_break$character"
 
+# The tabs kitty restores right after a boot scan their directories with a
+# cold cache, all at once, and overran the 30 ms default: a WARN pair above
+# the first prompt. A warm scan costs ~5 µs an entry, so 100 ms is reached
+# only cold or past ~20 000 entries; there the prompt renders from a partial
+# scan, as it does at any timeout.
+scan_timeout = 100
+
 [fill]
 symbol = " "
 

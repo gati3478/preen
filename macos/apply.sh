@@ -131,7 +131,7 @@ settings() {
 
   # Dock
   want com.apple.dock orientation -string left
-  want com.apple.dock tilesize -int 40
+  want com.apple.dock tilesize -int 44
   want com.apple.dock magnification -bool false
   want com.apple.dock autohide -bool false
   want com.apple.dock mineffect -string scale
