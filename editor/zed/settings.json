@@ -112,7 +112,6 @@
   // is switching git branches, where a stale tab otherwise resurrects a
   // deleted file on the next save.
   "close_on_file_delete": true,
-  "session": { "trust_all_worktrees": true },
   "use_system_window_tabs": false,
   "tabs": {
     "close_position": "left",
@@ -140,7 +139,7 @@
   // configs). That is only affordable because the heavy build directories
   // below are never scanned at all.
   // ⚠️ file_scan_exclusions REPLACES Zed's defaults rather than extending
-  // them, so the nine stock entries are repeated here on purpose. Dropping
+  // them, so Zed's stock entries are repeated here on purpose. Dropping
   // them would put .git and .DS_Store back in the file finder.
   "search": { "include_ignored": true },
   "file_scan_exclusions": [
@@ -148,6 +147,8 @@
     "**/.svn",
     "**/.hg",
     "**/.jj",
+    "**/.sl",
+    "**/.repo",
     "**/CVS",
     "**/.DS_Store",
     "**/Thumbs.db",
@@ -183,47 +184,12 @@
 
   // ── AI ──
   "agent": {
-    "terminal_init_command": "claude",
     "favorite_models": [],
     "play_sound_when_agent_done": "when_hidden",
     "model_parameters": []
   },
-  "agent_servers": { "claude-acp": { "type": "registry" } },
   "agent_buffer_font_family": "FiraCode Nerd Font Mono",
-  "edit_predictions": { "provider": "zed", "mode": "eager" },
-
-  // ── extensions ─────────────────────────────────────────
-  // Pinned so a fresh machine reproduces the set on first launch.
-  // ⚠️ `false` only prevents auto-INSTALL; it never uninstalls. Kotlin is
-  // `true`: Zed reads Kotlin and Gradle .kts; IDEA still owns builds,
-  // refactoring and Spring.
-  // Bash, C/C++, CSS, Go, JS/TS, JSON, Markdown, Python, Rust, Tailwind and
-  // YAML are built into Zed and correctly absent from this list.
-  "auto_install_extensions": {
-    "comment": true,
-    "csv": true,
-    "dockerfile": true,
-    "env": true,
-    "gdscript": true,
-    "git-firefly": true,
-    "html": true,
-    "jai": true,
-    "java": true,
-    "kotlin": true,
-    "latex": true,
-    "log": true,
-    "lua": true,
-    "make": true,
-    "markdown-oxide": true,
-    "npm-package-json-checker": true,
-    "playdate": true,
-    "sql": true,
-    "ssh-config": true,
-    "svelte": true,
-    "swift": true,
-    "tombi": true,
-    "xml": true
-  },
+  "edit_predictions": { "mode": "eager" },
 
   // ── per-language ───────────────────────────────────────
   "languages": {
@@ -289,7 +255,6 @@
   "calls": { "mute_on_join": true },
   "telemetry": {
     "diagnostics": true,
-    "metrics": true,
-    "anthropic_retention": true
+    "metrics": true
   }
 }

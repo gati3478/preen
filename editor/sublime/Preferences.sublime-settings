@@ -1,5 +1,6 @@
-// Settings in here override those in "Default/Preferences.sublime-settings",
-// and are overridden in turn by syntax-specific settings.
+// Settings in here override Default's, every zipped package's and those of a
+// loose package sorting before "preen", case ignored; a loose package sorting
+// after it, Packages/User and syntax-specific settings override them in turn.
 // Preferences.sublime-settings
 {
   "font_face": "Fira Code",
@@ -14,11 +15,6 @@
   // more aggressive than either of the other two editors. Default was
   // ["selection"], which showed almost nothing.
   "draw_white_space": ["leading", "trailing", "isolated", "all_tabs"],
-  "ignored_packages":
-  [
-		"Vintage",
-  ],
-  "index_files": true,
   "highlight_line": true,
   "scroll_past_end": true,
   "spell_check": true,
@@ -26,16 +22,9 @@
   "remember_open_files": true,
   "theme": "ayu-light.sublime-theme",
   // Vendored, not from the gruvbox package — that package is abandoned
-  // (last push 04-03-2023) and so is every Sublime alternative. The explicit
-  // Packages/User/ path is deliberate: a bare filename would resolve against
-  // any package that happens to ship the same name.
-  "color_scheme": "Packages/User/gruvbox-light-hard.sublime-color-scheme",
-  // A File Icon 4.0 draws through Sublime's file icon themes (Build 4213+),
-  // and opens its theme picker at every launch until this key exists.
-  "file_icon_theme": "A File Icon.sublime-file-icons",
+  // (last push 04-03-2023) and so is every Sublime alternative. A
+  // .sublime-color-scheme is unique by its name, not its path: same-named
+  // files in any package are merged into one (Default's ui.py).
+  "color_scheme": "Packages/preen/gruvbox-light-hard.sublime-color-scheme",
   "open_files_in_new_window": false,
-  "added_words":
-  [
-		"dev"
-  ],
 }

@@ -395,10 +395,13 @@ def _dotted(data, key):
     return cur
 
 
-def read_jsonc(path, key, **_opts):
+def _load_jsonc(path):
     with open(path, encoding="utf-8-sig") as fh:
-        data = json.loads(_strip_jsonc(fh.read()))
-    return _dotted(data, key)
+        return json.loads(_strip_jsonc(fh.read()))
+
+
+def read_jsonc(path, key, **_opts):
+    return _dotted(_load_jsonc(path), key)
 
 
 def read_toml(path, key, **_opts):
@@ -2422,6 +2425,88 @@ READERS = {
 }
 
 
+# ── layered targets ───────────────────────────────────────────────────────────
+# Some applications assemble one config from several files of one format, each
+# overriding the one below: Zed reads settings.json over global_settings.json,
+# Sublime collates a settings file across packages with Packages/User last. A
+# target names the files under its `path` in `over`, lowest first, and the
+# application's rule for combining them in `merge`. A file of the stack that is
+# missing, the top one included, is an empty layer.
+
+
+def _merge_zed(low, high):
+    """Zed's rule: objects merge key by key, recursively; any other value, an
+    array included, replaces what is below it whole. Measured on Zed 1.23.2: a
+    user `binary` {path} over a global {path, arguments} keeps the global
+    arguments; a user `arguments` array replaces the global one."""
+    if isinstance(low, dict) and isinstance(high, dict):
+        merged = dict(low)
+        for key, value in high.items():
+            merged[key] = _merge_zed(low[key], value) if key in low else value
+        return merged
+    return high
+
+
+def _merge_sublime(low, high):
+    """Sublime's rule: a top-level key replaces the one below it whole, an
+    object included — measured on Sublime Text 4215."""
+    return {**low, **high}
+
+
+LAYER_RULES = {"zed": _merge_zed, "sublime": _merge_sublime}
+LAYERED_FORMATS = ("jsonc",)
+
+
+def layer_problem(tname, t):
+    """What is wrong with a target's layer declaration; None when it is sound or absent."""
+    over, rule = t.get("over"), t.get("merge")
+    if over is None and rule is None:
+        return None
+    if t.get("host"):
+        return f"target '{tname}' on {t['host']} names layers — they are read only on this machine"
+    if t.get("format") not in LAYERED_FORMATS:
+        return (f"target '{tname}' names layers, and format '{t.get('format')}' has no merge — "
+                f"only {', '.join(LAYERED_FORMATS)} does")
+    known = ", ".join(sorted(LAYER_RULES))
+    if over is None:
+        return f"target '{tname}' names a merge rule and no layers (over) for it to merge"
+    if not (isinstance(over, list) and over and all(isinstance(p, str) and p for p in over)):
+        return f"target '{tname}': over is a non-empty list of paths, lowest layer first"
+    if rule is None:
+        return f"target '{tname}' names layers (over) and no merge rule — known: {known}"
+    if not isinstance(rule, str) or rule not in LAYER_RULES:
+        return f"target '{tname}' has unknown merge rule '{rule}' — known: {known}"
+    return None
+
+
+def layer_paths(t):
+    """The files a target's path is read over, lowest first, `~` expanded; [] for none."""
+    return [os.path.expanduser(p) for p in t.get("over", [])]
+
+
+def read_target(t, path, key, accumulate=False, host=None):
+    """One key from a target as its application assembles it: a layered
+    target's whole stack merged by its rule, any other its reader's read."""
+    if not t.get("over"):
+        return READERS[t["format"]](path, key, accumulate=accumulate, host=host)
+    merge = LAYER_RULES[t["merge"]]
+    data = {}
+    for layer in layer_paths(t) + [path]:
+        try:
+            # Zed reads an exactly empty settings file as {}, where json.loads
+            # refuses one (settings_store.rs at v1.23.2,
+            # parse_and_migrate_zed_settings); a byte more goes to its parser.
+            if t["merge"] == "zed" and os.path.getsize(layer) == 0:
+                continue
+            doc = _load_jsonc(layer)
+        except FileNotFoundError:
+            continue
+        if not isinstance(doc, dict):
+            raise ReadError(f"{layer} is not a JSON object")
+        data = merge(data, doc)
+    return _dotted(data, key)
+
+
 # ── ceiling probes ────────────────────────────────────────────────────────────
 # An `unreachable` entry with recheck="auto" is not a shrug — it re-proves the
 # ceiling from data the application ships, so a lifted limitation is noticed
@@ -2902,6 +2987,8 @@ def resolve_target(name, entry, targets, where="the spec"):
         return None, None, f"target '{tname}' is missing path or format"
     if t["format"] not in READERS:
         return None, None, f"target '{tname}' has unknown format '{t['format']}'"
+    if problem := layer_problem(tname, t):
+        return None, None, problem
     if t.get("host"):
         if not re.fullmatch(r"[A-Za-z0-9._-]+", t["host"]):
             return None, None, f"target '{tname}' has an unusable host '{t['host']}'"
@@ -3683,9 +3770,18 @@ def prove_scope(tname, entry, targets, where):
         return f"remote — the file lives on {t['host']}, and a copy emptied here says nothing about it"
     if t["format"] in LIVE_FORMATS:
         return f"read from a live application, not a file ({t['format']})"
-    if not os.path.isfile(path):
-        return f"not deployed here — nothing at {t['path']}"
+    if not any(os.path.isfile(p) for p in [path] + layer_paths(t)):
+        return f"not deployed here — nothing at {t['path']}" + (" nor under it" if t.get("over") else "")
     return None
+
+
+def _emptied_copy(room, path, fmt):
+    """An emptied copy of `path`, alone in `room`."""
+    os.makedirs(room, exist_ok=True)
+    copy_path = os.path.join(room, os.path.basename(os.path.expanduser(path)))
+    with open(copy_path, "w", encoding="utf-8") as fh:
+        fh.write(empty_document(fmt))
+    return copy_path
 
 
 def prove(spec, targets, came_from):
@@ -3722,11 +3818,13 @@ def prove(spec, targets, came_from):
             name = entry.get("target", tname)
             t = targets[name]
             room = os.path.join(scratch, name)
-            os.makedirs(room, exist_ok=True)
-            copy_path = os.path.join(room, os.path.basename(os.path.expanduser(t["path"])))
-            with open(copy_path, "w", encoding="utf-8") as fh:
-                fh.write(empty_document(t["format"]))
-            emptied[name]["path"] = copy_path
+            emptied[name]["path"] = _emptied_copy(room, t["path"], t["format"])
+            # A row the emptied top leaves unset is still green from a layer
+            # beneath, so a layered target's whole stack is emptied — each layer
+            # in a room of its own, since two may share a name (Sublime's do).
+            if t.get("over"):
+                emptied[name]["over"] = [_emptied_copy(os.path.join(room, f"layer{i}"), layer, t["format"])
+                                         for i, layer in enumerate(t["over"])]
 
         only = {"pref": {}}
         for label, pref_id, tname, entry in rows:
@@ -3844,6 +3942,8 @@ def main():
         t = targets.get(tname)
         if not isinstance(t, dict):
             sys.exit(f"unknown target '{tname}' — known: {', '.join(sorted(targets))}")
+        if problem := layer_problem(tname, t):
+            sys.exit(problem)
         path = os.path.expanduser(t["path"])
         host = t.get("host")
         try:
@@ -3851,7 +3951,7 @@ def main():
                 path = remote_path(t, targets)
                 if path is None:
                     sys.exit(f"{t['path']} is not on {host}")
-            print(normalise(READERS[t["format"]](path, key, accumulate=True, host=host)))
+            print(normalise(read_target(t, path, key, accumulate=True, host=host)))
         except ReadSkip as exc:
             sys.exit(f"skipped {key} from {t['path']}: {exc}")
         except (OSError, ReadError, ET.ParseError, json.JSONDecodeError, tomllib.TOMLDecodeError, UnicodeDecodeError) as exc:
@@ -3965,13 +4065,14 @@ def emit_assertions(spec, targets, came_from, read):
                 if path is None:
                     emit("warn", f"{label}: {t['path']} not on {host} — skipped")
                     continue
-            elif not host and t["format"] not in ("defaults", "lshandler") and not os.path.exists(path):   # a defaults domain is not a file
-                emit("warn", f"{label}: {t['path']} not deployed — skipped")
+            elif (not host and t["format"] not in ("defaults", "lshandler")   # a defaults domain is not a file
+                  and not any(os.path.exists(p) for p in [path] + layer_paths(t))):
+                emit("warn", f"{label}: {t['path']} not deployed{', nor any layer under it' if t.get('over') else ''} — skipped")
                 continue
 
             accumulate = bool(entry.get("accumulate"))
             try:
-                raw = READERS[t["format"]](path, key, accumulate=accumulate, host=host)
+                raw = read_target(t, path, key, accumulate=accumulate, host=host)
             except ReadSkip as exc:
                 emit("warn", f"{label}: skipped — {exc}")
                 continue

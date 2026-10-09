@@ -17,15 +17,13 @@ ripgrep/config	~/.config/ripgrep/config	link
 shell/hushlogin	~/.hushlogin	link
 shell/inputrc	~/.inputrc	link
 ssh/config	~/.ssh/config	link	0600
-editor/zed/settings.json	~/.config/zed/settings.json	link
+editor/zed/settings.json	~/.config/zed/global_settings.json	link
 editor/zed/keymap.json	~/.config/zed/keymap.json	link
 editor/zed/tasks.json	~/.config/zed/tasks.json	link
-editor/sublime/Preferences.sublime-settings	~/Library/Application Support/Sublime Text/Packages/User/Preferences.sublime-settings	copy
-editor/sublime/Package Control.sublime-settings	~/Library/Application Support/Sublime Text/Packages/User/Package Control.sublime-settings	copy
-editor/sublime/gruvbox-light-hard.sublime-color-scheme	~/Library/Application Support/Sublime Text/Packages/User/gruvbox-light-hard.sublime-color-scheme	copy
-editor/sublime/Terminus.sublime-settings	~/Library/Application Support/Sublime Text/Packages/User/Terminus.sublime-settings	copy
-editor/sublime/Terminus View.sublime-settings	~/Library/Application Support/Sublime Text/Packages/User/Terminus View.sublime-settings	copy
-editor/sublime/Terminus.hidden-color-scheme	~/Library/Application Support/Sublime Text/Packages/User/Terminus/Terminus.hidden-color-scheme	copy
+editor/sublime/Preferences.sublime-settings	~/Library/Application Support/Sublime Text/Packages/preen/Preferences.sublime-settings	link
+editor/sublime/gruvbox-light-hard.sublime-color-scheme	~/Library/Application Support/Sublime Text/Packages/preen/gruvbox-light-hard.sublime-color-scheme	link
+editor/sublime/Terminus.sublime-settings	~/Library/Application Support/Sublime Text/Packages/preen/Terminus.sublime-settings	link
+editor/sublime/Terminus View.sublime-settings	~/Library/Application Support/Sublime Text/Packages/preen/Terminus View.sublime-settings	link
 terminal/kitty/open-actions.conf	~/.config/kitty/open-actions.conf	link
 terminal/kitty/mime.types	~/.config/kitty/mime.types	link
 mise/config.toml	~/.config/mise/config.toml	link

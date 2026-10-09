@@ -63,6 +63,26 @@ curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/git/install.sh 
 curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/git/install.sh | bash
 ```
 
+Zed's config, [`editor/zed/`](editor/zed/README.md), the same way:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/editor/zed/install.sh | bash -s -- --dry-run
+```
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/editor/zed/install.sh | bash
+```
+
+Sublime Text's, [`editor/sublime/`](editor/sublime/README.md), the same way:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/editor/sublime/install.sh | bash -s -- --dry-run
+```
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/editor/sublime/install.sh | bash
+```
+
 Each installer prints its plan and makes every refusal before its first
 write, then copies its files into your config — copies, never symlinks, a
 file of yours it replaces backed up beside it. The statusline's installer
@@ -72,8 +92,13 @@ line each to the zshenv and zshrc zsh reads — `~/.zshenv` and `~/.zshrc`
 unless `ZDOTDIR` moves them — and to `~/.inputrc`; tmux's appends one line
 to `~/.config/tmux/tmux.conf`, or to `~/.tmux.conf` where only that is there;
 git's appends one line to the file `git config --global` writes,
-`~/.gitconfig` unless only `~/.config/git/config` is there. `--help` is each
-script's manual.
+`~/.gitconfig` unless only `~/.config/git/config` is there. Zed's and
+Sublime Text's write a layer beneath your own settings, never into them:
+Zed's copies its settings to `~/.config/zed/global_settings.json`, which Zed
+reads under your `~/.config/zed/settings.json`, and its keymap and tasks
+only where you have none; Sublime Text's copies its files into a package of
+their own, `Packages/preen`, which Sublime reads under your `Packages/User`.
+`--help` is each script's manual.
 
 ## Take the setup
 
@@ -97,9 +122,13 @@ it, and asks before it goes on without one the setup needs. It asks your
 name and email for git and sets them in `~/.gitconfig.local`, leaving the
 rest of that file as it is; deploys every row of `manifest.tsv`; and writes
 `~/.config/kitty/tab-title.conf`, which holds your home, the one path kitty's
-config language cannot template. It ends by naming each overlay the shipped
-files read and everything it set aside. The statusline is linked but not
-wired: its installer, run from the clone, wires it.
+config language cannot template. Zed's and Sublime Text's settings are linked
+where their pieces copy them, `~/.config/zed/global_settings.json` and
+Sublime's `Packages/preen`, beneath your own `~/.config/zed/settings.json` and
+`Packages/User`, which bootstrap never writes. It ends by naming each
+overlay, the file of yours that wins over a shipped one, and everything it
+set aside. The statusline is linked but not wired: its installer, run from
+the clone, wires it.
 
 Every refusal, bootstrap's or `preen apply`'s, comes before the first write,
 and bootstrap never modifies your clone. What it finds in the way:
@@ -137,12 +166,14 @@ they are the author's:
 
 Some of the author's choices are felt at once. The zsh rows hold for the
 shell piece taken alone too; [its page](shell/README.md#what-changes) names
-the exceptions. [tmux's page](terminal/tmux/README.md#what-changes) and
-[git's](git/README.md#what-changes) list the rest of their choices; they hold
-for the setup too. An undo line goes in an overlay, where it wins over the
-shipped file: the one its row names, or else
+the exceptions. [tmux's page](terminal/tmux/README.md#what-changes),
+[git's](git/README.md#what-changes), [Zed's](editor/zed/README.md#what-changes)
+and [Sublime Text's](editor/sublime/README.md#what-changes) list the rest of
+their choices; they hold for the setup too. An undo line goes in an overlay,
+where it wins over the shipped file: the one its row names, or else
 its tool's — `~/.zshrc.local`, `~/.config/kitty/local.conf`,
-`~/.config/tmux/local.conf`, `~/.gitconfig.local` or `~/.ssh/config.local`.
+`~/.config/tmux/local.conf`, `~/.gitconfig.local`, `~/.ssh/config.local`,
+`~/.config/zed/settings.json` or Sublime's `Packages/User`.
 
 | Tool | What you notice | Undo |
 | --- | --- | --- |
@@ -180,7 +211,25 @@ pull, rebase or merge settings say: that is what its flags are for.
 `git -C ~/preen status --short` names the file and `git -C ~/preen diff`
 shows the edit. Its lines belong in the `.local` overlay beside the live
 file; `git -C ~/preen checkout -- <file>` then clears it, and the pull goes
-through.
+through. Zed, where `~/.config/zed/settings.json` is a link into the clone,
+writes the settings you change into the clone the same way, and has no
+`.local` overlay: keep those settings, clear the file, pull, then replace
+that link with a plain file holding them.
+
+`preen apply` deletes nothing. A row the pull removes, or points at another
+path, leaves the file it deployed: right after a pull,
+`git -C ~/preen diff ORIG_HEAD HEAD -- manifest.tsv` shows each as a `-`
+line whose target no `+` line names, and
+`git -C ~/preen log -p -- manifest.tsv` shows every such change, commit by
+commit, earlier pulls' included. Where the tool still reads that file, it
+can outrank the new row: a copy left in Sublime's `Packages/User` wins over
+`Packages/preen`, and a link left at `~/.config/zed/settings.json` takes
+Zed's writes into the clone. Delete a link into the clone. From a copied
+file, delete the setup's lines and keep yours; where none are yours, move
+its earliest backup back (§ Leaving), or delete the file where it has none.
+Keep `Package Control.sublime-settings` as it is: it lists the packages
+Package Control installed, and at Sublime's next start Package Control
+removes each it no longer lists.
 
 kitty's tab title does not follow the clone: bootstrap writes its line into
 `~/.config/kitty/tab-title.conf`, which wins over `kitty.conf`, so a change
@@ -214,6 +263,17 @@ In this order:
 If you ran `macos/apply.sh`, `sh` the `macos.unpreened.*.sh` it named, to put
 back the settings it changed.
 
+Package Control, when it upgrades ayu, copies the setup's theme into Sublime
+Text's `Packages/User/Preferences.sublime-settings` as
+`"theme": "ayu-light.sublime-theme"`, which outlives the links: delete that
+line unless you set it yourself.
+
+Terminus, where it ran under the setup, generated
+`Packages/User/Terminus/Terminus.hidden-color-scheme` from the setup's
+palette, and `Packages/User/Terminus.hidden-color-scheme` from its
+background; both outlive the links. Delete them, and a Terminus you keep
+generates them again from its own settings when it next loads.
+
 ## What is here
 
 ```
@@ -223,8 +283,8 @@ terminal/tmux/     tmux for SSH: true colour, mouse, a deep history, resurrect; 
 terminal/bat/      one line: bat in the terminal's palette
 terminal/ncdu/     one line: ncdu in the terminal's palette
 shell/             zsh, readline, hushlogin, atuin; its own page and installer
-editor/zed/        settings, a keymap on a JetBrains base, tasks
-editor/sublime/    settings, Terminus to match, a vendored light scheme
+editor/zed/        settings, a keymap on a JetBrains base, tasks; its own page and installer
+editor/sublime/    settings, Terminus to match, a vendored light scheme; its own page and installer
 git/               gitconfig, the global ignore, no identity — bootstrap asks for it; its own page and installer
 gh/                the CLI's own preferences
 ripgrep/           flags: hidden in, .git out, smart case, clickable matches
@@ -247,19 +307,25 @@ no second list, so "installed" and "checked" read the same row.
 
 **`link` or `copy`, decided by who writes the file.** Where an application only
 reads its config, the live file is a symlink and the repo file _is_ the config.
-Where the application rewrites its own config — Sublime, gh, kitty for its
-theme file — the row is a copy, because a symlink would be replaced by a plain
-file the first time it saved.
+Where the application rewrites its own config — gh, kitty for its theme file —
+the row is a copy, because a symlink would be replaced by a plain file the
+first time it saved.
 
-**A piece stands alone through the tool's own include.** kitty reads its
-includes last-wins, so `terminal/kitty/` lands under a directory of its own
-plus one `include` line in your `kitty.conf`, never an edit inside it; the
-files kitty reads by name from its config root are copied only where you
-have none. zsh's include is `source` and readline's `$include`, so `shell/`
-lands the same way, one line appended to each of your files; tmux's is
-`source-file` and git's `[include]`, so `terminal/tmux/` and `git/` do too.
+**A piece stands alone through the tool's own include or lower layer.**
+kitty reads its includes last-wins, so `terminal/kitty/` lands under a
+directory of its own plus one `include` line in your `kitty.conf`, never an
+edit inside it; the files kitty reads by name from its config root are
+copied only where you have none. zsh's include is `source` and readline's
+`$include`, so `shell/` lands the same way, one line appended to each of your
+files; tmux's is `source-file` and git's `[include]`, so `terminal/tmux/` and
+`git/` do too.
+Zed reads `global_settings.json` beneath your `settings.json`, and Sublime
+Text a package beneath your `Packages/User`, so `editor/zed/` and
+`editor/sublime/` land in that lower layer, and your keys win over it but
+for the exceptions Zed's page names; the keymap and tasks Zed reads by name
+alone are copied only where you have none.
 A tool with one file and no include — the statusline — is copied and
-tailored by its installer. Nothing installed either way points back here.
+tailored by its installer. Nothing a piece installs points back here.
 
 **Themes are a family, not one scheme.** Gruvbox Dark Hard where code runs —
 kitty, tmux, the statusline — and Gruvbox Light Hard where it is read — Zed,

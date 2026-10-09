@@ -1,4 +1,4 @@
-// Global Zed tasks — Cmd+Shift+X (JetBrains keymap: "Run Anything").
+// Global Zed tasks — Ctrl+Alt+R / Shift+F10 (JetBrains keymap: "Run Anything").
 //
 // These are deliberately global rather than per-project: the task modal is
 // fuzzy-searched, so a Rust task in a Svelte project costs a few characters
@@ -30,8 +30,8 @@
     "save": "all"
   },
   {
-    // nextest rather than `cargo test`: it is installed, it is faster, and it
-    // reports per-test rather than per-binary.
+    // nextest rather than `cargo test` (needs cargo-nextest): it is faster, and
+    // it reports per-test rather than per-binary.
     "label": "rust: test",
     "command": "cargo nextest run",
     "save": "all"
@@ -62,7 +62,7 @@
     "reveal": "no_focus"
   },
   {
-    // Supply-chain pass. Both binaries are installed; `deny` also covers
+    // Supply-chain pass; needs cargo-audit and cargo-deny. `deny` also covers
     // licences and duplicate versions, which `audit` does not.
     "label": "rust: audit + deny",
     "command": "cargo audit && cargo deny check",

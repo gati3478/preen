@@ -25,7 +25,8 @@ yours still wins. A ~/.gitconfig that names the git piece's copy,
 ~/.config/git/preen/gitconfig, is not moved either: the copy includes
 ~/.gitconfig.local, so moved there it would include itself. Every refusal,
 its own or preen apply's, comes before the first write. It ends by naming
-the overlays the shipped files read and every file this run set aside.
+the overlays, each yours and read with a shipped file, and every file this
+run set aside.
 EOF
 }
 # --help anywhere wins, even after an argument that is not one.
@@ -601,20 +602,34 @@ else
 fi
 
 # ── what is the adopter's now ────────────────────────────────────────────────
-# Every overlay the shipped files read, beside the file that reads it. None is
-# created: each reader skips an absent one without a word.
-OVERLAID="~/.zshenv ~/.zprofile ~/.zshrc ~/.gitconfig ~/.ssh/config ~/.config/tmux/tmux.conf ~/.config/kitty/kitty.conf"
-overlay_of() { # overlay_of <~path> → the overlay the shipped file at that path reads, if it reads one
+# Each shipped file read with an overlay, and that overlay: a file the shipped
+# one includes, or, for Zed and Sublime Text, the adopter's own file, which the
+# editor reads over the shipped one. None is created here. One ~ path a line,
+# since Sublime's hold spaces.
+SUBLIME_PACKAGES="~/Library/Application Support/Sublime Text/Packages"
+OVERLAID="~/.zshenv
+~/.zprofile
+~/.zshrc
+~/.gitconfig
+~/.ssh/config
+~/.config/tmux/tmux.conf
+~/.config/kitty/kitty.conf
+~/.config/zed/global_settings.json
+$SUBLIME_PACKAGES/preen/Preferences.sublime-settings
+$SUBLIME_PACKAGES/preen/Terminus.sublime-settings
+$SUBLIME_PACKAGES/preen/Terminus View.sublime-settings"
+overlay_of() { # overlay_of <~path> → the overlay read with the shipped file at that path, if there is one
   case "$1" in
     "~/.zshenv"|"~/.zprofile"|"~/.zshrc"|"~/.gitconfig"|"~/.ssh/config") echo "$1.local" ;;
     "~/.config/tmux/tmux.conf"|"~/.config/kitty/kitty.conf") echo "${1%/*}/local.conf" ;;
+    "~/.config/zed/global_settings.json") echo "${1%/*}/settings.json" ;;
+    "$SUBLIME_PACKAGES/preen/"*.sublime-settings) echo "$SUBLIME_PACKAGES/User/${1##*/}" ;;
   esac
 }
 echo
 echo "== overlays =="
-echo "Each is read by a shipped file, and a line of yours there wins over it:"
-# shellcheck disable=SC2086  # OVERLAID is a list of ~ paths, meant to split and never expanded
-for t in $OVERLAID; do
+echo "Each is read with a shipped file, and a line of yours there wins over it:"
+while IFS= read -r t; do
   ov="$(overlay_of "$t")"
   # Not `${ov/#\~/$HOME}`: bash 5.2 reads an `&` in HOME as the matched `~`.
   case "$ov" in '~'|'~/'*) ov_abs="$HOME${ov#\~}" ;; *) ov_abs="$ov" ;; esac
@@ -628,11 +643,13 @@ for t in $OVERLAID; do
       *) printf '  %-28s absent — create it for lines of your own\n' "$ov" ;;
     esac
   fi
-done
+done <<< "$OVERLAID"
 
 # A piece taken alone copies a shipped file into its own directory and appends
 # a line sourcing the copy to the adopter's file — git's piece, a line
-# including it — and the copy reads the overlay the same way.
+# including it — and the copy reads the overlay the same way. The Zed and
+# Sublime Text pieces append no line: they copy to the paths the setup links,
+# so the link replaces each copy, and preen apply backs up one that differs.
 piece_of() { # piece_of <~path> → the piece that wires the file at that path, and the directory of its copies
   case "$1" in
     "~/.zshrc"|"~/.zshenv") echo "shell ~/.config/zsh/preen/" ;;
