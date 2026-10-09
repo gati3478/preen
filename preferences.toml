@@ -943,21 +943,17 @@ why = "Remembered geometry drifts — so size is declared, never inherited from 
 key = "remember_window_size"
 want = "no"
 
-# The declared size itself. cship's `width = 129` is a fallback a terminal
-# never reaches, not a copy of this, so only the geometry is pinned here.
+# The declared width. cship's `width = 129` is a fallback a terminal never
+# reaches, not a copy of this. The height depends on the screen, so each host
+# pins its own.
 [pref.deterministic_geometry.targets.kitty_width]
 target = "kitty"
 key = "initial_window_width"
 want = "1300"
 
-[pref.deterministic_geometry.targets.kitty_height]
-target = "kitty"
-key = "initial_window_height"
-want = "840"
-
 [pref.window_margin]
 value = "half a cell"
-why = "Text should not touch chrome. kitty takes the gap in points: half of Fira Code's 9.85 pt cell at 16 pt."
+why = "Text should not touch chrome. kitty takes the gap in points: half of kitty's 10 pt cell at 16 pt."
 
 [pref.window_margin.targets.kitty]
 key = "window_padding_width"
