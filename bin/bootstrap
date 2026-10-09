@@ -21,9 +21,11 @@ manifest.tsv through preen apply, and writes kitty's tab title for your home.
 Before the deploy, a plain ~/.gitconfig of yours moves to ~/.gitconfig.local
 and ~/.ssh/config to ~/.ssh/config.local, unless that .local is there or the
 file names it: the shipped files include those overlays, so every line of
-yours still wins. Every refusal, its own or preen apply's, comes before the
-first write. It ends by naming the overlays the shipped files read and every
-file this run set aside.
+yours still wins. A ~/.gitconfig that names the git piece's copy,
+~/.config/git/preen/gitconfig, is not moved either: the copy includes
+~/.gitconfig.local, so moved there it would include itself. Every refusal,
+its own or preen apply's, comes before the first write. It ends by naming
+the overlays the shipped files read and every file this run set aside.
 EOF
 }
 # --help anywhere wins, even after an argument that is not one.
@@ -109,71 +111,19 @@ bare_shim() { # bare_shim <tool> → true when <tool> is macOS's /usr/bin stub w
 # set through a symlink lands in the file it points at.
 GITCONFIG_LOCAL="$HOME/.gitconfig.local"
 GITCONFIG="$HOME/.gitconfig"
+# The git piece's copy of the shipped gitconfig, under ~. Like the shipped
+# file, it includes ~/.gitconfig.local.
+GIT_PIECE_COPY=".config/git/preen/gitconfig"
 # The tab title is written for any home but the one kitty.conf's line names.
 AUTHORED_HOME="/Users/gati3478"
 KITTY_CONF="$REPO/terminal/kitty/kitty.conf"
 TAB_TITLE_AWK="$REPO/terminal/kitty/tab-title.awk"   # the kitty drop-in runs it too
 TAB_TITLE_CONF="$HOME/.config/kitty/tab-title.conf"
-refused=no
-if [ -L "$GITCONFIG_LOCAL" ]; then
-  echo "bootstrap: ~/.gitconfig.local is a symlink to $(readlink "$GITCONFIG_LOCAL") — set user.name and user.email in that file yourself, or replace the link with a file" >&2
-  refused=yes
-elif [ -e "$GITCONFIG_LOCAL" ] && [ ! -f "$GITCONFIG_LOCAL" ]; then
-  echo "bootstrap: ~/.gitconfig.local is not a file — the identity is set in it, and the shipped ~/.gitconfig includes it" >&2
-  refused=yes
-elif [ -e "$GITCONFIG_LOCAL" ] && [ ! -r "$GITCONFIG_LOCAL" ]; then
-  echo "bootstrap: ~/.gitconfig.local is not readable — the identity is set in it, and the shipped ~/.gitconfig includes it" >&2
-  refused=yes
-elif [ -e "$GITCONFIG_LOCAL" ]; then
-  # The shipped ~/.gitconfig includes ~/.gitconfig.local, so an include of
-  # ~/.gitconfig there is a loop, and git stops every command on it. Read as
-  # text: git may be the Command Line Tools stub. awk prints each include and
-  # includeIf path as git reads the value — quotes dropped, a comment cut — and
-  # an includeIf is a loop the moment its condition holds. The path is then
-  # resolved as git resolves it: a leading ~ or ~<this user> expanded, a
-  # relative path taken against this file's directory, which is ~, no variable
-  # expanded, and any spelling of the directory followed to the real one, a
-  # `..` after a link taken from where the link points. A link is followed by
-  # name, each relative target taken against the link's own directory, for a
-  # bounded number of hops, so a cycle of links ends. A link to ~/.gitconfig
-  # is the same loop even while it dangles, since the deploy writes that name,
-  # and so is the clone's git/gitconfig, which ~/.gitconfig becomes a link to.
-  # What ~/.gitconfig is before the run is not compared: the deploy replaces
-  # it, so in a stow home, where it links to ~/dotfiles/gitconfig, an include
-  # of that file is kept.
-  tab="$(printf '\t')"
-  home_gitconfig="$(cd -P "$HOME" && pwd -P)/.gitconfig"
-  me="$(id -un 2>/dev/null)" || me=""
-  loop=""
-  while IFS= read -r inc; do
-    [ -n "$inc" ] || continue
-    n="${inc%%"$tab"*}"; p="${inc#*"$tab"}"
-    case "$p" in
-      "~/"*) p="$HOME/${p#"~/"}" ;;
-      "~$me/"*) p="$HOME/${p#"~$me/"}" ;;
-      /*) ;;
-      *) p="$HOME/$p" ;;
-    esac
-    hops_left=40
-    while [ -z "$loop" ] && [ "$hops_left" -gt 0 ]; do
-      dir="${p%/*}"
-      dir="$(cd -P "${dir:-/}" 2>/dev/null && pwd -P)" || break
-      p="$dir/${p##*/}"
-      if [ "$p" = "$home_gitconfig" ] || [ "$p" -ef "$REPO/git/gitconfig" ]; then
-        loop="line $n includes ~/.gitconfig ($(sed -n "${n}{s/^[[:space:]]*//;p;}" "$GITCONFIG_LOCAL"))"
-      elif [ -L "$p" ]; then
-        target="$(readlink "$p")"
-        case "$target" in
-          /*) p="$target" ;;
-          *) p="$dir/$target" ;;
-        esac
-        hops_left=$((hops_left - 1))
-      else
-        break
-      fi
-    done
-    [ -z "$loop" ] || break
-  done <<< "$(awk '
+# Read as text: git may be the Command Line Tools stub. A path is printed as
+# git reads the value — quotes dropped, a comment cut — and an include section
+# counts from its header's own line, `[include] path = …`, as git's does.
+git_includes() { # git_includes <file> → each include and includeIf path in it, as <line><tab><value>
+  awk '
     function gitval(s,    v, q, c, i, sp) {
       v = ""; q = 0; sp = 0
       for (i = 1; i <= length(s); i++) {
@@ -193,7 +143,73 @@ elif [ -e "$GITCONFIG_LOCAL" ]; then
     }
     !/^[ \t]*\[/ { rest = $0 }
     inc && tolower(rest) ~ /^[ \t]*path[ \t]*=/ { v = rest; sub(/^[^=]*=/, "", v); print NR "\t" gitval(v) }
-  ' "$GITCONFIG_LOCAL")"
+  ' "$1"
+}
+refused=no
+if [ -L "$GITCONFIG_LOCAL" ]; then
+  echo "bootstrap: ~/.gitconfig.local is a symlink to $(readlink "$GITCONFIG_LOCAL") — set user.name and user.email in that file yourself, or replace the link with a file" >&2
+  refused=yes
+elif [ -e "$GITCONFIG_LOCAL" ] && [ ! -f "$GITCONFIG_LOCAL" ]; then
+  echo "bootstrap: ~/.gitconfig.local is not a file — the identity is set in it, and the shipped ~/.gitconfig includes it" >&2
+  refused=yes
+elif [ -e "$GITCONFIG_LOCAL" ] && [ ! -r "$GITCONFIG_LOCAL" ]; then
+  echo "bootstrap: ~/.gitconfig.local is not readable — the identity is set in it, and the shipped ~/.gitconfig includes it" >&2
+  refused=yes
+elif [ -e "$GITCONFIG_LOCAL" ]; then
+  # The shipped ~/.gitconfig includes ~/.gitconfig.local, so an include of
+  # ~/.gitconfig there is a loop, and git stops every command on it; so is an
+  # include of the git piece's copy, which includes ~/.gitconfig.local in turn.
+  # git_includes reads each include and includeIf path, and an includeIf is a
+  # loop the moment its condition holds. The path is then resolved as git
+  # resolves it: a leading ~ or ~<this user> expanded, a relative path taken
+  # against this file's directory, which is ~, no variable expanded, and any
+  # spelling of the directory followed to the real one, a `..` after a link
+  # taken from where the link points. A link is followed by
+  # name, each relative target taken against the link's own directory, for a
+  # bounded number of hops, so a cycle of links ends. A link to ~/.gitconfig
+  # is the same loop even while it dangles, since the deploy writes that name,
+  # and so is the clone's git/gitconfig, which ~/.gitconfig becomes a link to.
+  # What ~/.gitconfig is before the run is not compared: the deploy replaces
+  # it, so in a stow home, where it links to ~/dotfiles/gitconfig, an include
+  # of that file is kept. The copy is compared by name too, its directory
+  # resolved as a path's is; where that directory is not, there is no copy.
+  tab="$(printf '\t')"
+  home_gitconfig="$(cd -P "$HOME" && pwd -P)/.gitconfig"
+  piece_copy=""
+  piece_dir="$(cd -P "$HOME/${GIT_PIECE_COPY%/*}" 2>/dev/null && pwd -P)" && piece_copy="$piece_dir/${GIT_PIECE_COPY##*/}"
+  me="$(id -un 2>/dev/null)" || me=""
+  loop=""
+  while IFS= read -r inc; do
+    [ -n "$inc" ] || continue
+    n="${inc%%"$tab"*}"; p="${inc#*"$tab"}"
+    case "$p" in
+      "~/"*) p="$HOME/${p#"~/"}" ;;
+      "~$me/"*) p="$HOME/${p#"~$me/"}" ;;
+      /*) ;;
+      *) p="$HOME/$p" ;;
+    esac
+    hops_left=40
+    while [ -z "$loop" ] && [ "$hops_left" -gt 0 ]; do
+      dir="${p%/*}"
+      dir="$(cd -P "${dir:-/}" 2>/dev/null && pwd -P)" || break
+      p="$dir/${p##*/}"
+      if [ "$p" = "$home_gitconfig" ] || [ "$p" -ef "$REPO/git/gitconfig" ]; then
+        loop="line $n includes ~/.gitconfig ($(sed -n "${n}{s/^[[:space:]]*//;p;}" "$GITCONFIG_LOCAL"))"
+      elif [ -n "$piece_copy" ] && [ "$p" = "$piece_copy" ]; then
+        loop="line $n includes ~/$GIT_PIECE_COPY ($(sed -n "${n}{s/^[[:space:]]*//;p;}" "$GITCONFIG_LOCAL")), the git piece's copy, which includes ~/.gitconfig.local in turn"
+      elif [ -L "$p" ]; then
+        target="$(readlink "$p")"
+        case "$target" in
+          /*) p="$target" ;;
+          *) p="$dir/$target" ;;
+        esac
+        hops_left=$((hops_left - 1))
+      else
+        break
+      fi
+    done
+    [ -z "$loop" ] || break
+  done <<< "$(git_includes "$GITCONFIG_LOCAL")"
   if [ -n "$loop" ]; then
     echo "bootstrap: ~/.gitconfig.local $loop, and the shipped ~/.gitconfig includes ~/.gitconfig.local — git would stop every command on that loop; remove the line" >&2
     refused=yes
@@ -215,9 +231,10 @@ if command -v git >/dev/null 2>&1 && ! bare_shim git; then
     refused=yes
   fi
   # The move below, in == git ==: a plain ~/.gitconfig, no ~/.gitconfig.local,
-  # and no mention of it in the file.
+  # and no mention of it or of the git piece's copy in the file.
   if [ -f "$GITCONFIG" ] && [ ! -L "$GITCONFIG" ] && [ ! -e "$GITCONFIG_LOCAL" ] && [ ! -L "$GITCONFIG_LOCAL" ] \
-    && ! grep -q 'gitconfig\.local' "$GITCONFIG" && ! err="$(git_local "$GITCONFIG" --list 2>&1 >/dev/null)"; then
+    && ! grep -q 'gitconfig\.local' "$GITCONFIG" && ! grep -qF "$GIT_PIECE_COPY" "$GITCONFIG" \
+    && ! err="$(git_local "$GITCONFIG" --list 2>&1 >/dev/null)"; then
     echo "bootstrap: git cannot read ~/.gitconfig, which this run moves to ~/.gitconfig.local to set the identity there — $(sed -n 1p <<< "$err")" >&2
     refused=yes
   fi
@@ -366,13 +383,18 @@ echo "== git =="
 # ssh's rule below. Left to preen apply it would be kept as a backup, and its
 # credential helpers, signing and includeIf would go quiet. One that
 # names gitconfig.local would, moved there, include itself, and git stops every
-# command on that ("exceeded maximum include depth").
+# command on that ("exceeded maximum include depth"). So would one that names
+# the git piece's copy, which includes ~/.gitconfig.local. Both are text tests,
+# not git's parse: a name in a comment keeps the file too, which errs toward
+# keeping it, never toward the loop.
 moved=""   # what moves onto its overlay, as ~ paths
 if [ -f "$GITCONFIG" ] && [ ! -L "$GITCONFIG" ]; then
   if [ -e "$GITCONFIG_LOCAL" ]; then
     echo "~/.gitconfig.local is there, so ~/.gitconfig is not moved onto it — the deploy below keeps it as ~/.gitconfig.unpreened.<stamp>"
   elif grep -q 'gitconfig\.local' "$GITCONFIG"; then
     echo "~/.gitconfig names gitconfig.local itself — the deploy below keeps it as ~/.gitconfig.unpreened.<stamp>"
+  elif grep -qF "$GIT_PIECE_COPY" "$GITCONFIG"; then
+    echo "~/.gitconfig names the git piece's copy, ~/$GIT_PIECE_COPY, which includes ~/.gitconfig.local: moved there, it would include itself, and git stops every command on that — the deploy below keeps it as ~/.gitconfig.unpreened.<stamp>"
   else
     run mv "$GITCONFIG" "$GITCONFIG_LOCAL"
     moved="~/.gitconfig"
@@ -609,41 +631,50 @@ for t in $OVERLAID; do
 done
 
 # A piece taken alone copies a shipped file into its own directory and appends
-# a line sourcing the copy to the adopter's file; the copy sources the overlay.
+# a line sourcing the copy to the adopter's file — git's piece, a line
+# including it — and the copy reads the overlay the same way.
 piece_of() { # piece_of <~path> → the piece that wires the file at that path, and the directory of its copies
   case "$1" in
     "~/.zshrc"|"~/.zshenv") echo "shell ~/.config/zsh/preen/" ;;
     "~/.config/tmux/tmux.conf") echo "tmux ~/.config/tmux/preen/" ;;
+    "~/.gitconfig") echo "git ~/.config/git/preen/" ;;
   esac
 }
 # piece_lines <file> <~path> → the numbers of the file's lines that source the
 # piece's copy of the file at <~path>, as `3`, `1 and 4` or `1, 2 and 5`: zsh's
 # `source` or `.`, or tmux's `source-file` or `source` past its flags, then the
-# copy's path, quoted or not, up to a word-initial comment. A file that is not
-# a regular one has none: awk opening a FIFO would wait for a writer.
+# copy's path, quoted or not, up to a word-initial comment; for git, an include
+# or includeIf path, as git_includes reads it, that starts at ~ or / — git
+# expands no variable — and ends in the copy's path. A file that is not a
+# regular one has none: awk opening a FIFO would wait for a writer.
 piece_lines() {
   local piece dir base copy cmds=". source" flags=no
   read -r piece dir <<< "$(piece_of "$2")"
   [ -n "$piece" ] && [ -f "$1" ] || return 0
-  [ "$piece" = shell ] || { cmds="source-file source"; flags=yes; }
   base="${2##*/}"; copy="/${dir#\~/}${base#.}"
-  awk -v cmds=" $cmds " -v copy="${copy//./[.]}\$" -v flags="$flags" '
-    { for (i = 1; i < NF; i++) {
-        if ($i ~ /^#/) break
-        if (!index(cmds, " " $i " ")) continue
-        j = i + 1
-        if (flags == "yes") while (j < NF && $j ~ /^-/) j++
-        w = $j; gsub("[\"\047;)]", "", w)
-        if (w ~ copy) { n[++c] = NR; break }
-      } }
-    END { for (k = 1; k <= c; k++) printf "%s%s", (k == 1 ? "" : (k == c ? " and " : ", ")), n[k] }
-  ' "$1" 2>/dev/null
+  if [ "$piece" = git ]; then
+    git_includes "$1" | awk -v copy="${copy//./[.]}\$" '
+      { v = $0; sub(/^[^\t]*\t/, "", v); c = substr(v, 1, 1) }
+      (c == "~" || c == "/") && v ~ copy { sub(/\t.*/, ""); print }'
+  else
+    [ "$piece" = shell ] || { cmds="source-file source"; flags=yes; }
+    awk -v cmds=" $cmds " -v copy="${copy//./[.]}\$" -v flags="$flags" '
+      { for (i = 1; i < NF; i++) {
+          if ($i ~ /^#/) break
+          if (!index(cmds, " " $i " ")) continue
+          j = i + 1
+          if (flags == "yes") while (j < NF && $j ~ /^-/) j++
+          w = $j; gsub("[\"\047;)]", "", w)
+          if (w ~ copy) { print NR; break }
+        } }' "$1"
+  fi 2>/dev/null | awk '{ n[NR] = $0 } END { for (k = 1; k <= NR; k++) printf "%s%s", (k == 1 ? "" : (k == NR ? " and " : ", ")), n[k] }'
 }
-piece_said() { # piece_said <numbers> <~path> → what those lines of a file at that path source
-  local piece dir
+piece_said() { # piece_said <numbers> <~path> → what those lines of a file at that path source, or include
+  local piece dir verb=source
   read -r piece dir <<< "$(piece_of "$2")"
-  case "$1" in *" "*) printf 'its lines %s source' "$1" ;; *) printf 'its line %s sources' "$1" ;; esac
-  printf " the %s piece's copy in %s, which sources %s" "$piece" "$dir" "$(overlay_of "$2")"
+  case "$piece" in git) verb=include ;; esac
+  case "$1" in *" "*) printf 'its lines %s %s' "$1" "$verb" ;; *) printf 'its line %s %ss' "$1" "$verb" ;; esac
+  printf " the %s piece's copy in %s, which %ss %s" "$piece" "$dir" "$verb" "$(overlay_of "$2")"
 }
 
 # The files this run set aside, in preen apply's words (bootstrap's own lines
@@ -651,8 +682,11 @@ piece_said() { # piece_said <numbers> <~path> → what those lines of a file at 
 # line that sources that overlay, nor a piece's line, which sources the piece's
 # copy, which sources the overlay: from inside it, either sources the overlay
 # until zsh gives up, tmux 3.7c stops on "too many nested files", or tmux 3.4
-# hangs as it starts. A piece's line is read off the file set aside, still in
-# place in a dry run, or the file a link pointed at.
+# hangs as it starts. A gitconfig's lines go in ~/.gitconfig.local by the same
+# rule, never one that includes it nor the git piece's line: from inside it,
+# either includes it until git stops every command on "exceeded maximum include
+# depth". A piece's line is read off the file set aside, still in place in a
+# dry run, or the file a link pointed at.
 # A dry run has no log: it reads the lines it planned, preen apply's and the
 # tab title's, worded as done so the same parse reads them.
 if [ "$dry_run" = yes ]; then
@@ -682,7 +716,10 @@ while IFS= read -r line; do
   ov="$(overlay_of "$orig")"
   where=""
   if [ -n "$ov" ]; then where=": lines you want back go in $ov"; fi
-  case "$orig" in "~/.zshenv"|"~/.zprofile"|"~/.zshrc"|"~/.config/tmux/tmux.conf") where="$where, never one that sources it" ;; esac
+  case "$orig" in
+    "~/.zshenv"|"~/.zprofile"|"~/.zshrc"|"~/.config/tmux/tmux.conf") where="$where, never one that sources it" ;;
+    "~/.gitconfig") where="$where, never one that includes it" ;;
+  esac
   # A link's relative target is taken against the link's directory.
   case "$held" in /*|'~'|'~/'*) ;; *) held="${orig%/*}/$held" ;; esac
   case "$held" in '~'|'~/'*) held="$HOME${held#\~}" ;; esac
@@ -700,8 +737,11 @@ done <<< "$log_lines"
 # No row replaces ~/.tmux.conf, and tmux reads it as well as
 # ~/.config/tmux/tmux.conf: measured on tmux 3.7c and 3.4, a piece's line there
 # still sources the copy after the run. So that line is named, and the copy is
-# not called unread.
+# not called unread. Nor does a row replace ~/.config/git/config, which git
+# reads as well as ~/.gitconfig, so a git piece's line there is named the same
+# way.
 dot_tmux="$(piece_lines "$HOME/.tmux.conf" "~/.config/tmux/tmux.conf")" || dot_tmux=""
+xdg_git="$(piece_lines "$HOME/.config/git/config" "~/.gitconfig")" || xdg_git=""
 case " $pieces_seen " in
   *" shell "*)
     if [ -d "$HOME/.config/zsh/preen" ]; then
@@ -714,15 +754,22 @@ case " $pieces_seen " in
       aside="$aside  ~/.config/tmux/preen/ holds the tmux piece's copy, which nothing reads once this setup's tmux.conf is linked"$'\n'
     fi ;;
 esac
+case " $pieces_seen " in
+  *" git "*)
+    if [ -d "$HOME/.config/git/preen" ] && [ -z "$xdg_git" ]; then
+      aside="$aside  ~/.config/git/preen/ holds the git piece's copy, which nothing reads once this setup's gitconfig is linked"$'\n'
+    fi ;;
+esac
 if [ -n "$aside" ]; then
   echo
   echo "== set aside by $(tell 'this run' 'the real run') =="
   printf '%s' "$aside"
 fi
-if [ -n "$dot_tmux" ]; then
+if [ -n "$dot_tmux$xdg_git" ]; then
   echo
   echo "== left in place =="
-  echo "  ~/.tmux.conf: $(piece_said "$dot_tmux" "~/.config/tmux/tmux.conf")"
+  if [ -n "$dot_tmux" ]; then echo "  ~/.tmux.conf: $(piece_said "$dot_tmux" "~/.config/tmux/tmux.conf")"; fi
+  if [ -n "$xdg_git" ]; then echo "  ~/.config/git/config: $(piece_said "$xdg_git" "~/.gitconfig")"; fi
 fi
 
 echo

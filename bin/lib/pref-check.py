@@ -2622,9 +2622,11 @@ def kitty_shipped_default(key):
 
 
 # A format whose application ships its own defaults in readable text. Only such
-# a target may carry `unset_reads_default` — without an oracle the flag would
-# silently degrade to "an absent key always passes", which is the hole it
-# exists to close.
+# a target, or one in RESOLVER_FORMATS, may carry `unset_reads_default` —
+# without an oracle the flag would silently degrade to "an absent key always
+# passes", which is the hole it exists to close. A resolver is its own oracle:
+# the application answers an absent key with its default, so there the flag
+# only tells --prove that an emptied file correctly stays green.
 DEFAULT_ORACLES = {"kitty": kitty_shipped_default}
 
 
@@ -3048,7 +3050,7 @@ def entry_problems(name, entry, targets, where="the spec"):
     t, _, err = resolve_target(name, entry, targets, where)
     if err:
         problems.append(err)
-    elif entry.get("unset_reads_default") and t["format"] not in DEFAULT_ORACLES:
+    elif entry.get("unset_reads_default") and t["format"] not in DEFAULT_ORACLES and t["format"] not in RESOLVER_FORMATS:
         problems.append(f"unset_reads_default on format '{t['format']}', which ships no defaults oracle")
     elif entry.get("unset_reads_default") and entry.get("accumulate"):
         # An accumulating directive's "default" is a whole shipped TABLE, not a
@@ -3986,7 +3988,7 @@ def emit_assertions(spec, targets, came_from, read):
             # same terms as a written value, so an upstream flip fails the row
             # instead of passing it.
             from_default = False
-            if raw is None and entry.get("unset_reads_default"):
+            if raw is None and entry.get("unset_reads_default") and t["format"] in DEFAULT_ORACLES:
                 try:
                     shipped, why = DEFAULT_ORACLES[t["format"]](key)
                 except ReadSkip as exc:

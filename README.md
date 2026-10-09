@@ -53,6 +53,16 @@ curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/terminal/tmux/i
 curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/terminal/tmux/install.sh | bash
 ```
 
+The git config, [`git/`](git/README.md), the same way:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/git/install.sh | bash -s -- --dry-run
+```
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/git/install.sh | bash
+```
+
 Each installer prints its plan and makes every refusal before its first
 write, then copies its files into your config — copies, never symlinks, a
 file of yours it replaces backed up beside it. The statusline's installer
@@ -60,8 +70,10 @@ merges its `statusLine` key into `~/.claude/settings.json`; kitty's appends
 one `include` line to `~/.config/kitty/kitty.conf`; the shell's appends one
 line each to the zshenv and zshrc zsh reads — `~/.zshenv` and `~/.zshrc`
 unless `ZDOTDIR` moves them — and to `~/.inputrc`; tmux's appends one line
-to `~/.config/tmux/tmux.conf`, or to `~/.tmux.conf` where only that is there.
-`--help` is each script's manual.
+to `~/.config/tmux/tmux.conf`, or to `~/.tmux.conf` where only that is there;
+git's appends one line to the file `git config --global` writes,
+`~/.gitconfig` unless only `~/.config/git/config` is there. `--help` is each
+script's manual.
 
 ## Take the setup
 
@@ -94,13 +106,16 @@ and bootstrap never modifies your clone. What it finds in the way:
 
 - a symlinked directory between `~` and a file it deploys, the layout stow
   leaves, is refused;
-- a plain file of yours is kept beside itself as `<file>.unpreened.<stamp>`,
-  `<stamp>` the run's date and time;
+- a plain file of yours that differs from the shipped one is kept beside
+  itself as `<file>.unpreened.<stamp>`, `<stamp>` the run's date and time;
 - a symlink is never written through: at a `link` row it is replaced and its
   old target printed, at a `copy` row it is moved aside;
 - a plain `~/.gitconfig`, or a `~/.ssh/config` plain or linked, becomes the
   `.local` beside it, unless one is there or yours already names it; git
-  reads that file last and ssh first, so every line of yours wins;
+  reads that file last and ssh first, so every line of yours wins; a
+  `~/.gitconfig` that names the git piece's copy is kept beside itself
+  instead, its lines bound for `~/.gitconfig.local` — never the git piece's
+  line, which bootstrap names;
 - your `~/.zshenv`, `~/.zprofile` and `~/.zshrc`, set aside as above, go
   unread: their lines belong in the `.local` beside each, which the shipped
   file sources — never the shell piece's line, which bootstrap names.
@@ -122,9 +137,10 @@ they are the author's:
 
 Some of the author's choices are felt at once. The zsh rows hold for the
 shell piece taken alone too; [its page](shell/README.md#what-changes) names
-the exceptions. [tmux's page](terminal/tmux/README.md#what-changes) lists the
-rest of its choices; they hold for the setup too. An undo line goes in an
-overlay, where it wins over the shipped file: the one its row names, or else
+the exceptions. [tmux's page](terminal/tmux/README.md#what-changes) and
+[git's](git/README.md#what-changes) list the rest of their choices; they hold
+for the setup too. An undo line goes in an overlay, where it wins over the
+shipped file: the one its row names, or else
 its tool's — `~/.zshrc.local`, `~/.config/kitty/local.conf`,
 `~/.config/tmux/local.conf`, `~/.gitconfig.local` or `~/.ssh/config.local`.
 
@@ -209,7 +225,7 @@ terminal/ncdu/     one line: ncdu in the terminal's palette
 shell/             zsh, readline, hushlogin, atuin; its own page and installer
 editor/zed/        settings, a keymap on a JetBrains base, tasks
 editor/sublime/    settings, Terminus to match, a vendored light scheme
-git/               gitconfig, the global ignore; identity asked for, never here
+git/               gitconfig, the global ignore, no identity — bootstrap asks for it; its own page and installer
 gh/                the CLI's own preferences
 ripgrep/           flags: hidden in, .git out, smart case, clickable matches
 mise/              the runtime manager's global pins
@@ -241,9 +257,9 @@ plus one `include` line in your `kitty.conf`, never an edit inside it; the
 files kitty reads by name from its config root are copied only where you
 have none. zsh's include is `source` and readline's `$include`, so `shell/`
 lands the same way, one line appended to each of your files; tmux's is
-`source-file`, so `terminal/tmux/` does too. A tool with one
-file and no include — the statusline — is copied and tailored by its
-installer. Nothing installed either way points back here.
+`source-file` and git's `[include]`, so `terminal/tmux/` and `git/` do too.
+A tool with one file and no include — the statusline — is copied and
+tailored by its installer. Nothing installed either way points back here.
 
 **Themes are a family, not one scheme.** Gruvbox Dark Hard where code runs —
 kitty, tmux, the statusline — and Gruvbox Light Hard where it is read — Zed,

@@ -11,8 +11,8 @@ usage() { cat <<'EOF'
 usage: preen apply [--dry-run]
 
 Deploys every manifest.tsv row: a link row as a symlink into this repo, a copy
-row as a copy; a plain file it replaces is backed up beside itself. Every
-refusal comes before the first write. Never runs as root.
+row as a copy; a differing plain file it replaces is backed up beside itself.
+Every refusal comes before the first write. Never runs as root.
 
   --dry-run   refuse as a real run would, then print each line the real run
               would, worded "would …"; write nothing
@@ -238,8 +238,9 @@ while IFS=$'\t' read -r src tgt mode perms; do
   # drop the file it names.
   case "$mode" in
     link)
-      # Back up a pre-existing REGULAR file before replacing it with a link.
-      if [ -f "$abs_tgt" ] && [ ! -L "$abs_tgt" ]; then
+      # Back up a pre-existing REGULAR file before replacing it with a link;
+      # one holding the source's bytes, a drop-in's copy, the link loses nothing.
+      if [ -f "$abs_tgt" ] && [ ! -L "$abs_tgt" ] && ! cmp -s "$abs_src" "$abs_tgt"; then
         # Under a name nothing holds yet: a second plain file here — a tool
         # replaced the link — must not overwrite the first run's backup.
         bak="$(backup_name "$abs_tgt")"

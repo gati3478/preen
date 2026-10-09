@@ -177,9 +177,10 @@ fi
 # directory a row deploys into is searched rather than each row's own name, so
 # a backup outlives the row that made it; the prompt drop-in's ~/.claude, the
 # kitty drop-in's ~/.config/kitty/preen, the shell drop-in's
-# ~/.config/zsh/preen and the tmux drop-in's ~/.config/tmux/preen, which no
-# row names, are added here. A function, not inline: bash 3.2 reads a `case`
-# pattern's `)` inside $( ) as the end of the substitution.
+# ~/.config/zsh/preen, the tmux drop-in's ~/.config/tmux/preen and the git
+# drop-in's ~/.config/git/preen, which no row names, are added here. A
+# function, not inline: bash 3.2 reads a `case` pattern's `)` inside $( ) as
+# the end of the substitution.
 backups_beside_rows() {
   local src tgt abs dir
   {
@@ -188,7 +189,7 @@ backups_beside_rows() {
       case "$tgt" in '~'|'~/'*) abs="$HOME${tgt#\~}" ;; *) abs="$tgt" ;; esac
       printf '%s\n' "${abs%/*}"
     done < "$MANIFEST"
-    printf '%s\n' "${CLAUDE_CONFIG_DIR:-$HOME/.claude}" "$HOME/.config/kitty/preen" "$HOME/.config/zsh/preen" "$HOME/.config/tmux/preen"
+    printf '%s\n' "${CLAUDE_CONFIG_DIR:-$HOME/.claude}" "$HOME/.config/kitty/preen" "$HOME/.config/zsh/preen" "$HOME/.config/tmux/preen" "$HOME/.config/git/preen"
   } | sort -u | while IFS= read -r dir; do
     # -H: find does not descend a starting point that is a symlink, and HOME
     # or ~/.claude may be one.
@@ -289,7 +290,10 @@ fi
 # delta was measured to emit came from a keyword colour the config
 # deliberately avoids (brightblack -> 38;5;8), so the strict grep doubles
 # as a guard against reintroducing one. Control: the fixture guarantees
-# changed lines exist.
+# changed lines exist. Blame is its own fixture: delta's default blame
+# palette is hex, a ride the diff never shows. Two commits in git blame's
+# own format, which delta reads with no repository behind it, so the
+# palette's black stripe guarantees colour there.
 if ! command -v git >/dev/null 2>&1; then
   warn "git not installed — skipping the delta ANSI-rider check"
 elif bare_shim git; then
@@ -302,15 +306,20 @@ elif ! delta_fixture="$(fixture delta)"; then
 else
   printf 'line one\nline two\n' > "$delta_fixture/a"
   printf 'line one\nline TWO\n' > "$delta_fixture/b"
-  delta_out="$(git diff --no-index "$delta_fixture/a" "$delta_fixture/b" 2>/dev/null | delta --width 100 2>/dev/null)"
+  delta_diff="$(git diff --no-index "$delta_fixture/a" "$delta_fixture/b" 2>/dev/null | delta --width 100 2>/dev/null)"
   rm -rf "$delta_fixture"
-  if ! grep -q $'\x1b\[' <<< "$delta_out"; then
-    bad "delta emitted no colour at all — the ANSI-rider check has nothing to prove"
-  elif grep -qE $'\x1b\[[0-9;]*(38|48);(5|2);' <<< "$delta_out"; then
-    bad "delta emitted 256-colour/truecolor SGR codes — not riding the 16 ANSI colours (deployed [delta] styles changed, or an upgrade grew a truecolor default)"
-  else
-    ok "delta rides the 16 ANSI colours (4-bit output on a fixture diff)"
-  fi
+  delta_blame="$(printf '%s\n' 'aaaaaaaa (A U Thor 2026-01-01 00:00:00 +0000 1) line one' \
+    'bbbbbbbb (A U Thor 2026-01-02 00:00:00 +0000 2) line two' | delta --width 100 2>/dev/null)"
+  for fx in diff blame; do
+    if [ "$fx" = diff ]; then delta_out="$delta_diff"; else delta_out="$delta_blame"; fi
+    if ! grep -q $'\x1b\[' <<< "$delta_out"; then
+      bad "delta emitted no colour at all on a fixture $fx — the ANSI-rider check has nothing to prove there"
+    elif grep -qE $'\x1b\[[0-9;]*(38|48);(5|2);' <<< "$delta_out"; then
+      bad "delta emitted 256-colour/truecolor SGR codes on a fixture $fx — not riding the 16 ANSI colours (deployed [delta] styles changed, or an upgrade grew a truecolor default)"
+    else
+      ok "delta rides the 16 ANSI colours (4-bit output on a fixture $fx)"
+    fi
+  done
 fi
 
 # rg rides the terminal's 16 ANSI colours BY DEFAULT, the eza shape

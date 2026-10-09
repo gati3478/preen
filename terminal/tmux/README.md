@@ -173,13 +173,15 @@ The choices felt at once, each with the lines that undo it in
 puts back its row's keys and options as a server started with no config has
 them, down to the note C-b ? shows for a key. Such a server's copy mode is
 vi when `VISUAL`, else `EDITOR`, names a vi as it starts — `vim`, `nvim` —
-and there the undo of vi keys leaves out `setw -g mode-keys emacs`.
+and there the undo of vi keys leaves out `setw -g mode-keys emacs`. From
+tmux 3.8 such a server has the mouse on too, so there the mouse row changes
+nothing, and its undo turns the mouse off.
 
 | What you notice | Undo |
 | --- | --- |
 | the prefix is C-Space, and C-b does nothing | `set -g prefix C-b`<br>`bind -N "Send the prefix key" C-b send-prefix`<br>`unbind C-Space` |
 | `"` and `%` split nothing; `\|` splits side by side and `-` top to bottom, and `c` opens a window, in the pane's directory | `bind -N "Split window vertically" '"' split-window`<br>`bind -N "Split window horizontally" % split-window -h`<br>`bind -N "Delete the most recent paste buffer" - delete-buffer`<br>`unbind \|`<br>`bind -N "Create a new window" c new-window` |
-| tmux takes the mouse: a click selects a pane, a drag on a border resizes it, the wheel scrolls back, a drag in a pane selects and copies (`mouse on`) | `set -g mouse off` |
+| tmux takes the mouse: a click selects a pane, a drag on a border resizes it, the wheel scrolls back, a drag in a pane selects and copies (`mouse on`, tmux's own default from 3.8) | `set -g mouse off` |
 | copy mode takes vi keys: `v` starts a selection and `y` copies it | `setw -g mode-keys emacs`<br>`bind -T copy-mode-vi v send-keys -X rectangle-toggle` |
 | windows and panes count from 1 | `set -g base-index 0`<br>`setw -g pane-base-index 0` |
 | `y` and a mouse drag in copy mode pipe the selection to `pbcopy` | `unbind -T copy-mode-vi y`<br>`bind -T copy-mode-vi MouseDragEnd1Pane send-keys -X copy-pipe-and-cancel` |

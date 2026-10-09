@@ -112,7 +112,6 @@ TPM_LINE="if-shell '[ -x ~/.config/tmux/plugins/tpm/tpm ]' \"run '~/.config/tmux
 # there, and tpm reads the second when it is there, else the first: the last
 # one there is the file both read. A link counts as there, dangling or not, so
 # the symlink policy below meets it.
-there() { [ -e "$1" ] || [ -L "$1" ]; }
 if there "$XDG_CONF"; then
   TARGET="$XDG_CONF"
 elif there "$DOT_CONF"; then
@@ -239,12 +238,7 @@ touching_line "$TARGET" "$LINE"
 show_plan
 
 # ── the last refusals, before the first write ────────────────────────────────
-if [ -n "${XDG_CONFIG_HOME:-}" ]; then
-  squeeze() { printf '%s' "$1" | sed 's#//*#/#g; s#\(.\)/$#\1#'; }
-  if [ "$(squeeze "$XDG_CONFIG_HOME")" != "$(squeeze "$CONFIG_HOME")" ]; then
-    die "XDG_CONFIG_HOME is '$XDG_CONFIG_HOME', not $(squeeze "$CONFIG_HOME"), and this config's own paths are all under ~/.config/tmux. Nothing was changed."
-  fi
-fi
+refuse_other_xdg "and this config's own paths are all under ~/.config/tmux"
 refuse_unwritable_dir "$CONFIG_HOME"
 for d in "$TMUX_DIR" "$PREEN_DIR"; do refuse_linked_dir "$d"; done
 for d in "$TMUX_DIR" "$PREEN_DIR"; do refuse_unwritable_if_there "$d"; done

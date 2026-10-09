@@ -60,6 +60,8 @@ sq() { # sq <word> → the word as one shell word, quoted only when it needs it
 version_ge() { # version_ge <a> <b> → true when version a is not older than b
   [ "$(printf '%s\n%s\n' "$1" "$2" | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)" = "$1" ]
 }
+there() { [ -e "$1" ] || [ -L "$1" ]; }   # there <path> → true when something is at <path>, a dangling symlink included
+squeeze() { printf '%s' "$1" | sed 's#//*#/#g; s#\(.\)/$#\1#'; }   # squeeze <path> → it with doubled slashes and a trailing one dropped
 
 # A Mac without the Command Line Tools still has /usr/bin/git and
 # /usr/bin/python3: stubs that raise an install dialog when run. So the tool
@@ -90,6 +92,14 @@ refuse_unwritable_dir() { # refuse_unwritable_dir <dir> — stop the run when <d
 }
 refuse_unwritable_if_there() { # refuse_unwritable_if_there <dir> — stop the run when <dir> is there but is not a directory it can write into; an absent <dir> passes; call it before the first write
   if [ -e "$1" ] && { [ ! -d "$1" ] || [ ! -w "$1" ]; }; then die "$(short "$1") is not a directory this run can write into. Nothing was changed."; fi
+}
+# A tool that follows XDG_CONFIG_HOME reads its files under it, while a
+# piece's own paths are spelled under ~/.config. Empty, or ~/.config with a
+# doubled or trailing slash, is ~/.config.
+refuse_other_xdg() { # refuse_other_xdg <what follows from it> — stop the run when XDG_CONFIG_HOME names a directory other than ~/.config; call it before the first write
+  if [ -n "${XDG_CONFIG_HOME:-}" ] && [ "$(squeeze "$XDG_CONFIG_HOME")" != "$(squeeze "$HOME/.config")" ]; then
+    die "XDG_CONFIG_HOME is '$XDG_CONFIG_HOME', not $(squeeze "$HOME/.config"), $1. Nothing was changed."
+  fi
 }
 # An append through a symlink lands in the file it points at, which something
 # else manages, so the line belongs there. append_line_once refuses such a link

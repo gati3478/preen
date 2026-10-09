@@ -827,6 +827,14 @@ target = "gh"
 key = "accessible_colors"
 want = "enabled"
 
+[pref.follow_terminal_palette.targets.gh_labels]
+# Labels in their RGB hex — truecolor — when enabled. gh's own default, so an
+# emptied file still reads it.
+target = "gh"
+key = "color_labels"
+want = "disabled"
+unset_reads_default = true
+
 # ── Scrollback ─────────────────────────────────────────────────────────────────
 
 [pref.scrollback]
@@ -2955,7 +2963,7 @@ want_contains = "delta"
 # without any of these keys changing.
 [pref.git_ansi_ride]
 value = "delta rides the terminal's 16 ANSI colors"
-why = "The rider rule: named 4-bit colors and pure attributes only, so a kitty theme swap recolors diffs for free. delta's own `brightblack` keyword breaks the rule — it encodes as 38;5;8 — hence `normal dim` for the zero style (measured 28-08-2026, delta 0.19.2)."
+why = "The rider rule: named 4-bit colors and pure attributes only, so a kitty theme swap recolors diffs for free. delta's own `brightblack` keyword breaks the rule — it encodes as 38;5;8 — hence `normal dim` for the zero style (measured 28-08-2026, delta 0.19.2). Blame's default palette is hex — `48;2;…` backgrounds on every line (measured 09-10-2026, delta 0.20.1) — hence a palette of named colors."
 
 [pref.git_ansi_ride.targets.gitcfg]
 key = "delta.syntax-theme"
@@ -2996,6 +3004,11 @@ target = "gitcfg"
 key = "delta.line-numbers-zero-style"
 want = "normal dim"
 
+[pref.git_ansi_ride.targets.gitcfg_blame]
+target = "gitcfg"
+key = "delta.blame-palette"
+want = "normal black"
+
 [pref.git_conflicts]
 value = "zdiff3 conflict blocks; resolutions remembered"
 why = "zdiff3 shows the common ancestor inside the markers, so a conflict reads as two diffs instead of a guess; rerere replays a resolution already made once — proactive assistance, the machine remembers."
@@ -3010,8 +3023,8 @@ key = "rerere.enabled"
 want = "true"
 
 [pref.git_tidy_remotes]
-value = "remotes prune themselves; a first push needs no -u"
-why = "fetch.prune drops branches the remote already deleted; push.autoSetupRemote wires the upstream on first push — inventory upkeep the tool owns, not the operator."
+value = "remotes prune themselves and follow the remote's HEAD; a first push needs no -u"
+why = "fetch.prune drops branches the remote already deleted; fetch.followRemoteHEAD moves origin/HEAD when the remote changes its default branch, which the default `create` never corrects; push.autoSetupRemote wires the upstream on first push — inventory upkeep the tool owns, not the operator."
 
 [pref.git_tidy_remotes.targets.gitcfg]
 key = "fetch.prune"
@@ -3021,6 +3034,11 @@ want = "true"
 target = "gitcfg"
 key = "push.autoSetupRemote"
 want = "true"
+
+[pref.git_tidy_remotes.targets.gitcfg_remote_head]
+target = "gitcfg"
+key = "fetch.followRemoteHEAD"
+want = "always"
 
 [pref.git_conventions]
 value = "main by default; LF in the repo"
