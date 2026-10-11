@@ -1116,11 +1116,14 @@ def read_tmux(path, key, accumulate=False, host=None, **_opts):
 
     ⚠️ NOT refused, and this reader's real boundary: `run` / `run-shell`. The
     deployed tmux.conf's last line runs tpm (`run` inside an `if-shell` guard),
-    and a plugin can write options at runtime — tmux-continuum writes
-    `status-right` (continuum.tmux:42). Refusing would make the reader useless
-    against any config with a plugin manager, so its scope is what the FILE
-    declares. Measured 25-08-2026: no loaded plugin writes any asserted key.
-    Re-run the grep rather than trusting this sentence:
+    and a plugin can write options at runtime. Refusing would make the reader
+    useless against any config with a plugin manager, so its scope is what the
+    FILE declares. Measured 11-10-2026: continuum writes two asserted keys,
+    prefixing `status-right` with its save command (continuum.tmux:42) and, in
+    both `status-right` and `status-left`, swapping `#{continuum_status}` for
+    a script call (`update_tmux_option`); the file's other text survives. That
+    swap names its key through a variable, which this grep cannot see, so read
+    the plugins before trusting either the grep or this sentence:
       grep -rE 'set(_tmux_option|-option)?.*<key>' ~/.config/tmux/plugins
     """
     found = []

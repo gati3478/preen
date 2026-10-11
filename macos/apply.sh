@@ -5,10 +5,10 @@ usage: ./macos/apply.sh [--dry-run]
 Apply the macOS half of this setup: the settings System Settings owns.
 
 Sets, for the user running it, the appearance, the Dock and its hot corners,
-Finder, the trackpad, spelling correction, screenshots, the menu-bar clock,
-Stage Manager and Siri. Only a setting that differs is written, and the Dock,
-Finder and the menu bar restart only when one of theirs changed. Trackpad
-changes take effect at the next login.
+Finder, the trackpad, spelling correction, screenshots, the 12-hour clock and
+what the menu bar's clock shows, Stage Manager and Siri. Only a setting that
+differs is written, and the Dock, Finder and the menu bar restart only when
+one of theirs changed. Trackpad changes take effect at the next login.
 
 Before the first write, the values it replaces are saved as a script,
 ~/.local/state/preen/macos.unpreened.<time>.sh ($XDG_STATE_HOME/preen when
@@ -166,7 +166,10 @@ settings() {
   want com.apple.screencapture target -string clipboard
   want com.apple.screencapture target-screenrecording -string file
 
-  # Menu bar clock
+  # The clock: 12-hour wherever macOS formats the time, whatever the region's
+  # own format; the menu bar's with AM/PM, the date and the weekday
+  want -g AppleICUForce12HourTime -bool true
+  want com.apple.menuextra.clock ShowAMPM -bool true
   want com.apple.menuextra.clock ShowDate -int 1
   want com.apple.menuextra.clock ShowDayOfWeek -bool true
 

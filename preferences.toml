@@ -305,6 +305,24 @@ state = "unreachable"
 recheck = "manual"
 evidence = "cursor_animation (Zed 1.20) animates bar and block carets only — cursor_shape_supports_cursor_animation in crates/editor/src/element.rs at 1.23.2, with a test asserting the underline is excluded — and pref.caret's underline outranks the glide"
 
+# ── Clock ──────────────────────────────────────────────────────────────────────
+
+[pref.clock_12h]
+value = "12-hour, with AM/PM"
+why = "Wherever a person reads the time: a status line, a prompt, a menu bar, a listing. A stamp a script writes — a log line, a backup's name — stays ISO 24-hour: it is a record rather than a clock, and records keep the one form that sorts."
+
+# tmux's status line and its clock mode (prefix t). ll's times are pinned
+# whole by listings_eza; a machine's own clocks are rows in its half of the spec.
+[pref.clock_12h.targets.tmux_status]
+target = "tmux"
+key = "status-right"
+want_contains = "%-I:%M %p"
+
+[pref.clock_12h.targets.tmux_clock_mode]
+target = "tmux"
+key = "clock-mode-style"
+want = "12"
+
 # ── Typeface ───────────────────────────────────────────────────────────────────
 
 [pref.nerd_font_where_glyphs_render]
@@ -1844,7 +1862,7 @@ want_any_contain = 'ls="eza --icons=auto --hyperlink=auto --group-directories-fi
 target = "zshrc"
 key = "alias"
 accumulate = true
-want_any_contain = 'll="eza -la --icons=auto --git --hyperlink=auto --group-directories-first --time-style=long-iso"'
+want_any_contain = "ll=\"eza -la --icons=auto --git --hyperlink=auto --group-directories-first --time-style='+%Y-%m-%d %l:%M %p'\""
 
 # The tree form, pruned by .gitignore — the same "search what the repo
 # considers real" instinct as fzf's fd walker.

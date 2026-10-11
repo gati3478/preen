@@ -262,9 +262,11 @@ if (( $+commands[zoxide] )); then
 fi
 # Every entry kitty-clickable — =auto is load-bearing, a bare --hyperlink
 # eats the next positional — and directories first, as in the completion menu.
+# ll's times: an ISO date, a 12-hour clock, %l's space-padded hour keeping the
+# column straight.
 if (( $+commands[eza] )); then
   alias ls="eza --icons=auto --hyperlink=auto --group-directories-first"
-  alias ll="eza -la --icons=auto --git --hyperlink=auto --group-directories-first --time-style=long-iso"
+  alias ll="eza -la --icons=auto --git --hyperlink=auto --group-directories-first --time-style='+%Y-%m-%d %l:%M %p'"
   alias lt="eza -T --icons=auto --git-ignore --hyperlink=auto --group-directories-first"
 fi
 # No alias for kitty's hyperlinked-grep kitten: rg's own
