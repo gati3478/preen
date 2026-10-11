@@ -57,9 +57,9 @@ ours, and ctrl+x ctrl+e, and git on a terminal, read `VISUAL` first.
   those, the lines belong in the files it names, by hand.
 
 `~/.zprofile` is not taken. The shipped one is the author's login PATH — the
-JetBrains Toolbox, SDKMAN, Playdate, Docker's and Antigravity's installer
-lines, JDK 21 as `JAVA_HOME` — kept in that file because those installers
-write `~/.zprofile` themselves; and on a Mac with Homebrew your own
+JetBrains Toolbox, SDKMAN, Playdate and Antigravity installer lines, JDK 21
+as `JAVA_HOME` — kept in that file because those installers write
+`~/.zprofile` themselves; and on a Mac with Homebrew your own
 `~/.zprofile` already runs `brew shellenv`, as Homebrew's installer asks.
 
 ## What you need

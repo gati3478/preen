@@ -98,7 +98,6 @@ zle -N edit-command-line
 bindkey '^X^E' edit-command-line
 
 # ── Completion ───────────────────────────────────────────
-fpath=(~/.docker/completions $fpath)  # Docker Desktop ships its completion here
 autoload -Uz compinit
 # Versioned dump: `compinit -C` skips the staleness check, so an unversioned
 # dump serves broken completions after a zsh upgrade. Rebuilt when older

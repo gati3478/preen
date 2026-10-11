@@ -420,9 +420,9 @@ else
 fi
 
 # This repo owner's decision: the directory was deleted rather than wired in.
-# Source-repo only: the shipped zshrc adds only ~/.docker/completions to
-# fpath, so an adopter who HAS this directory could never pass. It also spends
-# a second launching an interactive login zsh. `script` fails on a stdin that
+# Source-repo only: the shipped zshrc adds nothing to fpath, so an adopter
+# who HAS this directory could never pass. It also spends a second
+# launching an interactive login zsh. `script` fails on a stdin that
 # is a socket, an agent's shell, and prints nothing, so its stdin is pinned
 # and an empty capture is no answer. macOS's `script` echoes that stdin's EOF
 # as `^D` and two backspaces ahead of the capture, so they are stripped before
