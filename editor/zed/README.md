@@ -77,7 +77,7 @@ was chosen explicitly; and the agent's fallback default model.
   default is `.ZedMono`; the run does not look for these.
 - **lazygit**, which alt-g's task runs.
 - **The tools the tasks call**: cargo with clippy and rustfmt,
-  cargo-nextest, cargo-audit, cargo-deny and cargo-insta for the `rust:`
+  cargo-nextest, cargo-deny and cargo-insta for the `rust:`
   tasks; npm and npx, with the project's `dev`, `build`, `test` and `check`
   scripts and vitest, for the `node:` tasks. A task fails when its tool is
   missing; the rest are unaffected.

@@ -62,10 +62,10 @@
     "reveal": "no_focus"
   },
   {
-    // Supply-chain pass; needs cargo-audit and cargo-deny. `deny` also covers
-    // licences and duplicate versions, which `audit` does not.
-    "label": "rust: audit + deny",
-    "command": "cargo audit && cargo deny check",
+    // Supply-chain pass. Advisories read the RustSec database cargo-audit reads.
+    // Licences stay out: a crate with no [licenses] policy rejects every licence.
+    "label": "rust: deny",
+    "command": "cargo deny check advisories bans sources",
     "save": "none"
   },
   {
