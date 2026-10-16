@@ -263,8 +263,10 @@ fi
 # Every entry kitty-clickable — =auto is load-bearing, a bare --hyperlink
 # eats the next positional — and directories first, as in the completion menu.
 # ll's times: an ISO date, a 12-hour clock, %l's space-padded hour keeping the
-# column straight.
-if (( $+commands[eza] )); then
+# column straight. Only in a shell started with a terminal on stdin: eza reads
+# file names from any other stdin, --stdin or not, so a bare `ls` in an
+# agent's tool shell hangs on its socket or lists nothing from /dev/null.
+if [[ -t 0 ]] && (( $+commands[eza] )); then
   alias ls="eza --icons=auto --hyperlink=auto --group-directories-first"
   alias ll="eza -la --icons=auto --git --hyperlink=auto --group-directories-first --time-style='+%Y-%m-%d %l:%M %p'"
   alias lt="eza -T --icons=auto --git-ignore --hyperlink=auto --group-directories-first"
