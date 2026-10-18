@@ -94,6 +94,12 @@ read `config.yml` or `hosts.yml` — bad YAML, say — in gh's own words; a
 source file that is missing, empty, or not the file it claims to be, or that
 gives a key a value other than plain words.
 
+## Updating
+
+Run the install line again; from a clone, `git pull`, then `./gh/install.sh`.
+gh reads one file and has no overlay, so a re-run sets back each key that
+differs, an undo of yours included, after backing up `config.yml`.
+
 ## Your overrides
 
 A key you set after the run — `gh config set pager less` — wins until the

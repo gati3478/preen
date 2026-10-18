@@ -93,6 +93,18 @@ else
   RECONCILE="the application rewrote it — copy it over the repo's copy to keep the change, or re-run preen apply to discard it"
 fi
 
+# Outside the source repo nothing pulls a copy row's rewrite back, so a file
+# that differs is either behind, an earlier copy this setup shipped, which
+# preen apply updates, or the person's, which it leaves. lib/shipped lists
+# every blob each shipped path has held, one "<blob id> <path>" a line.
+# Without it — a clone from before it shipped — or without a git to hash
+# with, only the current bytes count as this setup's.
+shipped() { # shipped <src> <file> → true when lib/shipped lists <file>'s bytes at <src>
+  local id
+  [ -f "$REPO/lib/shipped" ] && ! bare_shim git && id="$(git hash-object --stdin < "$2" 2>/dev/null)" &&
+    grep -qxF "$id $1" "$REPO/lib/shipped"
+}
+
 echo "== manifest rows =="
 rows_seen=0
 while IFS=$'\t' read -r src tgt mode perms; do
@@ -127,12 +139,18 @@ while IFS=$'\t' read -r src tgt mode perms; do
       fi
       ;;
     copy)
-      if [ ! -f "$abs_tgt" ]; then
+      if [ -L "$abs_tgt" ]; then
+        bad "$tgt is a link at a copy row — re-run preen apply to make it a copy"
+      elif [ ! -f "$abs_tgt" ]; then
         bad "$tgt missing"
-      elif ! diff -q "$REPO/$src" "$abs_tgt" >/dev/null 2>&1; then
-        bad "$tgt differs from repo — $RECONCILE"
-      else
+      elif diff -q "$REPO/$src" "$abs_tgt" >/dev/null 2>&1; then
         ok "$tgt"
+      elif [ "$SOURCE_REPO" = yes ]; then
+        bad "$tgt differs from repo — $RECONCILE"
+      elif shipped "$src" "$abs_tgt"; then
+        warn "$tgt is behind: it holds an earlier copy this setup shipped — re-run preen apply to update it"
+      else
+        warn "$tgt is yours: not a copy this setup shipped, so preen apply leaves it"
       fi
       ;;
     *)

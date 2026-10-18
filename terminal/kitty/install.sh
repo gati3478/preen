@@ -12,8 +12,7 @@ Copies the config, its palette and the tab title for your home into
 
 That is the whole edit to your file. Nothing in it is rewritten or removed, and
 if you have no kitty.conf yet it becomes that line alone. Copies, never
-symlinks: the files become yours to tune, and nothing here points back at this
-repo afterwards.
+symlinks, and nothing here points back at this repo afterwards.
 
   from a clone:    ./terminal/kitty/install.sh [flags]
   from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/terminal/kitty/install.sh | bash
@@ -33,14 +32,17 @@ open-actions.conf, mime.types and choose-files.conf are read by kitty from
 ~/.config/kitty itself, under those names and no others, so a file of yours at
 one of them is left exactly as it is and said so. bat's config, which sets the
 theme the scrollback pager draws in, is copied to ~/.config/bat/config the
-same way: only where none exists. Nothing else is overwritten without a
-timestamped backup beside it, and a re-run with nothing changed rewrites
-nothing. Every refusal comes before the first write; among them, a symlinked
-~/.config, ~/.config/kitty or preen/ is refused, or ~/.config/bat when bat's
-config would be copied, and so is a symlinked kitty.conf whose target lacks
-the line, which belongs in the target. A kitty.conf linked into a clone of
-the whole setup already has this config, and the run says so and writes
-nothing.
+same way: only where none of yours exists.
+
+Run this again to update: an earlier copy this setup shipped is replaced
+with no backup, at those four too; anything else in preen/ is overwritten
+only after a timestamped backup beside it; and a re-run with
+nothing changed rewrites nothing. Every refusal comes before the first
+write; among them, a symlinked ~/.config, ~/.config/kitty or preen/ is
+refused, or ~/.config/bat when bat's config would be copied, and so is a
+symlinked kitty.conf whose target lacks the line, which belongs in the
+target. A kitty.conf linked into a clone of the whole setup already has this
+config, and the run says so and writes nothing.
 
   --dry-run   print what the run would touch and stop, having written nothing
   -h, --help  print this and exit
@@ -116,6 +118,11 @@ FONT_CASK="font-fira-code-nerd-font"
 # The home the shipped tab title collapses to '~'. bin/bootstrap carries the
 # same constant for the same line; kitty expands no variable in that option.
 AUTHORED_HOME="/Users/gati3478"
+# HOME as tab-title.awk reads it: without its trailing slashes, so /h/ names
+# /h. A HOME of slashes alone is read as given.
+TITLE_HOME="$HOME"
+while [ "${TITLE_HOME%/}" != "$TITLE_HOME" ]; do TITLE_HOME="${TITLE_HOME%/}"; done
+[ -n "$TITLE_HOME" ] || TITLE_HOME="$HOME"
 
 # ── a home that took the whole setup ─────────────────────────────────────────
 # Its kitty.conf is a link into the setup's clone, which already carries this
@@ -210,7 +217,7 @@ fi
 echo
 echo "== tab title =="
 title_line=""
-if [ "$HOME" = "$AUTHORED_HOME" ]; then
+if [ "$TITLE_HOME" = "$AUTHORED_HOME" ]; then
   echo "this is the home the tab title was authored for — no tab-title.conf needed"
 else
   title_line="$(awk -v want=title -v authored="$AUTHORED_HOME" -f "$SRC/tab-title.awk" "$SRC/kitty.conf")"
@@ -228,7 +235,7 @@ else
   elif [ -n "$local_title" ]; then
     echo "$(short "$PREEN_DIR/local.conf") line $local_line, read after tab-title.conf, sets a tab title"
   else
-    home_lit="${HOME//\\/\\\\}"
+    home_lit="${TITLE_HOME//\\/\\\\}"
     case "$title_line" in
       *"'$home_lit'"*|*"\"$home_lit\""*) echo "the tab title a run writes to $(short "$PREEN_DIR/tab-title.conf") collapses this home to '~'" ;;
       *) echo "the tab title a run writes to $(short "$PREEN_DIR/tab-title.conf") does not collapse this home" ;;
@@ -244,11 +251,11 @@ touching "$PREEN_DIR/kitty.conf" "the config"
 touching "$PREEN_DIR/current-theme.conf" "the palette it includes"
 if [ -n "$title_line" ]; then touching "$PREEN_DIR/tab-title.conf" "the tab title for this home — ours; local.conf stays yours"; fi
 touching_line "$KITTY_CONF" "$INCLUDE_LINE"
-touching "$KITTY_DIR/open-actions.conf" "what a click on a link does — copied if absent"
-touching "$KITTY_DIR/mime.types" "the file types behind it — copied if absent"
-touching "$KITTY_DIR/choose-files.conf" "kitty's file picker, kitten choose-files — copied if absent"
+touching "$KITTY_DIR/open-actions.conf" "what a click on a link does — copied if absent or an earlier copy"
+touching "$KITTY_DIR/mime.types" "the file types behind it — copied if absent or an earlier copy"
+touching "$KITTY_DIR/choose-files.conf" "kitty's file picker, kitten choose-files — copied if absent or an earlier copy"
 touching_dir_for "$BAT_CONF" "bat's config directory, created"
-touching "$BAT_CONF" "bat's theme: the terminal's palette — copied if absent"
+touching "$BAT_CONF" "bat's theme: the terminal's palette — copied if absent or an earlier copy"
 show_plan
 
 # ── the last refusals, before the first write ────────────────────────────────
@@ -278,8 +285,8 @@ fi
 # ── the writes ───────────────────────────────────────────────────────────────
 echo
 echo "== installing =="
-copy_into "$SRC/kitty.conf" "$PREEN_DIR/kitty.conf"
-copy_into "$SRC/current-theme.conf" "$PREEN_DIR/current-theme.conf"
+copy_into "$SRC/kitty.conf" "$PREEN_DIR/kitty.conf" "$PIECE/kitty.conf"
+copy_into "$SRC/current-theme.conf" "$PREEN_DIR/current-theme.conf" "$PIECE/current-theme.conf"
 # tab-title.conf is this installer's, written whole, so the line kitty reads
 # always names this HOME. local.conf, read after it, is the adopter's, and a
 # tab title of theirs there wins. A plain file of one tab_title_template line
@@ -296,8 +303,8 @@ if [ -n "$title_line" ]; then
   copy_into "$WORK/tab-title.conf" "$title_conf"
 fi
 # shellcheck disable=SC2086
-for f in $ROOT_FILES; do copy_if_absent "$SRC/$f" "$KITTY_DIR/$f"; done
-copy_if_absent_into "$SRC_ROOT/terminal/bat/config" "$BAT_CONF"
+for f in $ROOT_FILES; do copy_if_absent "$SRC/$f" "$KITTY_DIR/$f" "$PIECE/$f"; done
+copy_if_absent_into "$SRC_ROOT/terminal/bat/config" "$BAT_CONF" terminal/bat/config
 # Last, so a kitty.conf that includes this config only ever points at files
 # already on disk.
 append_line_once "$KITTY_CONF" "$INCLUDE_LINE"

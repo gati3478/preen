@@ -6,11 +6,12 @@ Take this Zed configuration alone.
 
 Copies the settings to ~/.config/zed/global_settings.json, a file Zed reads
 under your own ~/.config/zed/settings.json, and copies keymap.json and
-tasks.json into ~/.config/zed where none is there. Your settings.json is
+tasks.json into ~/.config/zed where none is there, or an earlier copy this
+setup shipped is. Your settings.json is
 never read or written, and it wins: a key you set there wins over ours, an
 object there merges with ours key by key, and an array there replaces ours
-whole. Copies, never symlinks: the files become yours to tune, and nothing
-here points back at this repo afterwards.
+whole. Copies, never symlinks, and nothing here points back at this repo
+afterwards: a setting of yours belongs in your settings.json.
 
   from a clone:    ./editor/zed/install.sh [flags]
   from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/editor/zed/install.sh | bash
@@ -19,10 +20,12 @@ There is nothing to ask, so nothing is asked.
 
 keymap.json and tasks.json are read by Zed from ~/.config/zed under those
 names and no others, so a file of yours at one of them is left exactly as it
-is and said so. Nothing else is overwritten without a timestamped backup
-beside it; a symlink at global_settings.json is moved aside, never written
-through; and a re-run with nothing changed rewrites nothing. Every refusal
-comes before the first write; among them: a symlinked ~/.config or
+is and said so. Run this again to update: an earlier copy this setup
+shipped is replaced with no backup; anything else is overwritten only after
+a timestamped backup beside it; a symlink at global_settings.json is moved
+aside, never written through; and a re-run with nothing changed rewrites
+nothing. Every refusal comes before the first write; among them: a
+symlinked ~/.config or
 ~/.config/zed, or one the run can neither write into nor create; and, on
 Linux and FreeBSD, an XDG_CONFIG_HOME that names a directory other than
 ~/.config, where Zed then reads its config. A global_settings.json linked
@@ -152,13 +155,13 @@ fi
 
 # ── keymap.json and tasks.json, as they stand ────────────────────────────────
 # Read before the writes, so the closing says what the copy-if-absent did.
-fixed_state() { # fixed_state <name> → absent, ours (the shipped bytes), setup (a link into a clone of the whole setup) or yours
+fixed_state() { # fixed_state <name> → absent, ours (the shipped bytes, or an earlier copy the run updates), setup (a link into a clone of the whole setup) or yours
   local dst="$ZED_DIR/$1"
   if ! there "$dst"; then
     echo absent
   elif links_into_clone "$dst"; then
     echo setup
-  elif [ ! -L "$dst" ] && cmp -s "$SRC/$1" "$dst"; then
+  elif [ ! -L "$dst" ] && { cmp -s "$SRC/$1" "$dst" || ours "$dst" "$PIECE/$1"; }; then
     echo ours
   else
     echo yours
@@ -171,8 +174,8 @@ tasks_state="$(fixed_state tasks.json)"
 [ -d "$CONFIG_HOME" ] || touching "$CONFIG_HOME" "the directory configs live under, created"
 [ -d "$ZED_DIR" ] || touching "$ZED_DIR" "Zed's config directory, created"
 touching "$LAYER" "the settings, read under your settings.json"
-touching "$ZED_DIR/keymap.json" "the keymap — copied if absent"
-touching "$ZED_DIR/tasks.json" "the tasks — copied if absent"
+touching "$ZED_DIR/keymap.json" "the keymap — copied if absent or an earlier copy"
+touching "$ZED_DIR/tasks.json" "the tasks — copied if absent or an earlier copy"
 show_plan
 
 # ── the last refusals, before the first write ────────────────────────────────
@@ -195,9 +198,9 @@ fi
 # ── the writes ───────────────────────────────────────────────────────────────
 echo
 echo "== installing =="
-copy_into "$SRC/settings.json" "$LAYER"
+copy_into "$SRC/settings.json" "$LAYER" "$PIECE/settings.json"
 # shellcheck disable=SC2086
-for f in $FIXED_FILES; do copy_if_absent "$SRC/$f" "$ZED_DIR/$f"; done
+for f in $FIXED_FILES; do copy_if_absent "$SRC/$f" "$ZED_DIR/$f" "$PIECE/$f"; done
 
 # ── what Zed reads now ───────────────────────────────────────────────────────
 echo

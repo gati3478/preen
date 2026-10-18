@@ -38,8 +38,9 @@ for, and nothing here writes them: the copy sets neither.
   git then reads its config and its ignore under it, and the run knows only
   `~/.config/git`.
 - **`~/.config/git/ignore`**, git's global ignore, is copied only where
-  nothing is there. A `core.excludesFile` of yours names another file in its
-  place, and git then reads that one alone.
+  nothing is there, or an earlier copy this setup shipped is. A
+  `core.excludesFile` of yours names another file in its place, and git then
+  reads that one alone.
 
 ## What you need
 
@@ -93,7 +94,7 @@ empty home:
 ~/.config/git                              git's config directory, created
 ~/.config/git/preen                        this config's own directory, created
 ~/.config/git/preen/gitconfig              the config
-~/.config/git/ignore                       the global ignore — copied if absent
+~/.config/git/ignore                       the global ignore — copied if absent or an earlier copy
 ~/.gitconfig                               created: [include] path = ~/.config/git/preen/gitconfig
 ```
 
@@ -106,11 +107,13 @@ It
    other config, never to write one;
 2. copies `gitconfig` into `~/.config/git/preen/` — a copy, never a symlink,
    backed up beside itself as `gitconfig.unpreened.<timestamp>` if a
-   different one was there, left untouched if identical;
-3. copies `ignore` to `~/.config/git/ignore` where nothing is there. A file
-   already there stays, with no backup, because nothing is replaced: the run
-   says `unchanged` when it holds this config's bytes, and `left alone` when
-   it is anything else, a symlink included;
+   different one was there, left untouched if identical, and replaced with
+   no backup if it is an earlier copy this setup shipped;
+3. copies `ignore` to `~/.config/git/ignore` where nothing is there, and over
+   an earlier copy this setup shipped, with no backup. Anything else there
+   stays, with no backup, because nothing is replaced: the run says
+   `unchanged` when it holds this config's bytes, and `left alone` when it is
+   anything else, a symlink included;
 4. appends `[include] path = ~/.config/git/preen/gitconfig` to the file named
    above, once. Your file is not otherwise touched, and with none it becomes
    that line. The append is last, so a run that stops earlier never leaves
@@ -140,6 +143,15 @@ source file that is missing, empty, or not the file it claims to be.
 git's read runs nothing in the file: `git config -f <file> --no-includes
 --list`, with no system or global config, so one of yours that git cannot
 read does not stop the run's own read.
+
+## Updating
+
+Run the install line again; from a clone, `git pull`, then
+`./git/install.sh`. An earlier copy this setup shipped comes back `updated`,
+with no backup. One you edited is not: the copy in `~/.config/git/preen/` is
+backed up beside itself first, and `~/.config/git/ignore` is left alone. A
+line of yours belongs in `~/.gitconfig.local`, or below the appended line
+(Your overrides).
 
 ## Your overrides
 
@@ -196,8 +208,8 @@ the line or in `~/.gitconfig.local`.
    from the file the run named, `~/.gitconfig` or `~/.config/git/config`.
    Where that line is all the file holds, delete the file.
 2. Delete `~/.config/git/preen/`.
-3. For `~/.config/git/ignore`, read what the run said: `copied` or
-   `unchanged` means the file held this config's bytes and can go;
+3. For `~/.config/git/ignore`, read what the run said: `copied`, `updated`
+   or `unchanged` means the file held this config's bytes and can go;
    `left alone` means something else was there, and the run never touched
    it.
 4. `~/.gitconfig.local` is yours. Once the line is gone, nothing of this
@@ -205,9 +217,9 @@ the line or in `~/.gitconfig.local`.
    from there.
 
 A backup the run took sits in `~/.config/git/preen/` beside the copy, as
-`gitconfig.unpreened.<timestamp>`: the copy as it was before a later run
-replaced it, your edits to it included. Keep it before you delete that
-directory, if you want those edits.
+`gitconfig.unpreened.<timestamp>`: the copy with your edits, as a later run
+found it. Keep it before you delete that directory, if you want those
+edits.
 
 Took the whole repository through `bin/bootstrap`? Then `~/.gitconfig` is a
 link into your clone, which already carries this config: the installer says

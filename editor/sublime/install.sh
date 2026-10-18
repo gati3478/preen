@@ -12,8 +12,7 @@ Text's data directory:
 
 Nothing else is written. Packages/User, where Sublime, Package Control and
 you keep your own settings, is never read or written. Copies, never
-symlinks: the files become yours to tune, and nothing here points back at
-this repo afterwards.
+symlinks, and nothing here points back at this repo afterwards.
 
   from a clone:    ./editor/sublime/install.sh [flags]
   from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/editor/sublime/install.sh | bash
@@ -25,9 +24,11 @@ over the same key here, and a key whose value is an object is replaced
 whole, never merged. No package is installed: the run names the two these
 settings need, ayu and Terminus, found or not, and how to get one missing.
 
-Nothing is overwritten without a timestamped backup beside it, and a re-run
-with nothing changed rewrites nothing. Every refusal comes before the first
-write; among them: a symlinked directory between ~ and Packages/preen, or
+Run this again to update: an earlier copy this setup shipped is replaced
+with no backup; anything else is overwritten only after a timestamped backup
+beside it; and a re-run with nothing changed rewrites nothing. A key of
+yours belongs in Packages/User. Every refusal comes before the first write;
+among them: a symlinked directory between ~ and Packages/preen, or
 one that is not a directory, or that the run can neither write into nor
 create; on Linux, an XDG_CONFIG_HOME that names a directory other than
 ~/.config; a system other than macOS or Linux. A file linked into a clone
@@ -250,7 +251,7 @@ for f in "${FILES[@]}"; do
   if links_into_clone "$PREEN_DIR/$f"; then
     record "left alone      $(short "$PREEN_DIR/$f")"
   else
-    place "$SRC/$f" "$PREEN_DIR/$f"
+    place "$SRC/$f" "$PREEN_DIR/$f" "$PIECE/$f"
   fi
 done
 

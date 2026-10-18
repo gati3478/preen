@@ -146,6 +146,13 @@ path = "~/.config/tmux/tmux.conf"
 format = "tmuxbind"
 path = "~/.config/tmux/tmux.conf"
 
+# The same file again, as the config a scratch tmux server starts from. What a
+# copy keeps of a row's trailing spaces is tmux's own doing, which no line
+# decides, so this reader runs tmux and copies (see read_tmuxcopy).
+[targets.tmux_copy]
+format = "tmuxcopy"
+path = "~/.config/tmux/tmux.conf"
+
 # bat's config is one command-line flag per line; the `flags` reader parses it
 # the way bat itself does (quotes stripped, last occurrence wins — measured).
 [targets.bat]
@@ -487,14 +494,23 @@ evidence = "Terminus does not implement copy-on-select — absent from its sourc
 key = "mouse"
 want = "on"
 
-# The trailing-space half of the taste stops at the tmux border: copy-mode
-# has no strip option, and the smart rectangular exception would need a
-# rectangle_toggle format conditional — a contraption, not a setting.
+# The trailing-space half: tmux drops a row's trailing spaces from a copy, as
+# kitty's `smart` does. No option says so, so it is watched — a scratch server
+# copies a row that ends in spaces the way a mouse drag does.
+[pref.copy_on_select.targets.tmux_strip_trailing]
+target = "tmux_copy"
+key = "stream"
+want = "stripped"
+
+# `smart`'s exception stops at the tmux border: a rectangle's rows lose their
+# trailing spaces too. Rebuilding the rectangle from capture-pane -N by its
+# coordinates would be a contraption, not a setting.
 [pref.copy_on_select.targets.tmux_trailing]
 state = "unreachable"
-recheck = "manual"
+recheck = "auto"
 target = "tmux"
-evidence = "man tmux 3.7c: no trailing-space option exists in copy-mode; only capture-pane's -N/-J flags speak to trailing spaces, and neither reaches the mouse-drag copy path"
+probe = "tmux_rectangle_trailing"
+evidence = "man tmux 3.8 speaks of trailing spaces only under capture-pane's -N and -J; window_copy_copy_line in window-copy.c ends every copied row at window_copy_find_length, its text without trailing spaces, unless the row wrapped — a rectangle's rows included, as in 3.5a and 3.7c"
 
 [pref.ligatures]
 value = "on"
@@ -758,15 +774,8 @@ want_contains = "#8ec07c"
 key = "status-style"
 want_contains = "#1d2021"
 
-# ⚠️ The accents are anchored to `bg=`, not to the bare hex, and that is not
-# cosmetic. Both values carry their accent more than once — status-left as the
-# session pill's fill and again as the powerline separator's foreground,
-# window-status-current-format likewise — and `want_contains` is satisfied by
-# ANY occurrence. Verified 25-08-2026 by recolouring ONLY the pill fills, which
-# are the elements actually on screen: both bare-hex assertions stayed green
-# while the bar visibly changed. `bg=` pins the fill.
-# Residual limit, stated rather than hidden: a re-theme touching only a
-# separator's `fg=` still passes. No matcher here can say "every occurrence".
+# The accents are anchored to `bg=`, not to the bare hex: a pill is its fill,
+# and a bare hex would pass on the same colour used as text.
 [pref.terminal_palette.targets.tmux_gold]
 target = "tmux"
 key = "status-left"
@@ -776,6 +785,19 @@ want_contains = "bg=#fabd2f"
 target = "tmux"
 key = "window-status-current-format"
 want_contains = "bg=#8ec07c"
+
+# The active pill reads by its aqua alone. tmux 3.8 underlines the current
+# window's name by default; this keeps the pill as kitty's active tab is.
+[pref.terminal_palette.targets.tmux_aqua_plain]
+target = "tmux"
+key = "window-status-current-style"
+want = "default"
+
+# The active pane's border, the twin of kitty's active_border_color.
+[pref.terminal_palette.targets.tmux_active_border]
+target = "tmux"
+key = "pane-active-border-style"
+want = "fg=#8ec07c"
 
 # ── Editor theme ───────────────────────────────────────────────────────────────
 
@@ -852,6 +874,13 @@ target = "kitty_choose_files"
 key = "dark_pygments_style"
 want = "gruvbox"
 
+# tmux's own colours — menus, the clock, copy-mode matches — come from its
+# theme from 3.8, and `terminal` gives that theme the terminal's 16. The
+# status bar's hexes are its own and stay (pref.terminal_palette).
+[pref.follow_terminal_palette.targets.tmux]
+key = "theme"
+want = "terminal"
+
 [pref.follow_terminal_palette.targets.gh]
 # gh's glamour markdown renderer emits 256-colour by default: `gh repo view`
 # measured 518 off-palette SGR codes at the shipped `disabled`, 0 at `enabled`,
@@ -904,6 +933,16 @@ want = "yes"
 [pref.scrollback.targets.tmux]
 key = "history-limit"
 want = "200000"
+
+[pref.scrollbar]
+value = "shown only while scrolled back"
+why = "A scrollbar says how far back the view is; at the live end there is nothing to say. kitty's shipped `scrolled` is kept by ruling (26-08-2026); tmux's `modal` shows one only in copy mode."
+
+# kitty's half is its shipped default and not asserted. From 3.8 the bar
+# overlays the pane's edge rather than narrowing the pane.
+[pref.scrollbar.targets.tmux]
+key = "pane-scrollbars"
+want = "modal"
 
 [pref.session_persistence]
 value = "tabs and layouts survive a quit"
@@ -980,7 +1019,7 @@ want = "5"
 [pref.window_margin.targets.tmux]
 state = "unreachable"
 recheck = "manual"
-evidence = "tmux panes have no padding option — the only 'padding' in man tmux 3.7c is scrollbar padding under pane-scrollbars-style; text touches pane borders over SSH"
+evidence = "tmux panes have no padding option — man tmux 3.8's only padding is pane-scrollbars-style's pad attribute, between a scrollbar and its pane; `pane-border-lines spaces` blanks the border rather than adding a margin, and `padded` is a popup and menu border type that pane-border-lines refuses (unknown value); text touches pane borders over SSH"
 
 [pref.window_title_placement]
 value = "window"
@@ -1079,6 +1118,12 @@ why = "A left sidebar was trialled 25-08-2026 and declined: ~30 of the window's 
 key = "tab_bar_edge"
 want = "bottom"
 unset_reads_default = true
+
+# tmux's bar, at the bottom like kitty's. Its default in every version, so the
+# line is what this row reads.
+[pref.horizontal_tab_bar.targets.tmux]
+key = "status-position"
+want = "bottom"
 
 # The look of the bar itself — one look, both halves pinned.
 [pref.tab_bar_shape]
@@ -1212,6 +1257,31 @@ target = "zshrc"
 key = "setopt"
 accumulate = true
 want_any = "EXTENDED_GLOB"
+
+# tmux names a window by automatic-rename-format only while automatic-rename
+# is on, and titles the client from set-titles-string only while set-titles
+# is: the switches under pref.tab_identity's tmux rows.
+[pref.gates.targets.tmux_automatic_rename]
+target = "tmux"
+key = "automatic-rename"
+want = "on"
+
+[pref.gates.targets.tmux_set_titles]
+target = "tmux"
+key = "set-titles"
+want = "on"
+
+# Without RGB tmux draws each hex in the bar as the nearest of 256 colours, so
+# pref.terminal_palette's tmux rows would assert colours it does not draw. An
+# SSH client presenting xterm-256color gets RGB only from this line (kitty's
+# own terminfo declares Tc). Exact, so the line edited to `RGB@`, the
+# capability removed, fails; a later line appending `RGB@` would not, and no
+# matcher here can say "and nothing after it takes it back".
+[pref.gates.targets.tmux_rgb_ssh]
+target = "tmux"
+key = "terminal-overrides"
+accumulate = true
+want_any = ",xterm-256color:RGB"
 
 # `disabled = true` renders nothing while set, so every pref.session_account
 # row would stay green. Absent is enabled, so this is want_absent rather than a
@@ -1902,6 +1972,14 @@ why = "The reasoning was never recorded and is not fabricated here."
 key = "prefix"
 want = "C-Space"
 
+[pref.tmux_message_time]
+value = "3 s, not tmux's 750 ms"
+why = "Recorded beside the prefix as deliberate; the reasoning was never written down and is not fabricated here."
+
+[pref.tmux_message_time.targets.tmux]
+key = "display-time"
+want = "3000"
+
 # ── tmux key bindings ─────────────────────────────────────────────────────────
 # The prefix (above) is this family's gate: every binding here is reached
 # through it, so an unasserted prefix would leave all of them green and
@@ -1922,7 +2000,7 @@ want = "C-Space"
 #   would slip past; a substring matcher cannot say "is unset".
 [pref.tmux_keys]
 value = "the shipped keys wherever tmux already ships the guessable one; a letter only where it ships nothing"
-why = "prefix+arrow selects a pane and prefix+option+arrow resizes it, on both 3.7c and 3.5a, out of the box. An hjkl/HJKL block would restate all of it under vim letters and cost `l` (last-window) and `L` (switch-client -l), and it is modal idiom outside copy-mode, the only place the non-modal criterion grants an exception (ruled 09-09-2026). Splits keep `|` and `-` because those are pictures of the divider they make, and tmux's own `%`/`\"` are not."
+why = "prefix+arrow selects a pane and prefix+option+arrow resizes it, on both 3.8 and 3.5a, out of the box. An hjkl/HJKL block would restate all of it under vim letters and cost `l` (last-window) and `L` (switch-client -l), and it is modal idiom outside copy-mode, the only place the non-modal criterion grants an exception (ruled 09-09-2026). Splits keep `|` and `-` because those are pictures of the divider they make, and tmux's own `%`/`\"` are not."
 
 [pref.tmux_keys.targets.tmux_split_h]
 target = "tmux_keys"

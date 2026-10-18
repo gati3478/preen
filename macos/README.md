@@ -50,6 +50,13 @@ script, which would put it wherever the link points; a restore script that
 cannot be saved. A write that fails part-way stops the run, which names the
 restore script that puts back what changed.
 
+## Updating
+
+Run the script again; from a clone, `git pull`, then `./macos/apply.sh`.
+System Settings have no overlay, so a re-run sets back each setting that
+differs, one you changed since included, saving what it replaces first:
+`--dry-run` lists them.
+
 ## Putting it back
 
 `sh` the restore script the run named,

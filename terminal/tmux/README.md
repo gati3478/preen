@@ -53,10 +53,13 @@ it and wins.
 
 **Required**
 
-- **tmux**, measured with 3.7c on macOS and 3.4 on Ubuntu 24.04. Not found,
+- **tmux**, measured with 3.8 on macOS and 3.4 on Ubuntu 24.04. Not found,
   the installer says so and installs anyway; the file is read when a tmux
   server starts. Without tmux the run cannot ask tmux to parse your file, and
-  checks only that its last line does not end in a backslash.
+  checks only that its last line does not end in a backslash. tmux before
+  3.8 has no `theme`, and before 3.6 no copy-mode scrollbar; it skips those
+  lines without a word. 3.6 to 3.7c draw the scrollbar beside the text,
+  narrowing the pane while in copy mode.
 
 **Optional**
 
@@ -117,7 +120,8 @@ It
    its version and to parse files, never to start a session;
 2. copies `tmux.conf` into `~/.config/tmux/preen/` — a copy, never a symlink,
    backed up beside itself as `tmux.conf.unpreened.<timestamp>` if a
-   different one was there, left untouched if identical;
+   different one was there, left untouched if identical, and replaced with
+   no backup if it is an earlier copy this setup shipped;
 3. appends `source-file -q ~/.config/tmux/preen/tmux.conf` to the file named
    above, once. Your file is not otherwise touched, and with none it becomes
    that line. The append is last, so a run that stops earlier never leaves
@@ -146,6 +150,14 @@ cannot parse is refused as it stands: tmux reads none of it now. tmux's parse
 runs nothing in the file — `source-file -n`, on a server of the run's own,
 started with no config and stopped when the run ends.
 
+## Updating
+
+Run the install line again; from a clone, `git pull`, then
+`./terminal/tmux/install.sh`. An earlier copy this setup shipped comes back
+`updated`, with no backup; one you edited is backed up beside itself first.
+A line of yours belongs in `~/.config/tmux/local.conf`, or below the
+appended line (Your overrides).
+
 ## Your overrides
 
 A line of yours below the appended line runs after this config and wins.
@@ -169,13 +181,15 @@ growing, and had not started fifteen seconds later.
 ## What changes
 
 The choices felt at once, each with the lines that undo it in
-`~/.config/tmux/local.conf`. Each undo was measured on tmux 3.7c and 3.4, and
+`~/.config/tmux/local.conf`. Each undo was measured on tmux 3.8 and 3.4, and
 puts back its row's keys and options as a server started with no config has
 them, down to the note C-b ? shows for a key. Such a server's copy mode is
 vi when `VISUAL`, else `EDITOR`, names a vi as it starts — `vim`, `nvim` —
 and there the undo of vi keys leaves out `setw -g mode-keys emacs`. From
 tmux 3.8 such a server has the mouse on too, so there the mouse row changes
-nothing, and its undo turns the mouse off.
+nothing, and its undo turns the mouse off. Before 3.8 tmux neither
+underlines the active window nor has a theme of its own, and before 3.6 it
+has no scrollbar, so those rows change nothing there.
 
 | What you notice | Undo |
 | --- | --- |
@@ -185,6 +199,9 @@ nothing, and its undo turns the mouse off.
 | copy mode takes vi keys: `v` starts a selection and `y` copies it | `setw -g mode-keys emacs`<br>`bind -T copy-mode-vi v send-keys -X rectangle-toggle` |
 | windows and panes count from 1 | `set -g base-index 0`<br>`setw -g pane-base-index 0` |
 | `y` and a mouse drag in copy mode pipe the selection to `pbcopy` | `unbind -T copy-mode-vi y`<br>`bind -T copy-mode-vi MouseDragEnd1Pane send-keys -X copy-pipe-and-cancel` |
+| tmux's own colours — menus, the clock, copy-mode matches — are the terminal's, not tmux's built-in theme | `set -gq theme detect` |
+| the active window's name is not underlined | `setw -gu window-status-current-style` |
+| copy mode shows a scrollbar at the pane's right edge | `set -gq pane-scrollbars off` |
 
 A tmux server keeps what it read until it stops, and reading the config again
 does not take back a line you deleted; the undo lines above unbind and reset

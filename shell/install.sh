@@ -20,13 +20,13 @@ to say. A ZDOTDIR the system zshenv sets moves both, one your zshenv sets
 moves the .zshrc. zsh is asked as a non-login, non-interactive shell, so it
 does not see a ZDOTDIR set only in a login file or only for an interactive
 shell; and ZDOTDIR is unset for the question, so one exported before zsh
-starts is not followed either. Copies, never symlinks: the files become
-yours to tune, and nothing here points back at this repo afterwards.
-~/.hushlogin, and atuin's, bat's, ripgrep's and ncdu's configs under
-~/.config, are copied only where none exists. ripgrep's is not copied while
-RIPGREP_CONFIG_PATH names another file: the copied zshenv exports it naming
-~/.config/ripgrep/config whenever that file is there. ~/.zprofile is never
-touched.
+starts is not followed either. Copies, never symlinks, and nothing here
+points back at this repo afterwards. ~/.hushlogin, and atuin's, bat's,
+ripgrep's and ncdu's configs under ~/.config, are copied only where none
+exists, or an earlier copy this setup shipped does. ripgrep's is not copied
+while RIPGREP_CONFIG_PATH names another file: the copied zshenv exports it
+naming ~/.config/ripgrep/config whenever that file is there. ~/.zprofile is
+never touched.
 
   from a clone:    ./shell/install.sh [flags]
   from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/shell/install.sh | bash
@@ -40,10 +40,11 @@ zshrc reads at its end. ~/.zshenv.local, read at the end of the copied
 zshenv, wins over that file and not over a zshrc, which is read after it.
 Those two are yours: nothing here writes them.
 
-Nothing is overwritten without a timestamped backup beside it, and a re-run
-with nothing changed rewrites nothing. Every refusal comes before the first
-write: a symlinked ~/.config, ~/.config/zsh or preen/, or ~/.config/atuin,
-bat, ripgrep or ncdu when its file would be copied, or a symlinked directory
+Run this again to update: an earlier copy this setup shipped is replaced
+with no backup; anything else in ~/.config/zsh/preen is overwritten only
+after a timestamped backup beside it; and a re-run with nothing changed
+rewrites nothing. Every refusal comes before the first write: a symlinked
+~/.config, ~/.config/zsh or preen/, or ~/.config/atuin, bat, ripgrep or ncdu when its file would be copied, or a symlinked directory
 on the way to the .zshenv or .zshrc zsh reads; a symlinked .zshrc, .zshenv
 or ~/.inputrc whose target lacks its line, which belongs in the target; one
 of them that lacks its line and cannot be read and appended to; a zsh file
@@ -295,19 +296,19 @@ if [ -n "${RIPGREP_CONFIG_PATH:-}" ] && [ "$(squeeze "$RIPGREP_CONFIG_PATH")" !=
 touching "$PREEN_DIR/zshrc" "the interactive shell's config"
 touching "$PREEN_DIR/zshenv" "what every zsh reads first: PATH, the editor"
 touching "$PREEN_DIR/inputrc" "readline's settings, for bash and the rest"
-touching "$HUSHLOGIN" "silences login's Last login line — copied if absent"
+touching "$HUSHLOGIN" "silences login's Last login line — copied if absent or an earlier copy"
 if [ "$atuin_copy" = yes ] && [ ! -d "$ATUIN_DIR" ]; then touching "$ATUIN_DIR" "atuin's config directory, created"; fi
-touching "$ATUIN_CONF" "atuin's settings — copied if absent"
+touching "$ATUIN_CONF" "atuin's settings — copied if absent or an earlier copy"
 touching_dir_for "$BAT_CONF" "bat's config directory, created"
-touching "$BAT_CONF" "bat's theme: the terminal's palette — copied if absent"
+touching "$BAT_CONF" "bat's theme: the terminal's palette — copied if absent or an earlier copy"
 if [ "$rg_copy" = yes ]; then
   touching_dir_for "$RG_CONF" "ripgrep's config directory, created"
-  touching "$RG_CONF" "rg's flags: hidden files, smart case — copied if absent"
+  touching "$RG_CONF" "rg's flags: hidden files, smart case — copied if absent or an earlier copy"
 else
   touching "$RG_CONF" "not copied: RIPGREP_CONFIG_PATH is '$RIPGREP_CONFIG_PATH'"
 fi
 touching_dir_for "$NCDU_CONF" "ncdu's config directory, created"
-touching "$NCDU_CONF" "ncdu's colours: the terminal's palette — copied if absent"
+touching "$NCDU_CONF" "ncdu's colours: the terminal's palette — copied if absent or an earlier copy"
 touching_line "$ZSHENV" "$ZSHENV_LINE"
 if [ "$inputrc_fresh" = yes ]; then
   touching "$INPUTRC" "created: $SYSTEM_INPUTRC_LINE, then $INPUTRC_LINE"
@@ -451,17 +452,17 @@ fi
 # ── the writes ───────────────────────────────────────────────────────────────
 echo
 echo "== installing =="
-copy_into "$SRC/zshrc" "$PREEN_DIR/zshrc"
-copy_into "$SRC/zshenv" "$PREEN_DIR/zshenv"
-copy_into "$SRC/inputrc" "$PREEN_DIR/inputrc"
-copy_if_absent "$WORK/hushlogin" "$HUSHLOGIN"
+copy_into "$SRC/zshrc" "$PREEN_DIR/zshrc" "$PIECE/zshrc"
+copy_into "$SRC/zshenv" "$PREEN_DIR/zshenv" "$PIECE/zshenv"
+copy_into "$SRC/inputrc" "$PREEN_DIR/inputrc" "$PIECE/inputrc"
+copy_if_absent "$WORK/hushlogin" "$HUSHLOGIN" "$PIECE/hushlogin"
 # copy_if_absent places a file, never a directory, so atuin's is made here — and
 # registered in the plan above, because it is a thing this run creates.
 if [ "$atuin_copy" = yes ]; then make_dir "$ATUIN_DIR"; fi
-copy_if_absent "$SRC/atuin/config.toml" "$ATUIN_CONF"
-copy_if_absent_into "$SRC_ROOT/terminal/bat/config" "$BAT_CONF"
-if [ "$rg_copy" = yes ]; then copy_if_absent_into "$SRC_ROOT/ripgrep/config" "$RG_CONF"; fi
-copy_if_absent_into "$SRC_ROOT/terminal/ncdu/config" "$NCDU_CONF"
+copy_if_absent "$SRC/atuin/config.toml" "$ATUIN_CONF" "$PIECE/atuin/config.toml"
+copy_if_absent_into "$SRC_ROOT/terminal/bat/config" "$BAT_CONF" terminal/bat/config
+if [ "$rg_copy" = yes ]; then copy_if_absent_into "$SRC_ROOT/ripgrep/config" "$RG_CONF" ripgrep/config; fi
+copy_if_absent_into "$SRC_ROOT/terminal/ncdu/config" "$NCDU_CONF" terminal/ncdu/config
 # Last, so an rc only ever points at copies already on disk; the zshrc line
 # after the zshenv one, which every zsh reads first.
 append_line_once "$ZSHENV" "$ZSHENV_LINE"

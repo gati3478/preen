@@ -27,7 +27,7 @@ it fetches the configs, and nothing it installs points back here.
 - **bat**, for the scrollback pager. `scrollback_pager` runs it by name, so
   until bat is installed the pager opens on nothing. Everything else is
   unaffected. The installer copies bat's config, which names its theme,
-  where you have none.
+  where you have none of your own.
 - **Zed**, for the click seam. `open-actions.conf` launches `zed` by name
   when you click a file path; without it a click does nothing, and with
   another editor you put its name in that file. The installer says what it
@@ -93,11 +93,11 @@ plan for a home with no `~/.config` yet:
 ~/.config/kitty/preen/current-theme.conf   the palette it includes
 ~/.config/kitty/preen/tab-title.conf       the tab title for this home — ours; local.conf stays yours
 ~/.config/kitty/kitty.conf                 created: include preen/kitty.conf
-~/.config/kitty/open-actions.conf          what a click on a link does — copied if absent
-~/.config/kitty/mime.types                 the file types behind it — copied if absent
-~/.config/kitty/choose-files.conf          kitty's file picker, kitten choose-files — copied if absent
+~/.config/kitty/open-actions.conf          what a click on a link does — copied if absent or an earlier copy
+~/.config/kitty/mime.types                 the file types behind it — copied if absent or an earlier copy
+~/.config/kitty/choose-files.conf          kitty's file picker, kitten choose-files — copied if absent or an earlier copy
 ~/.config/bat                              bat's config directory, created
-~/.config/bat/config                       bat's theme: the terminal's palette — copied if absent
+~/.config/bat/config                       bat's theme: the terminal's palette — copied if absent or an earlier copy
 ```
 
 A `kitty.conf` of yours without the line reads `one line appended: <line>`
@@ -110,7 +110,8 @@ It
 2. copies `kitty.conf` and `current-theme.conf` into
    `~/.config/kitty/preen/` — copies, never symlinks, each backed up beside
    itself as `<file>.unpreened.<timestamp>` if a different one was there,
-   left untouched if identical;
+   left untouched if identical, and replaced with no backup if it is an
+   earlier copy this setup shipped;
 3. writes `~/.config/kitty/preen/tab-title.conf`: the tab title, rewritten
    for your home directory. kitty's config language expands no environment
    variable in that option, so the home to collapse to `~` has to be a
@@ -124,12 +125,14 @@ It
 4. copies `open-actions.conf`, `mime.types` and `choose-files.conf` into
    `~/.config/kitty` itself, because kitty reads those three from the config
    directory root under those exact names — a copy under `preen/` is ignored.
-   A file already at one of them stays as it is, with no backup, because
+   An earlier copy this setup shipped at one of them is `updated`, with no
+   backup; anything else there stays as it is, with no backup, because
    nothing is replaced: the run says `unchanged` when it is a file holding
    this config's bytes, and `left alone` when it is anything else, a symlink
    included;
 5. copies bat's config, from [`terminal/bat/`](../bat/), to
-   `~/.config/bat/config` the same way: only where nothing is there. Its one
+   `~/.config/bat/config` the same way: only where nothing is there, or an
+   earlier copy this setup shipped is. Its one
    line is `--theme="ansi"`, the terminal's own palette, and
    `scrollback_pager` names no theme of its own;
 6. appends `include preen/kitty.conf` to `~/.config/kitty/kitty.conf`, once.
@@ -153,6 +156,15 @@ would be copied into it;
 `~/.config` is not a directory, is not writable, or cannot be created; a
 source file that is missing, empty, or not the file it claims to be.
 
+## Updating
+
+Run the install line again; from a clone, `git pull`, then
+`./terminal/kitty/install.sh`. An earlier copy this setup shipped comes back
+`updated`, with no backup. One you edited is not: a copy in `preen/` is
+backed up beside itself first, and one of the files kitty reads from
+`~/.config/kitty` itself, or bat's config, is left alone. A setting of yours
+belongs in `local.conf`, which no run writes (Your overrides).
+
 ## Your overrides
 
 `~/.config/kitty/preen/local.conf` is read after everything else in this
@@ -171,6 +183,16 @@ knowing before you wonder why a setting of yours stopped working: **lines in
 your own `kitty.conf` above the include line lose to this config.** If you had
 `cursor_shape block`, the caret is an underline after this install. Move the
 line below the include line, or into `local.conf`.
+
+**Another theme.** `kitten themes` writes the theme you pick to
+`~/.config/kitty/current-theme.conf` and appends an include of it to the end
+of your own `kitty.conf`, below the include line, so it wins over this
+palette (read in kitty 0.49.2's source). After the whole setup, `kitty.conf`
+is a link into the clone, which the kitten writes through, and the next
+`git pull` refuses: run `kitten themes --config-file-name local.conf`
+instead, and the include lands in `~/.config/kitty/local.conf`, which that
+setup reads last. `kitten choose-fonts` edits `kitty.conf` too, unless given
+the same `--config-file-name local.conf`.
 
 ## Sessions
 
@@ -210,9 +232,9 @@ cost nothing.
 2. Delete `~/.config/kitty/preen/` — keep `local.conf` from it first if you
    made one; that file is yours.
 3. For `open-actions.conf`, `mime.types`, `choose-files.conf` and
-   `~/.config/bat/config`, read what the run said of each: `copied` or
-   `unchanged` means the file held this config's bytes and can go;
-   `left alone` means something else was there, a different file or a
+   `~/.config/bat/config`, read what the run said of each: `copied`,
+   `updated` or `unchanged` means the file held this config's bytes and can
+   go; `left alone` means something else was there, a different file or a
    symlink, and the run never touched it. Where it said `created` of
    `~/.config/bat`, that directory goes with its file. The shell piece
    copies bat's config too, so keep it while you keep that piece.

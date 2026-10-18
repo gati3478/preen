@@ -22,6 +22,7 @@
 PREEN_INSTALL_LIB=1
 
 STAMP="$(date +%Y%m%d-%H%M%S)"   # one per run, so a run's backups sort together
+SHIPPED=""   # lib/shipped, once locate_sources has found or fetched it
 
 die() { echo "install.sh: $*" >&2; exit 1; }   # say why the run stops, and stop it
 
@@ -135,37 +136,48 @@ fetch() { # fetch <file> — one of this piece's files from SOURCE_URL into SRC,
 }
 # curl -f already refuses a 404; a caller still checks that what arrived is the
 # file it asked for, because a 200 of the wrong bytes is a success.
-# Only the marker file is fetched here; a piece fetches its other files itself,
-# after this, and knows it is on the fetched path when SRC is under WORK.
-locate_sources() { # locate_sources <marker file> — set SRC and ORIGIN: beside the caller when <marker file> is there, else a fetched copy
+# Only the marker file is fetched here, and lib/shipped, which ours() reads; a
+# piece fetches its other files itself, after this, and knows it is on the
+# fetched path when SRC is under WORK.
+locate_sources() { # locate_sources <marker file> — set SRC and ORIGIN: beside the caller when <marker file> is there, else a fetched copy; and SHIPPED
   if [ -n "$SELF_DIR" ] && [ -f "$SELF_DIR/$1" ]; then
     SRC="$SELF_DIR"
     ORIGIN="$(short "$SRC")"
+    SHIPPED="$(clone_root)/lib/shipped"
   else
     SRC="$WORK/src"
     ORIGIN="$SOURCE_URL"
     mkdir -p "$SRC"
     echo "== fetching from $SOURCE_URL =="
     fetch "$1"
+    # Missing, it only makes a copy an earlier run made read as yours. Until
+    # the installers fetch a tagged release, a run fetched mid-publish can read
+    # a list from the other side of that publish.
+    SHIPPED="$WORK/shipped"
+    curl -fsSL "$ROOT_URL/lib/shipped" -o "$SHIPPED" 2>/dev/null || rm -f "$SHIPPED"
   fi
+}
+clone_root() { # clone_root → the root of the clone SRC is in, PIECE's depth above it
+  local root="$SRC" up="$PIECE"
+  while [ -n "$up" ]; do
+    root="$(dirname "$root")"
+    case "$up" in */*) up="${up#*/}" ;; *) up="" ;; esac
+  done
+  printf '%s' "$root"
 }
 whole_with() { [ "$(tail -n 1 "$SRC/$1")" = "$2" ] && grep -qF -- "$3" "$SRC/$1"; }   # whole_with <file> <its last line> <text it holds> → true when $SRC/<file> ends on that line and holds that text
 # A file kept outside the piece's own directory is named by its path under the
 # root, and comes the way the piece's files came: from the same clone, PIECE's
 # depth above them, or fetched from ROOT_URL when they were fetched.
 locate_root_file() { # locate_root_file <path under the root> <its last line> <text it holds> — set SRC_ROOT to a root holding that file whole, or stop; call it after locate_sources
-  local up="$PIECE" origin
+  local origin
   if [ "$SRC" = "$WORK/src" ]; then
     SRC_ROOT="$WORK/root"
     origin="$ROOT_URL"
     mkdir -p "$SRC_ROOT/$(dirname "$1")"
     curl -fsSL "$ROOT_URL/$1" -o "$SRC_ROOT/$1" && [ -s "$SRC_ROOT/$1" ] || die "could not fetch $ROOT_URL/$1"
   else
-    SRC_ROOT="$SRC"
-    while [ -n "$up" ]; do
-      SRC_ROOT="$(dirname "$SRC_ROOT")"
-      case "$up" in */*) up="${up#*/}" ;; *) up="" ;; esac
-    done
+    SRC_ROOT="$(clone_root)"
     origin="$(short "$SRC_ROOT")"
     [ -s "$SRC_ROOT/$1" ] || die "$origin/$1 is missing or empty"
   fi
@@ -200,15 +212,37 @@ backup_name() { # backup_name <file> → a name beside it that nothing holds yet
   done
   printf '%s' "$b"
 }
+# lib/shipped lists every blob each file here has held, "<blob id> <path in
+# the mirror>" a line, so a copy an earlier run made is told from your edit.
+# Without the list, or anything to hash with, only the current bytes count as
+# this setup's.
+ours() { # ours <file> <its path in the mirror> → true when <file> is a plain file holding bytes this setup shipped at that path
+  local id
+  [ -n "$2" ] && [ -f "$SHIPPED" ] && [ -f "$1" ] && [ ! -L "$1" ] && id="$(blob_id "$1")" && grep -qxF -- "$id $2" "$SHIPPED"
+}
+# git's blob id: sha-1 over "blob <size>", a NUL, then the bytes. Asked of git
+# where there is a real one, else of shasum or sha1sum, each sha-1 by default.
+blob_id() { # blob_id <file> → its blob id; false with nothing to hash with
+  local sum
+  if command -v git >/dev/null 2>&1 && ! bare_shim git; then git hash-object --stdin < "$1"; return; fi
+  sum="$(command -v shasum || command -v sha1sum)" || return 1
+  { printf 'blob %d\0' "$(wc -c < "$1")"; cat "$1"; } | "$sum" | cut -d' ' -f1
+}
 # A file is materialised as it should land, then compared with what is there:
-# identical is left untouched, so a re-run backs up nothing. A symlink in the
-# way is moved aside, link and all, even to identical content — the file is
-# being replaced, and writing through the link would overwrite whatever it
-# points at, a repo of yours say.
-place() { # place <materialised file> <destination> — the destination becomes this file, whatever was there backed up beside it
+# identical is left untouched, so a re-run backs up nothing, and an earlier
+# copy this setup shipped is replaced with no backup, holding nothing of yours.
+# A symlink in the way is moved aside, link and all, even to identical
+# content — the file is being replaced, and writing through the link would
+# overwrite whatever it points at, a repo of yours say.
+place() { # place <materialised file> <destination> [its path in the mirror] — the destination becomes this file, whatever was there backed up beside it unless this setup shipped it
   local src="$1" dst="$2" bak
   if [ -e "$dst" ] || [ -L "$dst" ]; then
     if [ ! -L "$dst" ] && cmp -s "$src" "$dst"; then record "unchanged       $(short "$dst")"; return 0; fi
+    if ours "$dst" "${3:-}"; then
+      { rm -f "$dst" && cp "$src" "$dst"; } || die "could not write $(short "$dst")"
+      record "updated         $(short "$dst")"
+      return 0
+    fi
     bak="$(backup_name "$dst")"
     mv "$dst" "$bak" || die "could not move $(short "$dst") aside"
     record "backed up       $(short "$dst") -> $(short "$bak")"
@@ -223,17 +257,22 @@ make_dir() { # make_dir <dir> — create <dir> and each missing directory above 
   mkdir "$1" || die "could not create $(short "$1")"
   record "created         $(short "$1")"
 }
-copy_into() { # copy_into <file> <destination> — place it, creating each directory missing above it
+copy_into() { # copy_into <file> <destination> [its path in the mirror] — place it, creating each directory missing above it
   make_dir "$(dirname "$2")"
-  place "$1" "$2"
+  place "$1" "$2" "${3:-}"
 }
 # For a file the tool reads by a fixed name of its own: a drop-in cannot layer
-# under such a name, so whatever is there stays, backup or no backup. The run
-# says whether its bytes are this file's, never whose the file is; a symlink,
-# as in place(), is never `unchanged`.
-copy_if_absent() { # copy_if_absent <file> <destination> — copy only when nothing is at the destination; anything there stays
+# under such a name, so whatever is there stays, backup or no backup — but an
+# earlier copy this setup shipped, updated where the run could have copied it:
+# its directory not a symlink, and writable. The run says whether its bytes
+# are this file's, never whose the file is; a symlink, as in place(), is never
+# `unchanged`.
+copy_if_absent() { # copy_if_absent <file> <destination> [its path in the mirror] — copy only when nothing is at the destination, or an earlier copy this setup shipped; anything else there stays
   if [ -e "$2" ] || [ -L "$2" ]; then
-    if [ ! -L "$2" ] && cmp -s "$1" "$2"; then record "unchanged       $(short "$2")"; else record "left alone      $(short "$2")"; fi
+    if [ ! -L "$2" ] && cmp -s "$1" "$2"; then record "unchanged       $(short "$2")"
+    elif [ ! -L "$(dirname "$2")" ] && [ -w "$(dirname "$2")" ] && ours "$2" "${3:-}"; then place "$1" "$2" "${3:-}"
+    else record "left alone      $(short "$2")"
+    fi
     return 0
   fi
   cp "$1" "$2" || die "could not write $(short "$2")"
@@ -250,9 +289,9 @@ refuse_dir_for() { # refuse_dir_for <file> — when nothing is at <file>, stop t
   refuse_linked_dir "$(dirname "$1")"
   refuse_unwritable_if_there "$(dirname "$1")"
 }
-copy_if_absent_into() { # copy_if_absent_into <file> <destination> — copy_if_absent, first creating the destination's directory when nothing is at it
+copy_if_absent_into() { # copy_if_absent_into <file> <destination> [its path in the mirror] — copy_if_absent, first creating the destination's directory when nothing is at it
   there "$2" || make_dir "$(dirname "$2")"
-  copy_if_absent "$1" "$2"
+  copy_if_absent "$1" "$2" "${3:-}"
 }
 holds_line() { # holds_line <file> <line> → true when <file>, followed if a symlink, is a regular file holding that exact whole line
   [ -f "$1" ] && grep -qxF -- "$2" "$1" 2>/dev/null

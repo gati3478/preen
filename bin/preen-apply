@@ -12,6 +12,8 @@ usage: preen apply [--dry-run]
 
 Deploys every manifest.tsv row: a link row as a symlink into this repo, a copy
 row as a copy; a differing plain file it replaces is backed up beside itself.
+Outside the source repo, a copy row's file holding an earlier copy this setup
+shipped is updated, and one holding anything else is yours and kept.
 Every refusal comes before the first write. Never runs as root.
 
   --dry-run   refuse as a real run would, then print each line the real run
@@ -32,6 +34,37 @@ done
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MANIFEST="$REPO/manifest.tsv"
+
+# preen doctor's test for the source repo: the list of what ships, which never
+# ships itself. There preen pull brings a copy row's rewrite back, so a
+# differing file is backed up and overwritten; in any other clone nothing
+# would bring it back, so only bytes this setup shipped are overwritten.
+SOURCE_REPO=no
+[ -f "$REPO/bin/lib/stage-mirror.sh" ] && SOURCE_REPO=yes
+
+# A Mac without the Command Line Tools still has /usr/bin/git and
+# /usr/bin/python3: stubs that raise an install dialog when run. So the tool
+# behind the stub is looked for, never run; `xcode-select -p` alone is not
+# enough, it prints a stale selection and exits 0.
+bare_shim() { # bare_shim <tool> → true when <tool> is macOS's /usr/bin stub with no developer tools behind it
+  local dir
+  [ "$(command -v "$1" 2>/dev/null)" = "/usr/bin/$1" ] && [ -x /usr/bin/xcode-select ] || return 1
+  dir="$(/usr/bin/xcode-select -p 2>/dev/null)" && [ -x "$dir/usr/bin/$1" ] && return 1
+  return 0
+}
+
+# lib/shipped lists every blob each shipped path has held, one
+# "<blob id> <path>" a line, so a copy an earlier run made is told from the
+# person's edit. Without it — a clone from before it shipped — or without a
+# git to hash with, only the current bytes count as this setup's.
+shipped() { # shipped <src> <file> → true when lib/shipped lists <file>'s bytes at <src>
+  local id
+  [ -f "$REPO/lib/shipped" ] && ! bare_shim git && id="$(git hash-object --stdin < "$2" 2>/dev/null)" &&
+    grep -qxF "$id $1" "$REPO/lib/shipped"
+}
+yours() { # yours <src> <file> → true outside the source repo when <file> is a plain file holding bytes this setup never shipped at <src>
+  [ "$SOURCE_REPO" = no ] && [ -f "$2" ] && [ ! -L "$2" ] && ! cmp -s "$REPO/$1" "$2" && ! shipped "$1" "$2"
+}
 
 # The manifest installs USER files: ~/.zshrc, ~/.config, ~/.local. Running as
 # root would create root-owned files in a user's home, which then fail to be
@@ -127,7 +160,7 @@ while IFS=$'\t' read -r src tgt mode perms; do
     if [ ! -r "$abs_tgt" ]; then
       echo "REFUSING        $tgt is not readable, so it cannot be backed up" >&2
       refused=yes
-    elif [ "$mode" = copy ] && [ ! -w "$abs_tgt" ]; then
+    elif [ "$mode" = copy ] && [ ! -w "$abs_tgt" ] && ! yours "$src" "$abs_tgt"; then
       echo "REFUSING        $tgt is not writable, and this copy row writes it in place" >&2
       refused=yes
     fi
@@ -258,13 +291,25 @@ while IFS=$'\t' read -r src tgt mode perms; do
       # `cp` follows a symlink: copying over a link here would overwrite what it
       # points at, an adopter's own file outside this manifest, while the link
       # still reads as a link and every check says ok. Move the link aside,
-      # link and all, as the drop-ins' shared place() does.
-      if [ -L "$abs_tgt" ]; then
+      # link and all, as the drop-ins' shared place() does. A link to this
+      # repo's own file is the row from when it was a link row, and removing it
+      # loses nothing.
+      if [ -L "$abs_tgt" ] && [ "$abs_tgt" -ef "$abs_src" ]; then
+        run rm "$abs_tgt"
+        say 'replaced link' 'would replace link' "$tgt (a link into this clone)"
+      elif [ -L "$abs_tgt" ]; then
         bak="$(backup_name "$abs_tgt")"
         was="$(readlink "$abs_tgt")"
         run mv "$abs_tgt" "$bak"
         say 'moved aside' 'would move aside' "$tgt (a symlink -> $was)"
-      elif [ -f "$abs_tgt" ] && ! cmp -s "$abs_src" "$abs_tgt"; then
+      elif yours "$src" "$abs_tgt"; then
+        # Outside the source repo nothing pulls a rewrite back, so bytes this
+        # setup never shipped stay where they are; a file of bytes it did ship
+        # is an earlier copy, which the cp below replaces whole.
+        say 'kept' 'would keep' "$tgt (yours: not a copy this setup shipped)"
+        row=""
+        continue
+      elif [ -f "$abs_tgt" ] && [ "$SOURCE_REPO" = yes ] && ! cmp -s "$abs_src" "$abs_tgt"; then
         # A plain file here is the adopter's own, or the application's rewrite
         # of an earlier copy, so it is kept beside itself under a name nothing
         # holds yet, as for a link row; identical content is left alone, so a

@@ -25,9 +25,18 @@
 # spaces as whitespace; a line led or split by one, or with one for its value,
 # is not modelled. LC_ALL=C: under a UTF-8 locale, macOS awk stops at a byte
 # that is not UTF-8.
+#
+# In both, HOME is read without its trailing slashes, as a working directory
+# is written: /h/ names /h. A HOME of slashes alone is read as given.
+
+BEGIN {
+  home = ENVIRON["HOME"]
+  while (home ~ /\/$/) home = substr(home, 1, length(home) - 1)
+  if (home == "") home = ENVIRON["HOME"]
+}
 
 want == "title" && /^tab_title_template / {
-  lit = ""; r = ENVIRON["HOME"]
+  lit = ""; r = home
   while ((k = index(r, "\\")) > 0) {
     lit = lit substr(r, 1, k - 1) "\\\\"
     r = substr(r, k + 1)
@@ -49,7 +58,7 @@ END {
   p = ""; i = index(t, "active_wd.replace(")
   if (i) {
     s = substr(t, i + 18); q = substr(s, 1, 1); s = substr(s, 2); j = index(s, q)
-    if ((q == "\"" || q == "'") && j && substr(s, 1, j - 1) != ENVIRON["HOME"] && substr(s, j + 1) ~ /^, *.~.\)/) p = substr(s, 1, j - 1)
+    if ((q == "\"" || q == "'") && j && substr(s, 1, j - 1) != home && substr(s, j + 1) ~ /^, *.~.\)/) p = substr(s, 1, j - 1)
   }
   print n, p
 }

@@ -42,6 +42,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import time
 import xml.etree.ElementTree as ET
 import zipfile
 from xml.parsers.expat import ExpatError
@@ -1093,13 +1094,23 @@ def read_tmux(path, key, accumulate=False, host=None, **_opts):
                    default for a built-in, or an earlier value. `set -ga
                    update-environment APPENDED` came back as tmux's own built-in
                    list plus the appended entry — a value no amount of reading
-                   this file produces.
+                   this file produces. Refused for a single value only: an
+                   `accumulate` read takes each appended value as an entry, the
+                   way tmux builds an array (3.8, measured: two `set -as
+                   terminal-overrides` lines came back after the built-in
+                   `linux*:AX@`, and a plain `set -s` after them left only its
+                   own value). So in such a read a plain `set` of a built-in replaces
+                   the entries before it, and `-a` adds to them. The built-in
+                   default's own entries are not in the file and are not
+                   returned: `want_any` over such a read is sound,
+                   `want_all_contain` is not.
       -F           expands formats at set time, so `#{host}` is stored as the
                    hostname.
       -o           declines to overwrite an already-set option, which makes
                    last-wins the wrong rule.
-      no -g        sets a session-scope option that shadows the global this
-                   reader models.
+      no -g, -s    sets a session-scope option that shadows the global this
+                   reader models. `-s` sets a server option, which has one
+                   scope, so it reads like `-g`.
       %if          a branch this reader cannot evaluate. Refused only when the
                    REQUESTED key is set inside one, so an unrelated block costs
                    nothing.
@@ -1164,18 +1175,20 @@ def read_tmux(path, key, accumulate=False, host=None, **_opts):
             )
 
         cluster = "".join(f.lstrip("-") for f in flags)
+        appends = "a" in cluster
         for flag, why in (
             ("a", "appends to whatever the option already held (a built-in default, or an "
-                  "earlier value) — not reconstructable from this file"),
+                  "earlier value) — not reconstructable from this file as one value; "
+                  "an accumulate read takes it as an entry"),
             ("F", "expands formats at set time, so the stored value is not the text here"),
             ("o", "declines to overwrite an already-set option, so last-wins does not apply"),
         ):
-            if flag in cluster:
+            if flag in cluster and not (flag == "a" and accumulate):
                 raise ReadError(f"`{key}` is set with -{flag}, which {why}")
-        if "g" not in cluster:
+        if "g" not in cluster and "s" not in cluster:
             raise ReadError(
-                f"`{key}` is set without -g — that is a session-scope option shadowing the "
-                "global this reader models, and the two can differ"
+                f"`{key}` is set without -g or -s — that is a session-scope option shadowing "
+                "the global this reader models, and the two can differ"
             )
         if "u" in cluster:
             # A user option is genuinely removed; a built-in reverts to a
@@ -1188,7 +1201,13 @@ def read_tmux(path, key, accumulate=False, host=None, **_opts):
                 "default rather than removing it — this reader cannot supply that default"
             )
 
-        found.append(rest[1] if len(rest) > 1 else "")
+        value = rest[1] if len(rest) > 1 else ""
+        # A user option keeps every line: tpm reads `@plugin` off the file,
+        # one plugin per line, and so do the rows asserting it.
+        if accumulate and not appends and not key.startswith("@"):
+            found = [value]
+        else:
+            found.append(value)
 
     if not found:
         return None
@@ -1385,6 +1404,133 @@ def read_tmux_bind(path, key, accumulate=False, host=None, **_opts):
     if not found:
         return None
     return found if accumulate else found[-1]
+
+
+# What a tmux copy keeps can only be watched: no option reaches it. man tmux 3.8
+# speaks of trailing spaces only under capture-pane's -N and -J, and
+# window_copy_copy_line in window-copy.c ends every copied row at
+# window_copy_find_length — its text without trailing spaces — unless the row
+# wrapped at the screen edge, which it copies whole. The same in 3.5a and 3.7c.
+#
+# The probe pane is 20 cells wide. Its first row ends in spaces; its third
+# fills the row with spaces and wraps onto `z`, so a copy of it keeps them —
+# the control: a probe that cannot see a trailing space there would read every
+# copy as stripped.
+_TMUXCOPY_WIDTH = 20
+_TMUXCOPY_ROWS = ("abc     ", "de    fgh", "wrap" + " " * 16 + "z")
+_TMUXCOPY_KEYS = ("stream", "rectangle")
+_TMUXCOPY = {}   # config's real path -> {"stream" | "rectangle" | "wrapped": buffer} or the error
+
+
+def _tmuxcopy_buffers(conf):
+    """The probe's three copies, as tmux buffered them, on a scratch server.
+
+    The server runs from `conf` on a socket in a temporary directory, named
+    relatively because a socket path stops at 104 bytes. Its environment is
+    HOME, PATH and SHELL alone, HOME being that directory, so the config's `~`
+    paths resolve to nothing: no overlay, no tpm, and no continuum restoring
+    saved sessions into the probe. The copies land in tmux's own buffers and
+    are read back with show-buffer; with no client attached, set-clipboard has
+    no terminal to write to. The pane sleeps 20 s, so a server a killed run
+    leaves behind exits by itself.
+
+    TMUXCOPY_FIXTURE names a JSON file of the three buffers instead (tests).
+    """
+    fixture = os.environ.get("TMUXCOPY_FIXTURE")
+    if fixture:
+        with open(fixture, encoding="utf-8") as fh:
+            return json.load(fh)
+    tmux = shutil.which("tmux")
+    if not tmux:
+        raise ReadSkip("tmux is not installed here")
+    room = tempfile.mkdtemp(prefix="tmuxcopy.")
+    env = {"HOME": room, "PATH": "/usr/bin:/bin", "SHELL": "/bin/sh"}
+
+    def run(*args):
+        try:
+            proc = subprocess.run([tmux, "-S", "./s", *args], cwd=room, env=env, capture_output=True,
+                                  text=True, timeout=5, stdin=subprocess.DEVNULL)
+        except (OSError, subprocess.SubprocessError) as exc:
+            raise ReadError(f"tmux {args[0]} did not finish: {exc}") from exc
+        if proc.returncode:
+            raise ReadError(f"tmux {args[0]} failed (rc={proc.returncode}): {proc.stderr.strip()[:120]}")
+        return proc.stdout
+
+    def copy(*moves):
+        """Copy mode from the top row's start, `moves` (copy-mode commands with their
+        send-keys flags), then copy and leave: the buffer it made."""
+        run("copy-mode", "-t", "p")
+        for move in (("top-line",), ("start-of-line",)) + moves + (("copy-selection-and-cancel",),):
+            run("send-keys", "-t", "p", *move[1:], "-X", move[0])
+        return run("show-buffer")
+
+    pane = "printf '%s\\n' " + " ".join(shlex.quote(r) for r in _TMUXCOPY_ROWS) + "; sleep 20"
+    try:
+        run("-f", conf, "new-session", "-d", "-s", "p", "-x", str(_TMUXCOPY_WIDTH), "-y", "8", pane)
+        # 3.6 to 3.7c narrow a pane entering copy mode for a `modal` scrollbar,
+        # which would rewrap the control's row.
+        run("set", "-gq", "pane-scrollbars", "off")
+        deadline = time.monotonic() + 5
+        while run("capture-pane", "-p", "-t", "p").split("\n")[3:4] != ["z"]:
+            if time.monotonic() > deadline:
+                raise ReadError("the probe pane never showed its text")
+            time.sleep(0.05)
+        begin, down = ("begin-selection",), ("cursor-down",)
+        return {
+            # From the first row's start down one, as a mouse drag takes it:
+            # the first row whole.
+            "stream": copy(begin, down),
+            # The first two rows, eight cells wide: the first row's text and spaces.
+            "rectangle": copy(("rectangle-on",), begin, down, ("cursor-right", "-N", "7")),
+            # The wrapped row whole.
+            "wrapped": copy(("cursor-down", "-N", "2"), begin, down),
+        }
+    finally:
+        subprocess.run([tmux, "-S", "./s", "kill-server"], cwd=room, env=env, capture_output=True,
+                       timeout=5, stdin=subprocess.DEVNULL)
+        shutil.rmtree(room, ignore_errors=True)
+
+
+def _tmuxcopy_capture(conf):
+    real = os.path.realpath(conf)
+    if real not in _TMUXCOPY:
+        try:
+            _TMUXCOPY[real] = _tmuxcopy_buffers(real)
+        except (ReadSkip, ReadError, OSError, ValueError) as exc:
+            _TMUXCOPY[real] = exc if isinstance(exc, (ReadSkip, ReadError)) else ReadError(str(exc))
+    got = _TMUXCOPY[real]
+    if isinstance(got, Exception):
+        raise got
+    return got
+
+
+def _tmuxcopy_row(buffers, key):
+    """`stripped` or `kept`: what the `key` copy did with the first row's trailing spaces."""
+    wrapped = str(buffers.get("wrapped", ""))
+    if not wrapped.startswith(_TMUXCOPY_ROWS[2][:_TMUXCOPY_WIDTH]):
+        raise ReadError(
+            f"the control — a row wrapped at its own spaces, which tmux copies whole — came back "
+            f"{wrapped!r}, so this probe cannot see a trailing space and `stripped` would prove nothing"
+        )
+    first = str(buffers.get(key, "")).split("\n", 1)[0]
+    text, tail = first[:3], first[3:]
+    if text == _TMUXCOPY_ROWS[0].rstrip() and not tail.strip(" "):
+        return "kept" if tail else "stripped"
+    raise ReadError(f"the {key} copy began {first!r}, not the probe's first row")
+
+
+def read_tmuxcopy(path, key, accumulate=False, host=None, **_opts):
+    """What tmux's copy mode does with a row's trailing spaces: `stripped` or `kept`.
+
+    `path` is the config the scratch server starts from; `key` is the
+    selection: `stream`, the shape of a mouse drag (a whole row and the start
+    of the next), or `rectangle`. The read runs tmux; it never reads the text.
+    """
+    if host:
+        raise ReadError(f"tmuxcopy runs tmux on this machine, so it cannot measure {host}'s")
+    if key not in _TMUXCOPY_KEYS:
+        raise ReadError(f"tmuxcopy reads {' or '.join(_TMUXCOPY_KEYS)}, not `{key}`")
+    return _tmuxcopy_row(_tmuxcopy_capture(path), key)
 
 
 def _strip_flags_comment(line):
@@ -2438,6 +2584,7 @@ READERS = {
     "kittyblocks": read_kitty_blocks,
     "tmux": read_tmux,
     "tmuxbind": read_tmux_bind,
+    "tmuxcopy": read_tmuxcopy,
     "flags": read_flags,
     "rgconf": read_rgconf,
     "ncduconf": read_ncduconf,
@@ -2887,12 +3034,34 @@ def probe_fd_colour_modes():
                   "LS_COLORS replaces its extension table wholesale rather than recolouring it")
 
 
+def probe_tmux_rectangle_trailing():
+    """Does a rectangle copy in tmux still drop its rows' trailing spaces?
+
+    kitty's `strip_trailing_spaces smart` keeps them in a rectangle, and tmux
+    has no setting to: its copy ends every row at the row's text, rectangle or
+    not. Watched by copying one on a scratch server (read_tmuxcopy's), from the
+    deployed config.
+    """
+    conf = os.path.expanduser(spec_path("probes", "tmux_rectangle_trailing", "live_config",
+                                        "~/.config/tmux/tmux.conf"))
+    if not os.path.isfile(conf):
+        return None, f"no tmux config at {conf}"
+    try:
+        got = _tmuxcopy_row(_tmuxcopy_capture(conf), "rectangle")
+    except (ReadSkip, ReadError) as exc:
+        return None, str(exc)
+    if got == "kept":
+        return False, "a rectangle copy now keeps its rows' trailing spaces"
+    return True, "a rectangle copy drops its rows' trailing spaces, as every tmux copy does"
+
+
 PROBES = {
     "fd_colour_modes": probe_fd_colour_modes,
     "mac_nano_is_pico": probe_mac_nano_is_pico,
     "sublime_caret_styles": probe_sublime_caret_styles,
     "obsidian_caret": probe_obsidian_caret,
     "kitty_ctrl_shift_plane": probe_kitty_ctrl_shift_plane,
+    "tmux_rectangle_trailing": probe_tmux_rectangle_trailing,
 }
 
 # Every path literal inside a probe or the defaults oracle is THIS machine's.
@@ -2908,6 +3077,7 @@ SPEC_PATH_KEYS = {
         "kitty_ctrl_shift_plane": ("live_config",),
         "mac_nano_is_pico":       ("system_nano", "real_nano_candidates"),
         "fd_colour_modes":        ("fd_binary",),
+        "tmux_rectangle_trailing": ("live_config",),
     },
     "oracles": {
         "kitty": ("reference_conf_glob",),
@@ -3741,10 +3911,11 @@ def emit(status, message, kind=""):
 
 
 # Formats whose "path" is not a file this checker could empty: two run the
-# application's own resolver over a live process, and a `defaults` or
-# `lshandler` path is a preferences DOMAIN. A row on one of them is out of
-# --prove's scope, and said so rather than dropped.
-LIVE_FORMATS = ("zshcap", "obsidiancap", "defaults", "lshandler")
+# application's own resolver over a live process, a `defaults` or `lshandler`
+# path is a preferences DOMAIN, and `tmuxcopy` watches what tmux does, which
+# nothing in its config decides. A row on one of them is out of --prove's
+# scope, and said so rather than dropped.
+LIVE_FORMATS = ("zshcap", "obsidiancap", "defaults", "lshandler", "tmuxcopy")
 
 # The emptiest document each reader still accepts, MEASURED by handing one to
 # every reader with a key out of the real spec: each answered "absent" rather

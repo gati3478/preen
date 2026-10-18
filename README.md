@@ -122,16 +122,24 @@ in:
   into them: Zed's copies its settings to
   `~/.config/zed/global_settings.json`, which Zed reads under your
   `~/.config/zed/settings.json`, and its keymap and tasks only where you
-  have none; Sublime Text's copies its files into a package of their own,
+  have none of your own; Sublime Text's copies its files into a package of their own,
   `Packages/preen`, which Sublime reads under your `Packages/User`.
 
 The shell's and kitty's also copy bat's config, and the shell's ripgrep's
-and ncdu's, only where you have none — ripgrep's not while
+and ncdu's, only where you have none of your own — ripgrep's not while
 `RIPGREP_CONFIG_PATH` names another file. gh's copies nothing: it sets each of
 its keys that differs through `gh config set`, after backing up your
 `~/.config/gh/config.yml`. `macos/apply.sh` sets each System Settings value
 it names that differs on your Mac, with `defaults`, after saving a script
 that puts the old values back. `--help` is each script's manual.
+
+To update a piece, run its line again. A copy the setup shipped is replaced
+with no backup; a file you edited is backed up first, or, where the piece
+copies only where you have none of your own, left alone. Each page names
+where a line of yours belongs instead, but the statusline's: cship and
+starship each read one file, so carry an edit of yours over from the backup.
+gh's and `macos/apply.sh` set each value that differs again, after their
+backups.
 
 ## Take the setup
 
@@ -168,10 +176,14 @@ and bootstrap never modifies your clone. What it finds in the way:
 
 - a symlinked directory between `~` and a file it deploys, the layout stow
   leaves, is refused;
-- a plain file of yours that differs from the shipped one is kept beside
-  itself as `<file>.unpreened.<stamp>`, `<stamp>` the run's date and time;
+- at a `link` row, a plain file of yours that differs from the shipped one
+  is kept beside itself as `<file>.unpreened.<stamp>`, `<stamp>` the run's
+  date and time;
+- at a `copy` row, a file of yours stays as it is: only a copy the setup
+  shipped is replaced;
 - a symlink is never written through: at a `link` row it is replaced and its
-  old target printed, at a `copy` row it is moved aside;
+  old target printed, at a `copy` row it is moved aside, except a link into
+  the clone left from when the row was a link, which the copy replaces;
 - a plain `~/.gitconfig`, or a `~/.ssh/config` plain or linked, becomes the
   `.local` beside it, unless one is there or yours already names it; git
   reads that file last and ssh first, so every line of yours wins; a
@@ -208,8 +220,7 @@ where it wins over the shipped file: the one its row names, or else
 its tool's — `~/.zshrc.local`, `~/.config/kitty/local.conf`,
 `~/.config/tmux/local.conf`, `~/.gitconfig.local`, `~/.ssh/config.local`,
 `~/.config/zed/settings.json` or Sublime's `Packages/User`. gh has none: an
-undo from its page holds until the next `preen apply`, which puts the
-shipped `config.yml` back and keeps yours beside it.
+undo from its page makes `config.yml` yours, and `preen apply` leaves it.
 
 | Tool | What you notice | Undo |
 | --- | --- | --- |
@@ -238,9 +249,9 @@ cd ~/preen && git pull --rebase --no-autostash && ./bin/preen apply
 ```
 
 A `link` row reads the clone, so it changes the moment the clone does.
-`preen apply` then deploys any new row and resets a `copy` row an application
-has rewritten, keeping the rewrite beside it; `preen doctor` lists every such
-backup.
+`preen apply` then deploys any new row and updates a `copy` row's file still
+holding a copy the setup shipped. One you or an application changed stays:
+`preen doctor` names it as yours, and one an update is due for as behind.
 
 A tool that edits `~/.zshrc` or `~/.gitconfig` edits the clone, because those
 are links, and the pull then refuses and changes nothing, whatever your own
@@ -328,7 +339,7 @@ ripgrep/           flags: hidden in, .git out, smart case, clickable matches; th
 ssh/               an Include for your own config, then the agent line; no hosts. Not taken alone: an Include appended to your config falls under its last Host block, so this must open your config, and a piece only appends
 macos/             System Settings, run by hand: --dry-run lists each change, a run saves what it replaces; its own page
 bin/               bootstrap, preen — apply and doctor — and what the doctor runs
-lib/               install.sh, the half the installers share
+lib/               install.sh, the half the installers share; shipped, the versions of each piece's files, which tell a copy the setup made from your edit
 manifest.tsv       the source's public rows: file → live path → link or copy → permissions, where set
 preferences.toml   each preference's value and why, and the rows that check it
 LICENSE            MIT
@@ -343,28 +354,28 @@ no second list, so "installed" and "checked" read the same row.
 
 **`link` or `copy`, decided by who writes the file.** Where an application only
 reads its config, the live file is a symlink and the repo file _is_ the config.
-Where the application rewrites its own config — gh, kitty for its theme file —
-the row is a copy, because a symlink would be replaced by a plain file the
-first time it saved.
+Where it writes the file too — gh's and atuin's `config set`, kitty's theme
+picker, Zed's keymap editor and its task saves — the row is a copy: the write
+would follow a link into the clone, and the next `git pull` would refuse.
 
 **A piece stands alone through the tool's own include or lower layer.**
 kitty reads its includes last-wins, so `terminal/kitty/` lands under a
 directory of its own plus one `include` line in your `kitty.conf`, never an
 edit inside it; the files kitty reads by name from its config root are
-copied only where you have none. zsh's include is `source` and readline's
-`$include`, so `shell/` lands the same way, one line appended to each of your
-files; tmux's is `source-file` and git's `[include]`, so `terminal/tmux/` and
-`git/` do too.
+copied only where you have none of your own. zsh's include is `source` and
+readline's `$include`, so `shell/` lands the same way, one line appended to
+each of your files; tmux's is `source-file` and git's `[include]`, so
+`terminal/tmux/` and `git/` do too.
 Zed reads `global_settings.json` beneath your `settings.json`, and Sublime
 Text a package beneath your `Packages/User`, so `editor/zed/` and
 `editor/sublime/` land in that lower layer, and your keys win over it but
 for the exceptions Zed's page names; the keymap and tasks Zed reads by name
-alone are copied only where you have none.
+alone are copied only where you have none of your own.
 A tool with one file and no include is written by an installer: the
 statusline's is copied and tailored, gh's keys are merged into yours
 through gh's own writer, `gh config set`, and bat's, ripgrep's and ncdu's
-are copied only where you have none by the shell piece, bat's by kitty's
-too. Nothing a piece installs points back here.
+are copied only where you have none of your own by the shell piece, bat's
+by kitty's too. Nothing a piece installs points back here.
 
 **Themes are a family, not one scheme.** Gruvbox Dark Hard where code runs —
 kitty, tmux, the statusline — and Gruvbox Light Hard where it is read — Zed,

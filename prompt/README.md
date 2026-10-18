@@ -67,8 +67,9 @@ read it first if that is your habit. It
    (next section);
 3. copies `cship.toml` to `~/.config/cship.toml` — a copy, never a symlink,
    backed up beside it as `cship.toml.unpreened.<timestamp>` if one was
-   there, left untouched if identical. A symlink there is moved aside even
-   to identical content: the copy is yours to tune. A link into a clone of
+   there, left untouched if identical, and replaced with no backup if it is
+   an earlier copy this setup shipped. A symlink there is moved aside even
+   to identical content, so the copy is a plain file. A link into a clone of
    the whole setup is the exception, left as it is (below);
 4. wires `statusLine` in `~/.claude/settings.json` (or under
    `CLAUDE_CONFIG_DIR`, if you set it): added when absent; taken over, after
@@ -116,6 +117,14 @@ installed cship it first runs `cship uninstall`, which deletes the entry,
 then writes its bare one back, label and timer gone, your `cship.toml` left
 alone. After upgrading cship that way, run this installer again: it
 recognises the bare entry and takes it over.
+
+**Updating.** Run the install line again; from a clone, `git pull`, then
+`./prompt/install.sh`. An earlier copy this setup shipped comes back
+`updated`, with no backup — `starship.toml` only when you take it again,
+with `--with-starship` or a yes. One you edited is backed up beside itself first,
+and so is a `cship.toml` with the account hidden, which no release shipped.
+cship reads that one file, with no overlay, and starship its own
+`starship.toml`, so carry an edit of yours over from the backup.
 
 **Leaving.** Each backup sits beside the file it replaced, as
 `<file>.unpreened.<timestamp>`; move it back. Then remove the `statusLine`

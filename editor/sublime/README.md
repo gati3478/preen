@@ -111,8 +111,9 @@ It
    as it is made;
 3. copies the four files into it — copies, never symlinks — each backed up
    beside itself as `<name>.unpreened.<timestamp>` if a different one was
-   there, left untouched if identical. A symlink in the place of one is moved
-   aside, link and all, and never written through.
+   there, left untouched if identical, and replaced with no backup if it is
+   an earlier copy this setup shipped. A symlink in the place of one is
+   moved aside, link and all, and never written through.
 
 A re-run with nothing changed rewrites nothing and takes no backup: each file
 comes back `unchanged`.
@@ -128,6 +129,14 @@ other than `~/.config`, since whether Sublime then keeps its data under it is
 not known; a system other than macOS or Linux; a source file that is missing,
 empty, or not the file it claims to be. A symlinked `Packages/User` is not
 refused: nothing is written there.
+
+## Updating
+
+Run the install line again; from a clone, `git pull`, then
+`./editor/sublime/install.sh`. An earlier copy this setup shipped comes back
+`updated`, with no backup; one you edited is backed up beside itself first.
+A key of yours belongs in `Packages/User`, which no run reads or writes
+(Your overrides).
 
 ## Your overrides
 
@@ -211,9 +220,9 @@ the same way, by its key in your `Packages/User/Preferences.sublime-settings`.
    default.
 
 A backup the run took sits in `Packages/preen/` beside its copy, as
-`<name>.unpreened.<timestamp>`: the copy as it was before a later run
-replaced it, your edits to it included. Keep it before you delete that
-directory, if you want those edits.
+`<name>.unpreened.<timestamp>`: the copy with your edits, as a later run
+found it. Keep it before you delete that directory, if you want those
+edits.
 
 Where the whole repository's setup linked these files into your clone, which
 already carries this config, the installer says so and writes nothing.

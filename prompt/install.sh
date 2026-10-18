@@ -7,8 +7,8 @@ Take this statusline alone.
 
 Copies cship.toml — and starship.toml if you say so — into ~/.config, wires
 cship into ~/.claude/settings.json, and prints what it did and what it left
-alone. Copies, never symlinks: the files become yours to tune, and nothing
-here points back at this repo afterwards.
+alone. Copies, never symlinks, and nothing here points back at this repo
+afterwards.
 
   from a clone:    ./prompt/install.sh [flags]
   from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/prompt/install.sh | bash -s -- [flags]
@@ -18,9 +18,11 @@ use. The first two flag pairs below answer one each; with both answered it
 asks nothing, and with no terminal it takes the defaults — starship.toml
 left alone, the account module hidden.
 
-Nothing is overwritten without a timestamped backup beside it. A statusLine
-entry that runs anything but cship is left alone. A re-run with nothing
-changed rewrites nothing. Every refusal comes before the first write; a
+Run this again to update: an earlier copy this setup shipped is replaced
+with no backup, and anything else is overwritten only after a timestamped
+backup beside it. A statusLine entry that runs anything but cship is left
+alone. A re-run with nothing changed rewrites nothing. Every refusal comes
+before the first write; a
 symlinked ~/.config is one. A symlinked ~/.claude or settings.json is written
 through, as Claude Code writes through it, and the plan names where. After the
 whole setup, whose configs are links into its clone, this leaves those links
@@ -375,11 +377,11 @@ if [ "$cship_linked" = yes ] && [ "$starship_linked" = yes ]; then
 fi
 if [ "$cship_linked" = no ]; then
   if [ "$account_mode" = hide ]; then prepare_copy "$SRC/cship.toml" "$WORK/cship.toml" hide; else prepare_copy "$SRC/cship.toml" "$WORK/cship.toml" keep; fi
-  copy_into "$WORK/cship.toml" "$CONFIG_DIR/cship.toml"
+  copy_into "$WORK/cship.toml" "$CONFIG_DIR/cship.toml" "$PIECE/cship.toml"
 fi
 if [ "$starship_linked" = no ]; then
   if [ "$with_starship" = yes ]; then
-    place "$SRC/starship.toml" "$CONFIG_DIR/starship.toml"
+    place "$SRC/starship.toml" "$CONFIG_DIR/starship.toml" "$PIECE/starship.toml"
   else
     echo "left alone      $(short "$CONFIG_DIR/starship.toml")   (say --with-starship to take it)"
   fi

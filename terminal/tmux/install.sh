@@ -13,8 +13,7 @@ of tmux's own files that is there — ~/.config/tmux/tmux.conf, else
 That is the whole edit to your file. Nothing in it is rewritten or removed,
 and with neither file there, a new ~/.config/tmux/tmux.conf holds that line
 alone. tmux reads both files when both are there, ~/.tmux.conf first. Copies,
-never symlinks: the file becomes yours to tune, and nothing here points back
-at this repo afterwards.
+never symlinks, and nothing here points back at this repo afterwards.
 
   from a clone:    ./terminal/tmux/install.sh [flags]
   from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/terminal/tmux/install.sh | bash
@@ -26,9 +25,10 @@ above it in your file, and a line below it wins over it.
 ~/.config/tmux/local.conf, which the copy reads before it starts its plugin
 manager, wins over it too. That file is yours: nothing here writes it.
 
-Nothing is overwritten without a timestamped backup beside it, and a re-run
-with nothing changed rewrites nothing. Every refusal comes before the first
-write; among them: a symlinked ~/.config, ~/.config/tmux or preen/, or one
+Run this again to update: an earlier copy this setup shipped is replaced
+with no backup; anything else in ~/.config/tmux/preen is overwritten only
+after a timestamped backup beside it; and a re-run with nothing changed
+rewrites nothing. Every refusal comes before the first write; among them: a symlinked ~/.config, ~/.config/tmux or preen/, or one
 the run can neither write into nor create; a symlinked file the line goes in
 whose target lacks it, which belongs in the target; that file lacking the
 line and not one the run can read and append to, or with a last line ending
@@ -298,7 +298,7 @@ fi
 # ── the writes ───────────────────────────────────────────────────────────────
 echo
 echo "== installing =="
-copy_into "$SRC/tmux.conf" "$PREEN_DIR/tmux.conf"
+copy_into "$SRC/tmux.conf" "$PREEN_DIR/tmux.conf" "$PIECE/tmux.conf"
 # Last, so the line only ever points at a copy already on disk.
 append_line_once "$TARGET" "$LINE"
 

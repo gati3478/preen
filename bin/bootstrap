@@ -117,6 +117,11 @@ GITCONFIG="$HOME/.gitconfig"
 GIT_PIECE_COPY=".config/git/preen/gitconfig"
 # The tab title is written for any home but the one kitty.conf's line names.
 AUTHORED_HOME="/Users/gati3478"
+# HOME as tab-title.awk reads it: without its trailing slashes, so /h/ names
+# /h. A HOME of slashes alone is read as given.
+TITLE_HOME="$HOME"
+while [ "${TITLE_HOME%/}" != "$TITLE_HOME" ]; do TITLE_HOME="${TITLE_HOME%/}"; done
+[ -n "$TITLE_HOME" ] || TITLE_HOME="$HOME"
 KITTY_CONF="$REPO/terminal/kitty/kitty.conf"
 TAB_TITLE_AWK="$REPO/terminal/kitty/tab-title.awk"   # the kitty drop-in runs it too
 TAB_TITLE_CONF="$HOME/.config/kitty/tab-title.conf"
@@ -240,7 +245,7 @@ if command -v git >/dev/null 2>&1 && ! bare_shim git; then
     refused=yes
   fi
 fi
-if [ "$HOME" != "$AUTHORED_HOME" ] && grep -q '^tab_title_template ' "$KITTY_CONF" 2>/dev/null \
+if [ "$TITLE_HOME" != "$AUTHORED_HOME" ] && grep -q '^tab_title_template ' "$KITTY_CONF" 2>/dev/null \
   && [ -e "$TAB_TITLE_CONF" ] && [ ! -L "$TAB_TITLE_CONF" ] && [ ! -f "$TAB_TITLE_CONF" ]; then
   echo "bootstrap: ~/.config/kitty/tab-title.conf is not a file — this run writes the tab title there" >&2
   refused=yes
@@ -535,7 +540,7 @@ echo "== tab title =="
 # local.conf`, each silent when the file does not exist and last-wins when it
 # does. tab-title.conf is this run's, written whole; local.conf is the
 # adopter's, read after it, and never written here.
-if [ "$HOME" = "$AUTHORED_HOME" ]; then
+if [ "$TITLE_HOME" = "$AUTHORED_HOME" ]; then
   echo "this is the home the tab title was authored for — no tab-title.conf needed"
 elif [ ! -f "$KITTY_CONF" ]; then
   echo "kitty.conf not found — skipped"
@@ -588,7 +593,7 @@ else
     # a dry run reads the line it would write.
     title_now="$title_line"
     [ "$dry_run" = yes ] || title_now="$(cat "$TAB_TITLE_CONF")"
-    home_lit="${HOME//\\/\\\\}"
+    home_lit="${TITLE_HOME//\\/\\\\}"
     if [ -n "$local_path" ]; then
       echo "$title_state ~/.config/kitty/tab-title.conf; ~/.config/kitty/local.conf line $local_line, read after it, sets a tab title that collapses $local_path"
     elif [ -n "$local_title" ]; then
@@ -648,8 +653,11 @@ done <<< "$OVERLAID"
 # A piece taken alone copies a shipped file into its own directory and appends
 # a line sourcing the copy to the adopter's file — git's piece, a line
 # including it — and the copy reads the overlay the same way. The Zed and
-# Sublime Text pieces append no line: they copy to the paths the setup links,
-# so the link replaces each copy, and preen apply backs up one that differs.
+# Sublime Text pieces append no line: they copy to the paths the setup
+# deploys. At a link row the link replaces each copy, and preen apply backs up
+# one that differs; at a copy row, Zed's keymap and tasks, a copy the setup
+# shipped is the row's, updated where it is earlier, and a changed one is the
+# adopter's, kept.
 piece_of() { # piece_of <~path> → the piece that wires the file at that path, and the directory of its copies
   case "$1" in
     "~/.zshrc"|"~/.zshenv") echo "shell ~/.config/zsh/preen/" ;;

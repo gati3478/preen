@@ -1,7 +1,7 @@
 shell/zshrc	~/.zshrc	link
 shell/zshenv	~/.zshenv	link
 shell/zprofile	~/.zprofile	link
-shell/atuin/config.toml	~/.config/atuin/config.toml	link
+shell/atuin/config.toml	~/.config/atuin/config.toml	copy
 terminal/kitty/kitty.conf	~/.config/kitty/kitty.conf	link
 terminal/kitty/current-theme.conf	~/.config/kitty/current-theme.conf	copy
 terminal/kitty/choose-files.conf	~/.config/kitty/choose-files.conf	link
@@ -18,8 +18,8 @@ shell/hushlogin	~/.hushlogin	link
 shell/inputrc	~/.inputrc	link
 ssh/config	~/.ssh/config	link	0600
 editor/zed/settings.json	~/.config/zed/global_settings.json	link
-editor/zed/keymap.json	~/.config/zed/keymap.json	link
-editor/zed/tasks.json	~/.config/zed/tasks.json	link
+editor/zed/keymap.json	~/.config/zed/keymap.json	copy
+editor/zed/tasks.json	~/.config/zed/tasks.json	copy
 editor/sublime/Preferences.sublime-settings	~/Library/Application Support/Sublime Text/Packages/preen/Preferences.sublime-settings	link
 editor/sublime/gruvbox-light-hard.sublime-color-scheme	~/Library/Application Support/Sublime Text/Packages/preen/gruvbox-light-hard.sublime-color-scheme	link
 editor/sublime/Terminus.sublime-settings	~/Library/Application Support/Sublime Text/Packages/preen/Terminus.sublime-settings	link

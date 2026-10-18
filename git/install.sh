@@ -13,9 +13,9 @@ git --global writes to — ~/.gitconfig where it is there, else
 That is the whole edit to your file. Nothing in it is rewritten or removed,
 and with neither file there, a new ~/.gitconfig holds that line alone. Your
 name and email are not asked for, and nothing here writes them. Copies,
-never symlinks: the file becomes yours to tune, and nothing here points back
-at this repo afterwards. ~/.config/git/ignore, git's global ignore, is copied
-only where none is there.
+never symlinks, and nothing here points back at this repo afterwards.
+~/.config/git/ignore, git's global ignore, is copied only where none is
+there, or an earlier copy this setup shipped is.
 
   from a clone:    ./git/install.sh [flags]
   from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/git/install.sh | bash
@@ -24,13 +24,14 @@ There is nothing to ask, so nothing is asked.
 
 The appended line reads a whole config in place, so it wins over every line
 above it in your file, and a line below it wins over it. ~/.gitconfig.local,
-which the copy includes at its end, wins over it too. That file is yours:
-nothing here writes it.
+which the copy includes at its end, wins over it too. That file is yours,
+and where a line of yours belongs: nothing here writes it.
 
-Nothing is overwritten without a timestamped backup beside it, and a re-run
-with nothing changed rewrites nothing. Every refusal comes before the first
-write; among them: a GIT_CONFIG_GLOBAL set, under which git reads that file
-alone, or none; an XDG_CONFIG_HOME that names a directory other than
+Run this again to update: an earlier copy this setup shipped is replaced
+with no backup; anything else in ~/.config/git/preen is overwritten only
+after a timestamped backup beside it; and a re-run with nothing changed
+rewrites nothing. Every refusal comes before the first write; among them: a
+GIT_CONFIG_GLOBAL set, under which git reads that file alone, or none; an XDG_CONFIG_HOME that names a directory other than
 ~/.config; a symlinked ~/.config, ~/.config/git or preen/, or one the run can
 neither write into nor create; a symlinked file the line goes in whose target
 lacks it, which belongs in the target; that file lacking the line and not one
@@ -232,7 +233,7 @@ fi
 [ -d "$GIT_DIR_XDG" ] || touching "$GIT_DIR_XDG" "git's config directory, created"
 [ -d "$PREEN_DIR" ] || touching "$PREEN_DIR" "this config's own directory, created"
 touching "$COPY" "the config"
-touching "$IGNORE" "the global ignore — copied if absent"
+touching "$IGNORE" "the global ignore — copied if absent or an earlier copy"
 touching_line "$TARGET" "$LINE"
 show_plan
 
@@ -368,8 +369,8 @@ fi
 # ── the writes ───────────────────────────────────────────────────────────────
 echo
 echo "== installing =="
-copy_into "$SRC/gitconfig" "$COPY"
-copy_if_absent "$SRC/ignore" "$IGNORE"
+copy_into "$SRC/gitconfig" "$COPY" "$PIECE/gitconfig"
+copy_if_absent "$SRC/ignore" "$IGNORE" "$PIECE/ignore"
 # Last, so the line only ever points at a copy already on disk.
 append_line_once "$TARGET" "$LINE"
 

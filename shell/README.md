@@ -119,15 +119,15 @@ empty home, on a Mac:
 ~/.config/zsh/preen/zshrc                  the interactive shell's config
 ~/.config/zsh/preen/zshenv                 what every zsh reads first: PATH, the editor
 ~/.config/zsh/preen/inputrc                readline's settings, for bash and the rest
-~/.hushlogin                               silences login's Last login line — copied if absent
+~/.hushlogin                               silences login's Last login line — copied if absent or an earlier copy
 ~/.config/atuin                            atuin's config directory, created
-~/.config/atuin/config.toml                atuin's settings — copied if absent
+~/.config/atuin/config.toml                atuin's settings — copied if absent or an earlier copy
 ~/.config/bat                              bat's config directory, created
-~/.config/bat/config                       bat's theme: the terminal's palette — copied if absent
+~/.config/bat/config                       bat's theme: the terminal's palette — copied if absent or an earlier copy
 ~/.config/ripgrep                          ripgrep's config directory, created
-~/.config/ripgrep/config                   rg's flags: hidden files, smart case — copied if absent
+~/.config/ripgrep/config                   rg's flags: hidden files, smart case — copied if absent or an earlier copy
 ~/.config/ncdu                             ncdu's config directory, created
-~/.config/ncdu/config                      ncdu's colours: the terminal's palette — copied if absent
+~/.config/ncdu/config                      ncdu's colours: the terminal's palette — copied if absent or an earlier copy
 ~/.zshenv                                  created: source ~/.config/zsh/preen/zshenv
 ~/.inputrc                                 created: $include ~/.config/zsh/preen/inputrc
 ~/.zshrc                                   created: source ~/.config/zsh/preen/zshrc
@@ -150,8 +150,10 @@ It
 2. copies `zshrc`, `zshenv` and `inputrc` into `~/.config/zsh/preen/` —
    copies, never symlinks, each backed up beside itself as
    `<file>.unpreened.<timestamp>` if a different one was there, left
-   untouched if identical;
-3. copies, each only where nothing is there, `~/.hushlogin`, which is empty
+   untouched if identical, and replaced with no backup if it is an earlier
+   copy this setup shipped;
+3. copies, each only where nothing is there or an earlier copy this setup
+   shipped is, `~/.hushlogin`, which is empty
    — its whole effect is to exist — and these configs: atuin's,
    `~/.config/atuin/config.toml`; bat's, `~/.config/bat/config`, from
    [`terminal/bat/`](../terminal/bat/), whose theme is the terminal's
@@ -159,10 +161,11 @@ It
    [`terminal/ncdu/`](../terminal/ncdu/); and ripgrep's,
    `~/.config/ripgrep/config`, from [`ripgrep/`](../ripgrep/), which the
    zshenv points rg at whenever it is there — so not while
-   `RIPGREP_CONFIG_PATH` names another file, and the plan says so. A file
-   already at any of them stays as it is: the run says `unchanged` when it
-   holds this config's bytes, and `left alone` when it is anything else, a
-   symlink included;
+   `RIPGREP_CONFIG_PATH` names another file, and the plan says so. The run
+   says `updated` of an earlier copy it replaced; any other file already at
+   one of them stays as it is: the run says `unchanged` when it holds this
+   config's bytes, and `left alone` when it is anything else, a symlink
+   included;
 4. appends `source ~/.config/zsh/preen/zshenv` to the zshenv zsh reads,
    `$include ~/.config/zsh/preen/inputrc` to `~/.inputrc` and
    `source ~/.config/zsh/preen/zshrc` to the zshrc zsh reads, each once. Your
@@ -189,6 +192,15 @@ is not blank or a comment ends in `&&`, `||` or a pipe — or ends inside a
 here-document, or zsh cannot parse it; zsh names a `ZDOTDIR` that is not an
 absolute path, or no answer at all; a source file that is missing, empty, or
 not the file it claims to be.
+
+## Updating
+
+Run the install line again; from a clone, `git pull`, then
+`./shell/install.sh`. An earlier copy this setup shipped comes back
+`updated`, with no backup. One you edited is not: a copy in
+`~/.config/zsh/preen/` is backed up beside itself first, and `~/.hushlogin`
+or a tool's config is left alone. A line of yours belongs below an appended
+line, or in `~/.zshrc.local` or `~/.zshenv.local` (Your overrides).
 
 ## Your overrides
 
@@ -232,10 +244,10 @@ works as well.
 2. Delete `~/.config/zsh/preen/`, and `~/.config/zsh` with it where nothing
    else is in it.
 3. For `~/.hushlogin` and atuin's, bat's, ripgrep's and ncdu's configs,
-   read what the run said of each: `copied` means the run put it there, and
-   it can go; `unchanged` or `left alone` means a file was already there, and
-   the run never touched it. The shipped `~/.hushlogin` is empty, so an empty
-   one of your own reads `unchanged`. Where the run said `created` of a
+   read what the run said of each: `copied` or `updated` means the run put
+   it there, and it can go; `unchanged` or `left alone` means a file was
+   already there, and the run never touched it. The shipped `~/.hushlogin`
+   is empty, so an empty one of your own reads `unchanged`. Where the run said `created` of a
    directory above one of them, that directory goes with its file. The kitty
    piece copies bat's config too, so keep it while you keep that piece.
 4. `~/.zsh_history` holds what this config recorded, and

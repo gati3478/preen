@@ -50,7 +50,7 @@ was chosen explicitly; and the agent's fallback default model.
 
 - **`keymap.json` and `tasks.json`** are read from `~/.config/zed` under
   those names alone, one file each, so they cannot be layered: each is copied
-  only where nothing is there.
+  only where nothing is there, or an earlier copy this setup shipped is.
 - **A symlinked `~/.config` or `~/.config/zed`** — stow's layout, a
   dotfiles repository's — is refused. A symlink at `global_settings.json` is
   moved aside, never written through.
@@ -113,20 +113,22 @@ plan for an empty home:
 ~/.config                                  the directory configs live under, created
 ~/.config/zed                              Zed's config directory, created
 ~/.config/zed/global_settings.json         the settings, read under your settings.json
-~/.config/zed/keymap.json                  the keymap — copied if absent
-~/.config/zed/tasks.json                   the tasks — copied if absent
+~/.config/zed/keymap.json                  the keymap — copied if absent or an earlier copy
+~/.config/zed/tasks.json                   the tasks — copied if absent or an earlier copy
 ```
 
 It
 
 1. looks for Zed and lazygit, and runs neither;
 2. copies `settings.json` to `~/.config/zed/global_settings.json` — a copy,
-   never a symlink. A different file there, or a symlink, is first moved
-   aside beside it as `global_settings.json.unpreened.<timestamp>`; an
-   identical one is left untouched;
+   never a symlink. An earlier copy this setup shipped is replaced with no
+   backup; any other file there, or a symlink, is first moved aside beside
+   it as `global_settings.json.unpreened.<timestamp>`; an identical one is
+   left untouched;
 3. copies `keymap.json` and `tasks.json` into `~/.config/zed` where nothing
-   is there. A file already there stays, with no backup, because nothing is
-   replaced: the run says `unchanged` when it holds this config's bytes, and
+   is there, and over an earlier copy this setup shipped, with no backup.
+   Anything else there stays, with no backup, because nothing is replaced:
+   the run says `unchanged` when it holds this config's bytes, and
    `left alone` when it is anything else, a symlink included;
 4. says what Zed now reads, and what a `keymap.json` or `tasks.json` it left
    alone means for alt-g.
@@ -141,6 +143,15 @@ copies would land in whatever it points at, which something else manages;
 `~/.config/zed` cannot be written into; on Linux and FreeBSD,
 `XDG_CONFIG_HOME` names a directory other than `~/.config`; a source file
 that is missing, empty, or not the file it claims to be.
+
+## Updating
+
+Run the install line again; from a clone, `git pull`, then
+`./editor/zed/install.sh`. An earlier copy this setup shipped comes back
+`updated`, with no backup. One you edited is not: an edited
+`global_settings.json` is backed up beside itself first, and an edited
+`keymap.json` or `tasks.json` is left alone. A setting of yours belongs in
+your `settings.json`, which no run reads or writes.
 
 ## Your overrides
 
@@ -164,9 +175,12 @@ a binding or a task, copy it from `keymap.json` or `tasks.json` beside this
 page into yours.
 
 On Linux, Zed's own keymap begins three chords with alt-g — `alt-g b`,
-`alt-g m` and `alt-g r`, for git blame, the modified files and a review diff
-(read at the tag). How Zed settles those against this keymap's alt-g is not
-measured here.
+`alt-g m` and `alt-g r`, for git blame, the modified files and a review diff.
+Zed drops a chord still being typed when a binding that matches outright was
+loaded after it, whatever their contexts (its keymap resolver, read at the
+tag), and your keymap loads after Zed's. So alt-g opens lazygit at once, and
+those three chords are out of reach while this binding is in your keymap;
+remove it to have them back.
 
 ## What changes
 
@@ -212,13 +226,13 @@ blocks — and each is set back the same way, by its key in your
    file (measured).
 2. A backup the run took sits beside it as
    `global_settings.json.unpreened.<timestamp>`: what was there before — a
-   file or a symlink of yours, or the copy as it was before a later run
-   replaced it, your edits included. Rename the one you want back to
-   `global_settings.json`, or delete them.
-3. For `keymap.json` and `tasks.json`, read what the run said: `copied` or
-   `unchanged` means the file held this config's bytes and can go;
-   `left alone` means something else was there, and the run never touched
-   it.
+   file or a symlink of yours, or the copy with your edits, as a later run
+   found it. Rename the one you want back to `global_settings.json`, or
+   delete them.
+3. For `keymap.json` and `tasks.json`, read what the run said: `copied`,
+   `updated` or `unchanged` means the file held this config's bytes and can
+   go; `left alone` means something else was there, and the run never
+   touched it.
 4. Your `settings.json` was never read or written.
 
 Took the whole repository through `bin/bootstrap`? Then
