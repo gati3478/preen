@@ -118,7 +118,6 @@ done
 # as text, so each file must end on its own closing line, and each must hold
 # the line the others lean on: the keymap's bindings are chosen against the
 # JetBrains base, and alt-g spawns the task labelled lazygit.
-whole_with() { [ "$(tail -n 1 "$SRC/$1")" = "$2" ] && grep -qF -- "$3" "$SRC/$1"; }   # whole_with <file> <its last line> <text it holds> → true when it ends on that line and holds that text
 whole_with settings.json '}' '"base_keymap": "JetBrains"' \
   || die "$ORIGIN/settings.json is not this config, or did not arrive whole — it must set base_keymap to JetBrains and end on its closing brace"
 whole_with keymap.json ']' '"task_name": "lazygit"' \

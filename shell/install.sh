@@ -22,8 +22,11 @@ does not see a ZDOTDIR set only in a login file or only for an interactive
 shell; and ZDOTDIR is unset for the question, so one exported before zsh
 starts is not followed either. Copies, never symlinks: the files become
 yours to tune, and nothing here points back at this repo afterwards.
-~/.hushlogin and ~/.config/atuin/config.toml are copied only where none
-exists. ~/.zprofile is never touched.
+~/.hushlogin, and atuin's, bat's, ripgrep's and ncdu's configs under
+~/.config, are copied only where none exists. ripgrep's is not copied while
+RIPGREP_CONFIG_PATH names another file: the copied zshenv exports it naming
+~/.config/ripgrep/config whenever that file is there. ~/.zprofile is never
+touched.
 
   from a clone:    ./shell/install.sh [flags]
   from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/shell/install.sh | bash
@@ -39,17 +42,17 @@ Those two are yours: nothing here writes them.
 
 Nothing is overwritten without a timestamped backup beside it, and a re-run
 with nothing changed rewrites nothing. Every refusal comes before the first
-write: a symlinked ~/.config, ~/.config/zsh or preen/, or ~/.config/atuin
-when its file would be copied, or a symlinked directory on the way to the
-.zshenv or .zshrc zsh reads; a symlinked .zshrc, .zshenv or ~/.inputrc
-whose target lacks its line, which belongs in the target; one of them that
-lacks its line and cannot be read and appended to; a zsh file that would
-carry the appended line into its last command — its last line ends in a
-backslash, or its last command in &&, || or a pipe — or ends inside a
-here-document, or that zsh cannot parse; and a zsh that gives no answer, or
-a ZDOTDIR that is not an absolute path. A .zshrc, .zshenv or ~/.inputrc
-linked into a clone of the whole setup already has this config, and the run
-says so and writes nothing.
+write: a symlinked ~/.config, ~/.config/zsh or preen/, or ~/.config/atuin,
+bat, ripgrep or ncdu when its file would be copied, or a symlinked directory
+on the way to the .zshenv or .zshrc zsh reads; a symlinked .zshrc, .zshenv
+or ~/.inputrc whose target lacks its line, which belongs in the target; one
+of them that lacks its line and cannot be read and appended to; a zsh file
+that would carry the appended line into its last command — its last line
+ends in a backslash, or its last command in &&, || or a pipe — or ends
+inside a here-document, or that zsh cannot parse; and a zsh that gives no
+answer, or a ZDOTDIR that is not an absolute path. A .zshrc, .zshenv or
+~/.inputrc linked into a clone of the whole setup already has this config,
+and the run says so and writes nothing.
 
   --dry-run   print what the run would touch and stop, having written nothing
   -h, --help  print this and exit
@@ -110,6 +113,9 @@ ZSH_DIR="$CONFIG_HOME/zsh"
 PREEN_DIR="$ZSH_DIR/preen"
 ATUIN_DIR="$CONFIG_HOME/atuin"
 ATUIN_CONF="$ATUIN_DIR/config.toml"
+BAT_CONF="$CONFIG_HOME/bat/config"
+RG_CONF="$CONFIG_HOME/ripgrep/config"
+NCDU_CONF="$CONFIG_HOME/ncdu/config"
 HUSHLOGIN="$HOME/.hushlogin"
 INPUTRC="$HOME/.inputrc"
 SYSTEM_INPUTRC="/etc/inputrc"
@@ -195,6 +201,10 @@ grep -qxF -- "$ZSHRC_OVERLAY" "$SRC/zshrc" \
   || die "$ORIGIN/zshenv is not this config, or did not arrive whole — it must end by sourcing ~/.zshenv.local, which is what your own overrides ride on"
 grep -q '^set ' "$SRC/inputrc" || die "$ORIGIN/inputrc is not a readline config"
 grep -q '^columns = \[' "$SRC/atuin/config.toml" || die "$ORIGIN/atuin/config.toml is not this atuin config, or did not arrive whole"
+# Configs kept in their tools' own directories, outside this piece's.
+locate_root_file terminal/bat/config '--theme="ansi"' '--theme="ansi"'
+locate_root_file ripgrep/config '--hyperlink-format=kitty' '--glob=!.git'
+locate_root_file terminal/ncdu/config '--color dark' '# ncdu 2.x'
 if [ -n "$zsh_bin" ]; then
   for f in zshrc zshenv; do
     "$zsh_bin" -n -f "$SRC/$f" </dev/null >/dev/null 2>&1 || die "$ORIGIN/$f is not a file zsh can parse"
@@ -273,6 +283,11 @@ if [ ! -e "$INPUTRC" ] && [ ! -L "$INPUTRC" ] && [ -f "$SYSTEM_INPUTRC" ]; then 
 # and a directory that only holds one is never written under.
 atuin_copy=no
 if [ ! -e "$ATUIN_CONF" ] && [ ! -L "$ATUIN_CONF" ]; then atuin_copy=yes; fi
+# The copied zshenv exports RIPGREP_CONFIG_PATH naming ripgrep's config
+# whenever that file is there, so one created where the environment names
+# another file would replace that choice.
+rg_copy=yes
+if [ -n "${RIPGREP_CONFIG_PATH:-}" ] && [ "$(squeeze "$RIPGREP_CONFIG_PATH")" != "$(squeeze "$RG_CONF")" ]; then rg_copy=no; fi
 
 [ -d "$CONFIG_HOME" ] || touching "$CONFIG_HOME" "the directory configs live under, created"
 [ -d "$ZSH_DIR" ] || touching "$ZSH_DIR" "to hold this config's own directory, created"
@@ -283,6 +298,16 @@ touching "$PREEN_DIR/inputrc" "readline's settings, for bash and the rest"
 touching "$HUSHLOGIN" "silences login's Last login line — copied if absent"
 if [ "$atuin_copy" = yes ] && [ ! -d "$ATUIN_DIR" ]; then touching "$ATUIN_DIR" "atuin's config directory, created"; fi
 touching "$ATUIN_CONF" "atuin's settings — copied if absent"
+touching_dir_for "$BAT_CONF" "bat's config directory, created"
+touching "$BAT_CONF" "bat's theme: the terminal's palette — copied if absent"
+if [ "$rg_copy" = yes ]; then
+  touching_dir_for "$RG_CONF" "ripgrep's config directory, created"
+  touching "$RG_CONF" "rg's flags: hidden files, smart case — copied if absent"
+else
+  touching "$RG_CONF" "not copied: RIPGREP_CONFIG_PATH is '$RIPGREP_CONFIG_PATH'"
+fi
+touching_dir_for "$NCDU_CONF" "ncdu's config directory, created"
+touching "$NCDU_CONF" "ncdu's colours: the terminal's palette — copied if absent"
 touching_line "$ZSHENV" "$ZSHENV_LINE"
 if [ "$inputrc_fresh" = yes ]; then
   touching "$INPUTRC" "created: $SYSTEM_INPUTRC_LINE, then $INPUTRC_LINE"
@@ -296,6 +321,9 @@ show_plan
 refuse_unwritable_dir "$CONFIG_HOME"
 for d in "$ZSH_DIR" "$PREEN_DIR"; do refuse_linked_dir "$d"; done
 if [ "$atuin_copy" = yes ]; then refuse_linked_dir "$ATUIN_DIR"; fi
+refuse_dir_for "$BAT_CONF"
+if [ "$rg_copy" = yes ]; then refuse_dir_for "$RG_CONF"; fi
+refuse_dir_for "$NCDU_CONF"
 # The zshenv and zshrc zsh reads may sit under a ZDOTDIR: the policy holds for
 # every directory between ~ and it, or for the ZDOTDIR alone outside ~.
 refuse_linked_path() { # refuse_linked_path <dir> — refuse_linked_dir for each directory from ~ down to <dir>, or <dir> alone outside ~
@@ -431,6 +459,9 @@ copy_if_absent "$WORK/hushlogin" "$HUSHLOGIN"
 # registered in the plan above, because it is a thing this run creates.
 if [ "$atuin_copy" = yes ]; then make_dir "$ATUIN_DIR"; fi
 copy_if_absent "$SRC/atuin/config.toml" "$ATUIN_CONF"
+copy_if_absent_into "$SRC_ROOT/terminal/bat/config" "$BAT_CONF"
+if [ "$rg_copy" = yes ]; then copy_if_absent_into "$SRC_ROOT/ripgrep/config" "$RG_CONF"; fi
+copy_if_absent_into "$SRC_ROOT/terminal/ncdu/config" "$NCDU_CONF"
 # Last, so an rc only ever points at copies already on disk; the zshrc line
 # after the zshenv one, which every zsh reads first.
 append_line_once "$ZSHENV" "$ZSHENV_LINE"

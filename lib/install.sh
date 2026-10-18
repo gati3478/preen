@@ -10,6 +10,8 @@
 #   SOURCE_URL  where this piece's files are, mirror or local tree
 #   SELF_DIR    the directory holding the caller, empty when it was piped in
 #   WORK        a temp directory the caller owns and removes
+#   ROOT_URL    the root SOURCE_URL is under, mirror or local tree
+#   PIECE       this piece's path under that root
 # A dry run is the plan: a caller prints it with show_plan and stops there,
 # so nothing below has a second, pretend path.
 #
@@ -147,6 +149,30 @@ locate_sources() { # locate_sources <marker file> — set SRC and ORIGIN: beside
     fetch "$1"
   fi
 }
+whole_with() { [ "$(tail -n 1 "$SRC/$1")" = "$2" ] && grep -qF -- "$3" "$SRC/$1"; }   # whole_with <file> <its last line> <text it holds> → true when $SRC/<file> ends on that line and holds that text
+# A file kept outside the piece's own directory is named by its path under the
+# root, and comes the way the piece's files came: from the same clone, PIECE's
+# depth above them, or fetched from ROOT_URL when they were fetched.
+locate_root_file() { # locate_root_file <path under the root> <its last line> <text it holds> — set SRC_ROOT to a root holding that file whole, or stop; call it after locate_sources
+  local up="$PIECE" origin
+  if [ "$SRC" = "$WORK/src" ]; then
+    SRC_ROOT="$WORK/root"
+    origin="$ROOT_URL"
+    mkdir -p "$SRC_ROOT/$(dirname "$1")"
+    curl -fsSL "$ROOT_URL/$1" -o "$SRC_ROOT/$1" && [ -s "$SRC_ROOT/$1" ] || die "could not fetch $ROOT_URL/$1"
+  else
+    SRC_ROOT="$SRC"
+    while [ -n "$up" ]; do
+      SRC_ROOT="$(dirname "$SRC_ROOT")"
+      case "$up" in */*) up="${up#*/}" ;; *) up="" ;; esac
+    done
+    origin="$(short "$SRC_ROOT")"
+    [ -s "$SRC_ROOT/$1" ] || die "$origin/$1 is missing or empty"
+  fi
+  # whole_with reads under SRC, pointed at the root for this one call.
+  SRC="$SRC_ROOT" whole_with "$1" "$2" "$3" \
+    || die "$origin/$1 is not this config, or did not arrive whole — it must hold \`$3\` and end on \`$2\`"
+}
 
 # What the run will touch is registered as it is decided and printed while
 # nothing has moved yet; what each write did is said as it happens. A reader
@@ -212,6 +238,21 @@ copy_if_absent() { # copy_if_absent <file> <destination> — copy only when noth
   fi
   cp "$1" "$2" || die "could not write $(short "$2")"
   record "copied          $(short "$2")"
+}
+# Such a file in a directory of its own, ~/.config/<tool>/: the directory is
+# made, and held to the symlink policy, only when the file is absent and so
+# copied. A file already there is never a refusal, whatever holds it.
+touching_dir_for() { # touching_dir_for <file> <what its directory is> — register <file>'s directory for the plan when copy_if_absent_into will create it
+  if ! there "$1" && [ ! -d "$(dirname "$1")" ]; then touching "$(dirname "$1")" "$2"; fi
+}
+refuse_dir_for() { # refuse_dir_for <file> — when nothing is at <file>, stop the run over its directory if that is a symlink or not one it can write into; call it before the first write
+  there "$1" && return 0
+  refuse_linked_dir "$(dirname "$1")"
+  refuse_unwritable_if_there "$(dirname "$1")"
+}
+copy_if_absent_into() { # copy_if_absent_into <file> <destination> — copy_if_absent, first creating the destination's directory when nothing is at it
+  there "$2" || make_dir "$(dirname "$2")"
+  copy_if_absent "$1" "$2"
 }
 holds_line() { # holds_line <file> <line> → true when <file>, followed if a symlink, is a regular file holding that exact whole line
   [ -f "$1" ] && grep -qxF -- "$2" "$1" 2>/dev/null

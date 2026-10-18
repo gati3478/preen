@@ -31,13 +31,16 @@ first.
 
 open-actions.conf, mime.types and choose-files.conf are read by kitty from
 ~/.config/kitty itself, under those names and no others, so a file of yours at
-one of them is left exactly as it is and said so. Nothing else is overwritten
-without a timestamped backup beside it, and a re-run with nothing changed
-rewrites nothing. Every refusal comes before the first write; among them, a
-symlinked ~/.config, ~/.config/kitty or preen/ is refused, and so is a
-symlinked kitty.conf whose target lacks the line, which belongs in the
-target. A kitty.conf linked into a clone of the whole setup already has this
-config, and the run says so and writes nothing.
+one of them is left exactly as it is and said so. bat's config, which sets the
+theme the scrollback pager draws in, is copied to ~/.config/bat/config the
+same way: only where none exists. Nothing else is overwritten without a
+timestamped backup beside it, and a re-run with nothing changed rewrites
+nothing. Every refusal comes before the first write; among them, a symlinked
+~/.config, ~/.config/kitty or preen/ is refused, or ~/.config/bat when bat's
+config would be copied, and so is a symlinked kitty.conf whose target lacks
+the line, which belongs in the target. A kitty.conf linked into a clone of
+the whole setup already has this config, and the run says so and writes
+nothing.
 
   --dry-run   print what the run would touch and stop, having written nothing
   -h, --help  print this and exit
@@ -105,6 +108,7 @@ INCLUDE_LINE="include preen/kitty.conf"
 # kitten's documented path for choose-files.conf. A drop-in cannot layer under
 # a fixed name, so one of yours there wins by staying.
 ROOT_FILES="open-actions.conf mime.types choose-files.conf"
+BAT_CONF="$CONFIG_HOME/bat/config"
 KITTY_APP="/Applications/kitty.app/Contents/MacOS/kitty"
 FONT_FILE_PREFIX="FiraCodeNerdFontMono"   # how the cask names the files
 FONT_NAME="FiraCode Nerd Font Mono"       # how kitty.conf asks for it
@@ -148,6 +152,9 @@ grep -q '^background[[:space:]]' "$SRC/current-theme.conf" \
 grep -q '^want == "local"' "$SRC/tab-title.awk" && awk -f "$SRC/tab-title.awk" </dev/null >/dev/null 2>&1 \
   && [ "$(tail -n 1 "$SRC/tab-title.awk")" = '# end of tab-title.awk: install.sh refuses a copy whose last line is not this one' ] \
   || die "$ORIGIN/tab-title.awk is not the program that writes the tab title, or did not arrive whole"
+# scrollback_pager runs bat with no theme of its own; the shell piece takes
+# this config too, so it is kept in bat's own directory.
+locate_root_file terminal/bat/config '--theme="ansi"' '--theme="ansi"'
 
 # ── dependencies ─────────────────────────────────────────────────────────────
 # Each is a warning and never a refusal: the files are worth having before the
@@ -240,6 +247,8 @@ touching_line "$KITTY_CONF" "$INCLUDE_LINE"
 touching "$KITTY_DIR/open-actions.conf" "what a click on a link does — copied if absent"
 touching "$KITTY_DIR/mime.types" "the file types behind it — copied if absent"
 touching "$KITTY_DIR/choose-files.conf" "kitty's file picker, kitten choose-files — copied if absent"
+touching_dir_for "$BAT_CONF" "bat's config directory, created"
+touching "$BAT_CONF" "bat's theme: the terminal's palette — copied if absent"
 show_plan
 
 # ── the last refusals, before the first write ────────────────────────────────
@@ -258,6 +267,7 @@ if ! holds_line "$KITTY_CONF" "$INCLUDE_LINE"; then
   fi
 fi
 for d in "$KITTY_DIR" "$PREEN_DIR"; do refuse_unwritable_if_there "$d"; done
+refuse_dir_for "$BAT_CONF"
 
 if [ "$dry_run" = yes ]; then
   echo
@@ -287,6 +297,7 @@ if [ -n "$title_line" ]; then
 fi
 # shellcheck disable=SC2086
 for f in $ROOT_FILES; do copy_if_absent "$SRC/$f" "$KITTY_DIR/$f"; done
+copy_if_absent_into "$SRC_ROOT/terminal/bat/config" "$BAT_CONF"
 # Last, so a kitty.conf that includes this config only ever points at files
 # already on disk.
 append_line_once "$KITTY_CONF" "$INCLUDE_LINE"

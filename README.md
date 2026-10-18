@@ -83,22 +83,55 @@ curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/editor/sublime/
 curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/editor/sublime/install.sh | bash
 ```
 
-Each installer prints its plan and makes every refusal before its first
-write, then copies its files into your config — copies, never symlinks, a
-file of yours it replaces backed up beside it. The statusline's installer
-merges its `statusLine` key into `~/.claude/settings.json`; kitty's appends
-one `include` line to `~/.config/kitty/kitty.conf`; the shell's appends one
-line each to the zshenv and zshrc zsh reads — `~/.zshenv` and `~/.zshrc`
-unless `ZDOTDIR` moves them — and to `~/.inputrc`; tmux's appends one line
-to `~/.config/tmux/tmux.conf`, or to `~/.tmux.conf` where only that is there;
-git's appends one line to the file `git config --global` writes,
-`~/.gitconfig` unless only `~/.config/git/config` is there. Zed's and
-Sublime Text's write a layer beneath your own settings, never into them:
-Zed's copies its settings to `~/.config/zed/global_settings.json`, which Zed
-reads under your `~/.config/zed/settings.json`, and its keymap and tasks
-only where you have none; Sublime Text's copies its files into a package of
-their own, `Packages/preen`, which Sublime reads under your `Packages/User`.
-`--help` is each script's manual.
+gh's config, [`gh/`](gh/README.md), the same way:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/gh/install.sh | bash -s -- --dry-run
+```
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/gh/install.sh | bash
+```
+
+System Settings, [`macos/`](macos/README.md), the same way:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/macos/apply.sh | bash -s -- --dry-run
+```
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/macos/apply.sh | bash
+```
+
+Each prints its plan and makes every refusal before its first write. Every
+installer but gh's then copies its files into your config — copies, never
+symlinks, a file of yours it replaces backed up beside it — and wires them
+in:
+
+- the statusline's merges its `statusLine` key into
+  `~/.claude/settings.json`;
+- kitty's appends one `include` line to `~/.config/kitty/kitty.conf`;
+- the shell's appends one line each to the zshenv and zshrc zsh reads —
+  `~/.zshenv` and `~/.zshrc` unless `ZDOTDIR` moves them — and to
+  `~/.inputrc`;
+- tmux's appends one line to `~/.config/tmux/tmux.conf`, or to
+  `~/.tmux.conf` where only that is there;
+- git's appends one line to the file `git config --global` writes,
+  `~/.gitconfig` unless only `~/.config/git/config` is there;
+- Zed's and Sublime Text's write a layer beneath your own settings, never
+  into them: Zed's copies its settings to
+  `~/.config/zed/global_settings.json`, which Zed reads under your
+  `~/.config/zed/settings.json`, and its keymap and tasks only where you
+  have none; Sublime Text's copies its files into a package of their own,
+  `Packages/preen`, which Sublime reads under your `Packages/User`.
+
+The shell's and kitty's also copy bat's config, and the shell's ripgrep's
+and ncdu's, only where you have none — ripgrep's not while
+`RIPGREP_CONFIG_PATH` names another file. gh's copies nothing: it sets each of
+its keys that differs through `gh config set`, after backing up your
+`~/.config/gh/config.yml`. `macos/apply.sh` sets each System Settings value
+it names that differs on your Mac, with `defaults`, after saving a script
+that puts the old values back. `--help` is each script's manual.
 
 ## Take the setup
 
@@ -164,16 +197,19 @@ they are the author's:
 
 ## What changes when you take the setup
 
-Some of the author's choices are felt at once. The zsh rows hold for the
-shell piece taken alone too; [its page](shell/README.md#what-changes) names
-the exceptions. [tmux's page](terminal/tmux/README.md#what-changes),
-[git's](git/README.md#what-changes), [Zed's](editor/zed/README.md#what-changes)
-and [Sublime Text's](editor/sublime/README.md#what-changes) list the rest of
+Some of the author's choices are felt at once. The zsh and rg rows hold for
+the shell piece taken alone too; [its page](shell/README.md#what-changes)
+names the exceptions. [tmux's page](terminal/tmux/README.md#what-changes),
+[git's](git/README.md#what-changes), [gh's](gh/README.md#what-changes),
+[Zed's](editor/zed/README.md#what-changes) and
+[Sublime Text's](editor/sublime/README.md#what-changes) list the rest of
 their choices; they hold for the setup too. An undo line goes in an overlay,
 where it wins over the shipped file: the one its row names, or else
 its tool's — `~/.zshrc.local`, `~/.config/kitty/local.conf`,
 `~/.config/tmux/local.conf`, `~/.gitconfig.local`, `~/.ssh/config.local`,
-`~/.config/zed/settings.json` or Sublime's `Packages/User`.
+`~/.config/zed/settings.json` or Sublime's `Packages/User`. gh has none: an
+undo from its page holds until the next `preen apply`, which puts the
+shipped `config.yml` back and keeps yours beside it.
 
 | Tool | What you notice | Undo |
 | --- | --- | --- |
@@ -186,6 +222,7 @@ its tool's — `~/.zshrc.local`, `~/.config/kitty/local.conf`,
 | zsh | `$EDITOR` is `zed --wait` where `~/.zshenv` finds `zed` — on PATH, in Homebrew's bin or `/usr/local/bin` — else nano, and always nano over ssh | `export EDITOR=… VISUAL=…` in `~/.zshenv.local` |
 | zsh | over ssh, where tmux is installed, a shell attaches to the tmux session `remote`, and leaving tmux ends the login | `unset SSH_CONNECTION` in `~/.zprofile.local`; tools that read it then see no ssh session |
 | zsh | `~/.zprofile` carries the author's JetBrains Toolbox, SDKMAN and Playdate lines — PATH entries and a `PLAYDATE_SDK_PATH` export, harmless where those are absent — and Antigravity's, which puts `~/.local/bin` ahead of Homebrew. Where a JDK 21 is installed, `JAVA_HOME` is it | `unset PLAYDATE_SDK_PATH` in `~/.zprofile.local`; `path=("$HOMEBREW_PREFIX/bin" $path)` there puts Homebrew back ahead; for another JDK, `export JAVA_HOME=…` and `path=("$JAVA_HOME/bin" $path)` there, since JDK 21's `bin` is ahead of `/usr/bin` |
+| rg | searches hidden files but never `.git`, and ignores case until the pattern holds a capital | `unset RIPGREP_CONFIG_PATH` in `~/.zshenv.local` |
 | kitty | the left Option key is Alt, so characters typed with Option take the right one (`macos_option_as_alt`) | `macos_option_as_alt no` |
 | kitty | selecting text copies it, replacing the clipboard (`copy_on_select`) | `copy_on_select no` |
 | kitty | cmd+q saves the session and the next launch restores it (`startup_session`); before the first save, kitty logs that it cannot read the file and opens its usual window | `startup_session none`<br>`map cmd+q quit` |
@@ -280,17 +317,16 @@ generates them again from its own settings when it next loads.
 prompt/            the Claude Code statusline; its own page and installer
 terminal/kitty/    the terminal; its own page and installer
 terminal/tmux/     tmux for SSH: true colour, mouse, a deep history, resurrect; its own page and installer
-terminal/bat/      one line: bat in the terminal's palette
-terminal/ncdu/     one line: ncdu in the terminal's palette
+terminal/bat/      one line: bat in the terminal's palette; the kitty and shell pieces copy it
+terminal/ncdu/     one line: ncdu in the terminal's palette; the shell piece copies it
 shell/             zsh, readline, hushlogin, atuin; its own page and installer
 editor/zed/        settings, a keymap on a JetBrains base, tasks; its own page and installer
 editor/sublime/    settings, Terminus to match, a vendored light scheme; its own page and installer
 git/               gitconfig, the global ignore, no identity — bootstrap asks for it; its own page and installer
-gh/                the CLI's own preferences
-ripgrep/           flags: hidden in, .git out, smart case, clickable matches
-mise/              the runtime manager's global pins
-ssh/               an Include for your own config, then the agent line; no hosts
-macos/             System Settings, run by hand: --dry-run lists each change, a run saves what it replaces
+gh/                the CLI's own preferences; its own page and installer
+ripgrep/           flags: hidden in, .git out, smart case, clickable matches; the shell piece copies it
+ssh/               an Include for your own config, then the agent line; no hosts. Not taken alone: an Include appended to your config falls under its last Host block, so this must open your config, and a piece only appends
+macos/             System Settings, run by hand: --dry-run lists each change, a run saves what it replaces; its own page
 bin/               bootstrap, preen — apply and doctor — and what the doctor runs
 lib/               install.sh, the half the installers share
 manifest.tsv       the source's public rows: file → live path → link or copy → permissions, where set
@@ -324,8 +360,11 @@ Text a package beneath your `Packages/User`, so `editor/zed/` and
 `editor/sublime/` land in that lower layer, and your keys win over it but
 for the exceptions Zed's page names; the keymap and tasks Zed reads by name
 alone are copied only where you have none.
-A tool with one file and no include — the statusline — is copied and
-tailored by its installer. Nothing a piece installs points back here.
+A tool with one file and no include is written by an installer: the
+statusline's is copied and tailored, gh's keys are merged into yours
+through gh's own writer, `gh config set`, and bat's, ripgrep's and ncdu's
+are copied only where you have none by the shell piece, bat's by kitty's
+too. Nothing a piece installs points back here.
 
 **Themes are a family, not one scheme.** Gruvbox Dark Hard where code runs —
 kitty, tmux, the statusline — and Gruvbox Light Hard where it is read — Zed,

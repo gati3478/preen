@@ -145,7 +145,6 @@ done
 # by a brace at its start, so a download cut between two lines ends elsewhere;
 # a whole object proves nothing alone, so each must also hold a line that marks
 # it as this config's.
-whole_with() { [ "$(tail -n 1 "$SRC/$1")" = "$2" ] && grep -qF -- "$3" "$SRC/$1"; }   # whole_with <file> <its last line> <text it holds> → true when it ends on that line and holds that text
 whole_with Preferences.sublime-settings '}' '"color_scheme": "Packages/preen/gruvbox-light-hard.sublime-color-scheme"' \
   || die "$ORIGIN/Preferences.sublime-settings is not this config, or did not arrive whole — it must name the colour scheme in Packages/preen and end on the } that closes it"
 whole_with gruvbox-light-hard.sublime-color-scheme '}' '"name": "gruvbox (Light) (Hard)"' \

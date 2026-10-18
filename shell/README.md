@@ -86,13 +86,9 @@ one costs only what it does:
 - **atuin**, for ctrl+r; without it ctrl+r is fzf's, else zsh's own.
 - **eza**, for `ls`, `ll` and `lt`, recent enough for `--hyperlink=auto`;
   without it they stay what they were.
-- **bat**, for manual pages and fzf's preview. Its config is
-  [`terminal/bat/`](../terminal/bat/).
+- **bat**, for manual pages and fzf's preview.
 - **zoxide** for `z`, **mise** for per-directory runtimes, and **Zed** as
   `$EDITOR` — nano without it.
-- **ripgrep's config**, [`ripgrep/`](../ripgrep/) at
-  `~/.config/ripgrep/config`: the zshenv points rg at that file when it is
-  there.
 
 The installer names each it did not find, and the release fzf and eza need.
 
@@ -126,6 +122,12 @@ empty home, on a Mac:
 ~/.hushlogin                               silences login's Last login line — copied if absent
 ~/.config/atuin                            atuin's config directory, created
 ~/.config/atuin/config.toml                atuin's settings — copied if absent
+~/.config/bat                              bat's config directory, created
+~/.config/bat/config                       bat's theme: the terminal's palette — copied if absent
+~/.config/ripgrep                          ripgrep's config directory, created
+~/.config/ripgrep/config                   rg's flags: hidden files, smart case — copied if absent
+~/.config/ncdu                             ncdu's config directory, created
+~/.config/ncdu/config                      ncdu's colours: the terminal's palette — copied if absent
 ~/.zshenv                                  created: source ~/.config/zsh/preen/zshenv
 ~/.inputrc                                 created: $include ~/.config/zsh/preen/inputrc
 ~/.zshrc                                   created: source ~/.config/zsh/preen/zshrc
@@ -149,11 +151,18 @@ It
    copies, never symlinks, each backed up beside itself as
    `<file>.unpreened.<timestamp>` if a different one was there, left
    untouched if identical;
-3. copies `~/.hushlogin`, which is empty — its whole effect is to exist — and
-   `~/.config/atuin/config.toml` only where nothing is there. A file already
-   at either stays as it is: the run says `unchanged` when it holds this
-   config's bytes, and `left alone` when it is anything else, a symlink
-   included;
+3. copies, each only where nothing is there, `~/.hushlogin`, which is empty
+   — its whole effect is to exist — and these configs: atuin's,
+   `~/.config/atuin/config.toml`; bat's, `~/.config/bat/config`, from
+   [`terminal/bat/`](../terminal/bat/), whose theme is the terminal's
+   palette; ncdu's, `~/.config/ncdu/config`, from
+   [`terminal/ncdu/`](../terminal/ncdu/); and ripgrep's,
+   `~/.config/ripgrep/config`, from [`ripgrep/`](../ripgrep/), which the
+   zshenv points rg at whenever it is there — so not while
+   `RIPGREP_CONFIG_PATH` names another file, and the plan says so. A file
+   already at any of them stays as it is: the run says `unchanged` when it
+   holds this config's bytes, and `left alone` when it is anything else, a
+   symlink included;
 4. appends `source ~/.config/zsh/preen/zshenv` to the zshenv zsh reads,
    `$include ~/.config/zsh/preen/inputrc` to `~/.inputrc` and
    `source ~/.config/zsh/preen/zshrc` to the zshrc zsh reads, each once. Your
@@ -166,10 +175,11 @@ copies come back `unchanged` and each line `already there`.
 
 **Refusals**, all of them before the first write, so a stopped run has changed
 nothing: `~/.config`, `~/.config/zsh` or `~/.config/zsh/preen` is a symlink,
-dangling or not, or `~/.config/atuin` is one when atuin's config would be
-copied into it, or a directory between `~` and the zshenv or zshrc zsh reads
-is — the files would land in whatever it points at, which something else
-manages; the zshrc, the zshenv or `~/.inputrc` is a symlink without its line —
+dangling or not, or `~/.config/atuin`, `~/.config/bat`, `~/.config/ripgrep`
+or `~/.config/ncdu` is one when its config would be copied into it, or a
+directory between `~` and the zshenv or zshrc zsh reads is — the files would
+land in whatever it points at, which something else manages; the zshrc, the
+zshenv or `~/.inputrc` is a symlink without its line —
 the append would land in its target, so the line belongs there instead; one
 of them lacks its line and cannot be read and appended to; `~/.config` is not a
 directory, is not writable, or cannot be created, or another directory the run
@@ -196,14 +206,16 @@ For readline, a line below the `$include` in `~/.inputrc` wins.
 
 The front page's
 [What changes when you take the setup](../README.md#what-changes-when-you-take-the-setup)
-lists the choices felt at once, each with its undo line. Its zsh rows hold
-for this piece, with these exceptions:
+lists the choices felt at once, each with its undo line. Its zsh and rg
+rows hold for this piece, with these exceptions:
 
 - the `~/.zprofile` row does not apply: this piece leaves your `~/.zprofile`
   alone;
 - nothing here reads a `~/.zprofile.local`, so the undo of the zsh row on
   tmux over ssh, `unset SSH_CONNECTION`, goes above the appended line in
-  your zshrc, before this config's tmux block runs.
+  your zshrc, before this config's tmux block runs;
+- the rg row holds only where the run copied ripgrep's config, never while
+  `RIPGREP_CONFIG_PATH` named another file.
 
 Where an undo line goes in `~/.zshrc.local`, a line below the appended one
 works as well.
@@ -219,12 +231,13 @@ works as well.
    instead.
 2. Delete `~/.config/zsh/preen/`, and `~/.config/zsh` with it where nothing
    else is in it.
-3. For `~/.hushlogin` and `~/.config/atuin/config.toml`, read what the run
-   said of each: `copied` means the run put it there, and it can go;
-   `unchanged` or `left alone` means a file was already there, and the run
-   never touched it. The shipped `~/.hushlogin` is empty, so an empty one of
-   your own reads `unchanged`. Where the run said `created` of
-   `~/.config/atuin`, that directory goes with its file.
+3. For `~/.hushlogin` and atuin's, bat's, ripgrep's and ncdu's configs,
+   read what the run said of each: `copied` means the run put it there, and
+   it can go; `unchanged` or `left alone` means a file was already there, and
+   the run never touched it. The shipped `~/.hushlogin` is empty, so an empty
+   one of your own reads `unchanged`. Where the run said `created` of a
+   directory above one of them, that directory goes with its file. The kitty
+   piece copies bat's config too, so keep it while you keep that piece.
 4. `~/.zsh_history` holds what this config recorded, and
    `~/.zcompdump-<zsh version>` beside it is the completion cache this zshrc
    writes. A history file of yours by another name is where it was.

@@ -26,7 +26,8 @@ it fetches the configs, and nothing it installs points back here.
 
 - **bat**, for the scrollback pager. `scrollback_pager` runs it by name, so
   until bat is installed the pager opens on nothing. Everything else is
-  unaffected.
+  unaffected. The installer copies bat's config, which names its theme,
+  where you have none.
 - **Zed**, for the click seam. `open-actions.conf` launches `zed` by name
   when you click a file path; without it a click does nothing, and with
   another editor you put its name in that file. The installer says what it
@@ -95,6 +96,8 @@ plan for a home with no `~/.config` yet:
 ~/.config/kitty/open-actions.conf          what a click on a link does — copied if absent
 ~/.config/kitty/mime.types                 the file types behind it — copied if absent
 ~/.config/kitty/choose-files.conf          kitty's file picker, kitten choose-files — copied if absent
+~/.config/bat                              bat's config directory, created
+~/.config/bat/config                       bat's theme: the terminal's palette — copied if absent
 ```
 
 A `kitty.conf` of yours without the line reads `one line appended: <line>`
@@ -125,7 +128,11 @@ It
    nothing is replaced: the run says `unchanged` when it is a file holding
    this config's bytes, and `left alone` when it is anything else, a symlink
    included;
-5. appends `include preen/kitty.conf` to `~/.config/kitty/kitty.conf`, once.
+5. copies bat's config, from [`terminal/bat/`](../bat/), to
+   `~/.config/bat/config` the same way: only where nothing is there. Its one
+   line is `--theme="ansi"`, the terminal's own palette, and
+   `scrollback_pager` names no theme of its own;
+6. appends `include preen/kitty.conf` to `~/.config/kitty/kitty.conf`, once.
    Your file is not otherwise touched, and if you have none it becomes that
    one line. The append is last, so a run that stops earlier never leaves an
    include pointing at files that are not there.
@@ -141,6 +148,8 @@ whose target lacks the include line — the append would land in that target,
 so the line belongs there instead, and a re-run then says `already there`;
 `kitty.conf` lacks the line and cannot be appended to, or `~/.config/kitty`
 or `preen/` cannot be written into — root-owned after a `sudo` edit, say;
+`~/.config/bat` is a symlink, or cannot be written into, when bat's config
+would be copied into it;
 `~/.config` is not a directory, is not writable, or cannot be created; a
 source file that is missing, empty, or not the file it claims to be.
 
@@ -200,10 +209,13 @@ cost nothing.
    `~/.config/kitty/kitty.conf` — or the file, if that line is all it holds.
 2. Delete `~/.config/kitty/preen/` — keep `local.conf` from it first if you
    made one; that file is yours.
-3. For `open-actions.conf`, `mime.types` and `choose-files.conf`, read what
-   the run said of each: `copied` or `unchanged` means the file held this
-   config's bytes and can go; `left alone` means something else was there, a
-   different file or a symlink, and the run never touched it.
+3. For `open-actions.conf`, `mime.types`, `choose-files.conf` and
+   `~/.config/bat/config`, read what the run said of each: `copied` or
+   `unchanged` means the file held this config's bytes and can go;
+   `left alone` means something else was there, a different file or a
+   symlink, and the run never touched it. Where it said `created` of
+   `~/.config/bat`, that directory goes with its file. The shell piece
+   copies bat's config too, so keep it while you keep that piece.
 4. Delete `~/.config/kitty/last-session.kitty`, the session cmd+q saves, if
    it is there.
 
