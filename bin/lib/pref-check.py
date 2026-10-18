@@ -2034,6 +2034,32 @@ def read_javaprops(path, key, accumulate=False, **_opts):
     return [props[key]] if accumulate else props[key]
 
 
+def read_literalkv(path, key, accumulate=False, **_opts):
+    """`KEY=VALUE` lines read with no shell grammar: each line trimmed, one
+    opening with `#` skipped, the rest cut at the first `=` and both halves
+    trimmed — the loader of a server that reads its config this way, which
+    the target using this format names.
+
+    A line with no `=` after its first character is no pair. Nothing is
+    unquoted and nothing ends a value early, so `KEY="1"` is the value `"1"`
+    and `KEY=1 # note` is `1 # note`, where a shell reads `1` from both: a row
+    wanting `1` fails on either, as the server misreads either. No
+    continuation, no expansion; the last line for a key wins.
+    """
+    found = []
+    with open(path, encoding="utf-8") as fh:
+        for raw in fh.read().split("\n"):
+            line = raw.strip()
+            if line.startswith("#") or line.find("=") <= 0:
+                continue
+            name, _, value = line.partition("=")
+            if name.strip() == key:
+                found.append(value.strip())
+    if not found:
+        return None
+    return found if accumulate else found[-1]
+
+
 def read_androidprefs(path, key, accumulate=False, **_opts):
     """An Android app's SharedPreferences file: a <map> of
     `<string name="K">V</string>` and `<int|long|float|boolean name="K"
@@ -2424,6 +2450,7 @@ READERS = {
     "obsidiancap": read_obsidiancap,
     "nanorc": read_nanorc,
     "javaprops": read_javaprops,
+    "literalkv": read_literalkv,
     "androidprefs": read_androidprefs,
 }
 
