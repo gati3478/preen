@@ -15,7 +15,7 @@ you keep your own settings, is never read or written. Copies, never
 symlinks, and nothing here points back at this repo afterwards.
 
   from a clone:    ./editor/sublime/install.sh [flags]
-  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.1.0/editor/sublime/install.sh | bash
+  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.1.1/editor/sublime/install.sh | bash
 
 There is nothing to ask, so nothing is asked.
 
@@ -66,7 +66,7 @@ done
 # otherwise fetched from the mirror exactly as the config is — same trust,
 # same mechanism — and checked for its marker line before it is sourced.
 PIECE="editor/sublime"   # this piece's path under the mirror root
-PREEN_REF=v1.1.0   # this installer's release: the tag it fetches from, and the helper's marker
+PREEN_REF=v1.1.1   # this installer's release: the tag it fetches from, and the helper's marker
 # A slash ending an override would double the one joined after it, and leave
 # a root taken from it a level too deep.
 trim_slash() { printf '%s' "$1" | sed 's#/*$##'; }   # trim_slash <url> → it with any trailing slash dropped

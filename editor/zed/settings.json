@@ -226,12 +226,11 @@
       "initialization_options": {
         "check": { "command": "clippy" },
         "cargo": { "allFeatures": true },
-        // Both match rust-analyzer's own defaults (measured 08-08-2026:
-        // chainingHints on, closureReturnTypeHints "never"). Pinned
-        // deliberately: these are the two hint classes worth an opinion —
-        // chaining hints earn their space in iterator-heavy Rust, closure
-        // return hints are noise — and pinning them means an upstream default
-        // flip cannot change the editor.
+        // Both match rust-analyzer's own defaults, pinned deliberately: these
+        // are the two hint classes worth an opinion — chaining hints earn
+        // their space in iterator-heavy Rust, closure return hints are noise —
+        // and pinning them means an upstream default flip cannot change the
+        // editor.
         "inlayHints": {
           "chainingHints": { "enable": true },
           "closureReturnTypeHints": { "enable": "never" }

@@ -5,12 +5,8 @@
 // JSON below is byte-identical to the original.
 //
 // ── Why this is vendored rather than installed ──────────────────────────────
-// The upstream package is abandoned: Briles/gruvbox was last pushed
-// 04-03-2023. So is every alternative — a-n-d-a-i/everforest-sublime
-// (26-10-2023), karimlevallois/gruvbox-material-sublime-text (17-08-2021),
-// peaceant/gruvbox (24-06-2016). Sublime's colour-scheme ecosystem as a whole
-// is unmaintained, so switching packages trades one dead dependency for
-// another.
+// The upstream package is abandoned, and so is every alternative surveyed:
+// switching packages trades one dead dependency for another.
 //
 // A .sublime-color-scheme is declarative data, not code. It has no host API to
 // break against and no security surface, so "is upstream alive?" is close to

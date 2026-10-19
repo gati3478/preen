@@ -5,6 +5,16 @@ from it. A major release moves where or how a file lands, or drops a flag; a
 minor one adds a piece, a row, a flag or a check; a patch changes values,
 fixes and docs.
 
+## v1.1.1
+
+`preen doctor --quiet` leaves a ceiling that waits on a manual re-check to
+the full run, and folds the rows a host skipped, because ssh could not reach
+it, into one warn naming that host. The comments in
+`terminal/kitty/kitty.conf`, `editor/zed/settings.json` and Sublime's colour
+scheme keep each line's reason and drop the method behind it, and
+`preferences.toml`'s header names the `value` and `why` it carries beside
+its checks; no setting changed.
+
 ## v1.1.0
 
 `shell/`'s zshenv points rg at `~/.config/ripgrep/config` only where

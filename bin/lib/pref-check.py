@@ -281,6 +281,16 @@ class ReadSkip(Exception):
     """
 
 
+class HostUnreachable(ReadSkip):
+    """A ReadSkip for the host as a whole — its ssh call failed — rather than for
+    one read there. A quiet run says it once per host, not once per row."""
+
+    def __init__(self, message, host, reason):
+        super().__init__(message)
+        self.host = host
+        self.reason = reason
+
+
 def _tool_run(argv, **kw):
     """Run a reader's own tool, or ReadSkip if the machine does not have it.
 
@@ -1970,12 +1980,17 @@ def _zshcap_remote(host):
     try:
         proc = subprocess.run(["ssh", "-tt", *_SSH_OPTS, host, cmd],
                               capture_output=True, text=True, timeout=60, stdin=subprocess.DEVNULL)
-    except (subprocess.TimeoutExpired, OSError) as exc:
-        raise ReadSkip(f"{host} did not answer the live zsh probe — {exc}")
+    except subprocess.TimeoutExpired as exc:
+        raise HostUnreachable(f"{host} did not answer the live zsh probe — {exc}", host, f"no answer in {exc.timeout:g}s")
+    except OSError as exc:
+        raise ReadSkip(f"{host} could not be asked for the live zsh probe — {exc}")
     out = proc.stdout.replace("\r", "")
     if proc.returncode != 0 and "--SETOPT--" not in out:
         why = (proc.stderr or out).strip().splitlines()
-        raise ReadSkip(f"{host} unreachable for the live zsh probe (rc={proc.returncode}: {why[0][:120] if why else 'no output'})")
+        reason = f"rc={proc.returncode}: {why[0][:120] if why else 'no output'}"
+        if proc.returncode == SSH_FAILED:
+            raise HostUnreachable(f"{host} unreachable for the live zsh probe ({reason})", host, reason)
+        raise ReadSkip(f"{host}: the live zsh probe failed there ({reason})")
     if "\x1b" in out:
         raise ReadError(f"{host} live zsh probe output contains an ESC byte — refusing to strip it silently (zcap.sh)")
     col = subprocess.run(["col", "-b"], input=out, capture_output=True, text=True)
@@ -3221,6 +3236,8 @@ _SSH_OPTS = ["-o", "BatchMode=yes", "-o", "ConnectTimeout=8"]
 # A `host`, a target's or a version command's: an ssh alias only — a leading
 # `-` would reach ssh as an option.
 SSH_HOST = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
+# ssh's own failure; any other status is the remote command's.
+SSH_FAILED = 255
 
 
 def _remote_fetch(host, targets):
@@ -3238,12 +3255,19 @@ def _remote_fetch(host, targets):
     try:
         proc = subprocess.run(["ssh", "-n", *_SSH_OPTS, host, prog],
                               capture_output=True, text=True, timeout=60, stdin=subprocess.DEVNULL)
-    except (subprocess.TimeoutExpired, OSError) as exc:
-        _REMOTE[host] = ReadSkip(f"{host} did not answer — {exc}")
+    except subprocess.TimeoutExpired as exc:
+        _REMOTE[host] = HostUnreachable(f"{host} did not answer — {exc}", host, f"no answer in {exc.timeout:g}s")
+        return _REMOTE[host]
+    except OSError as exc:
+        _REMOTE[host] = ReadSkip(f"{host} could not be asked — {exc}")
         return _REMOTE[host]
     if proc.returncode != 0 or "--- end ---" not in proc.stdout:
         why = (proc.stderr or proc.stdout).strip().splitlines()
-        _REMOTE[host] = ReadSkip(f"{host} unreachable (rc={proc.returncode}: {why[0][:120] if why else 'no output'})")
+        reason = f"rc={proc.returncode}: {why[0][:120] if why else 'no output'}"
+        if proc.returncode == SSH_FAILED:
+            _REMOTE[host] = HostUnreachable(f"{host} unreachable ({reason})", host, reason)
+        else:
+            _REMOTE[host] = ReadSkip(f"{host}: the read failed there ({reason})")
         return _REMOTE[host]
     import base64, tempfile
     if not _REMOTE_DIR:
@@ -4209,12 +4233,14 @@ def main():
     for label, problem in validate_spec_paths(spec):
         emit("fail", f"{label}: {problem}")
         failed = 1
-    failed |= emit_assertions(spec, targets, came_from, read)
+    # PREEN_QUIET is preen doctor's --quiet; its full run passes no.
+    quiet = os.environ.get("PREEN_QUIET") == "yes"
+    failed |= emit_assertions(spec, targets, came_from, read, quiet)
     failed |= emit_surface_events(spec)
     return failed
 
 
-def emit_assertions(spec, targets, came_from, read):
+def emit_assertions(spec, targets, came_from, read, quiet=False):
     """One line per [pref.X.targets.Y] entry, read from the live config.
 
     Lifted out of main() so `--prove` can run the SAME loop twice — once on the
@@ -4222,11 +4248,24 @@ def emit_assertions(spec, targets, came_from, read):
     which is the one kind of second copy this checker exists to refuse. Exactly
     one line per entry, in sorted order: that is what lets the two runs be laid
     side by side.
+
+    `quiet` breaks that, so --prove never passes it: a manual ceiling prints
+    nothing, and the rows a host skipped because it could not be asked fold
+    into one warn per host, which names it and counts nothing.
     """
     failed = 0
     prefs = spec.get("pref", {})
     if not prefs:
         emit("warn", f"no [pref.*] entries in {read}")
+
+    unasked = {}   # host -> each distinct reason it could not be asked, in the order met
+
+    def skipped(label, exc):
+        if quiet and isinstance(exc, HostUnreachable):
+            if exc.reason not in unasked.setdefault(exc.host, []):
+                unasked[exc.host].append(exc.reason)
+        else:
+            emit("warn", f"{label}: skipped — {exc}")
 
     for pref_id, pref in sorted(prefs.items()):
         entries = pref.get("targets", {})
@@ -4266,7 +4305,7 @@ def emit_assertions(spec, targets, came_from, read):
                     else:
                         emit("fail", f"{label}: THE CEILING LIFTED — {detail}. Go claim the preference and set state='enforce'.")
                         failed = 1
-                else:
+                elif not quiet:
                     emit("warn", f"{label}: unreachable, manual re-check — {entry['evidence']}")
                 continue
 
@@ -4306,7 +4345,7 @@ def emit_assertions(spec, targets, came_from, read):
                 try:
                     path = remote_path(t, targets)
                 except ReadSkip as exc:
-                    emit("warn", f"{label}: skipped — {exc}")
+                    skipped(label, exc)
                     continue
                 if path is None:
                     emit("warn", f"{label}: {t['path']} not on {host} — skipped")
@@ -4320,7 +4359,7 @@ def emit_assertions(spec, targets, came_from, read):
             try:
                 raw = read_target(t, path, key, accumulate=accumulate, host=host)
             except ReadSkip as exc:
-                emit("warn", f"{label}: skipped — {exc}")
+                skipped(label, exc)
                 continue
             except (OSError, ReadError, ET.ParseError, json.JSONDecodeError, tomllib.TOMLDecodeError, UnicodeDecodeError) as exc:
                 emit("fail", f"{label}: could not read {key} — {exc}", kind="unreadable")
@@ -4446,6 +4485,8 @@ def emit_assertions(spec, targets, came_from, read):
                     emit("fail", f"{label}: {key} is '{shown}'{src}, want '{want}'")
                     failed = 1
 
+    for host, reasons in unasked.items():
+        emit("warn", f"{host}: unreachable, its rows were skipped — {'; '.join(reasons)}")
     return failed
 
 

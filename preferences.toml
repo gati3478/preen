@@ -7,7 +7,8 @@
 # entries, so without it that cross-check is skipped with one warn and every
 # row still runs.
 #
-# This file carries only what a check can act on, and `bin/lib/pref-check.py`
+# Beside the targets and rows a check acts on, this file carries each
+# preference's `value` and a one-line `why`, and `bin/lib/pref-check.py`
 # asserts it against LIVE config — not against the copies in this repo, because
 # an application can rewrite a `copy`-mode file, so the live copy can
 # legitimately differ from the repo's, and the question is what the

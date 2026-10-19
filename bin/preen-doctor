@@ -6,8 +6,11 @@
 # off a number.
 #
 #   preen doctor          every unit, one line each
-#   preen doctor --quiet  the headings, every warn and FAIL, the verdict — an
-#                         ok line prints nothing, and still nothing is counted
+#   preen doctor --quiet  the headings, every FAIL, the verdict, and every warn
+#                         but a ceiling that waits on a manual re-check; the
+#                         preference rows an unreachable host skipped are one
+#                         warn naming it. No ok line, and still nothing is
+#                         counted
 #   preen doctor --taste  also assert the preference spec where it is off by
 #                         default: outside the source repo (see SOURCE_REPO)
 set -uo pipefail
@@ -18,8 +21,10 @@ usage: preen doctor [--quiet] [--taste]
 Verifies the deployed state against manifest.tsv, then the semantic checks:
 every unit, one line each, and never a tally. Exit 0 with no FAIL, 1 with one.
 
-  --quiet     the headings, every warn and FAIL, the verdict; an ok line
-              prints nothing, and still nothing is counted
+  --quiet     the headings, every FAIL, the verdict, and every warn but a
+              ceiling that waits on a manual re-check; the preference rows
+              an unreachable host skipped are one warn naming it. No ok
+              line, and still nothing is counted
   --taste     also assert the preference spec outside the source repo, where
               it is off by default
   -h, --help  print this and exit
@@ -695,8 +700,11 @@ fi
 # section that looks broken rather than absent.
 # Outside the source repo the spec is the author's taste, asserted only when
 # asked for (--taste): an adopter's correct setup is not failed over it.
+# Only the checker can tell a manual ceiling or a row its host skipped from any
+# other warn, so --quiet's cut is made there. Passed both ways: a PREEN_QUIET
+# inherited from the caller never quiets a full run.
 if declare -f run_pref_checks >/dev/null 2>&1 && { [ "$SOURCE_REPO" = yes ] || [ "$TASTE" = yes ]; }; then
-  run_pref_checks "$REPO" || FAILED=1
+  PREEN_QUIET="$QUIET" run_pref_checks "$REPO" || FAILED=1
 fi
 
 echo "--"
