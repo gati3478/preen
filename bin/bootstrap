@@ -324,11 +324,11 @@ without() { # without <tool> → what goes missing when it is not installed
     gh)      echo "nothing else here needs it — the setup ships only its config" ;;
     git-lfs) echo "repositories that use LFS fail to check out" ;;
     tmux)    echo "no tmux over ssh" ;;
-    zed)     echo "EDITOR falls back to nano, and kitty's click-to-open does nothing" ;;
+    subl)    echo "EDITOR falls back to nano, and a click on a text file in kitty opens nothing" ;;
   esac
 }
 optional=""
-for tool in fd rg atuin mise gh git-lfs tmux zed; do
+for tool in fd rg atuin mise gh git-lfs tmux subl; do
   command -v "$tool" >/dev/null 2>&1 || in_brew "$tool" || optional="$optional $tool"
 done
 # tmux.conf runs tpm from this path, where no package manager puts it.
@@ -357,7 +357,8 @@ if [ -n "$optional" ] || [ "$tpm" = no ]; then
   # shellcheck disable=SC2086
   for tool in $optional; do printf '  %-8s %s\n' "$tool" "$(without "$tool")"; done
   [ "$tpm" = yes ] || printf '  %-8s %s\n' tpm "tmux's plugins: git clone https://github.com/tmux-plugins/tpm ~/.config/tmux/plugins/tpm"
-  [ -z "$optional" ] || echo "  $brew install$optional"
+  # subl is Sublime Text's command; Homebrew installs it as sublime-text.
+  [ -z "$optional" ] || echo "  $brew install${optional/ subl/ sublime-text}"
 fi
 if [ -n "$missing" ]; then
   echo "Missing:$missing"

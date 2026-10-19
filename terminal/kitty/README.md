@@ -28,10 +28,11 @@ it fetches the configs, and nothing it installs points back here.
   until bat is installed the pager opens on nothing. Everything else is
   unaffected. The installer copies bat's config, which names its theme,
   where you have none of your own.
-- **Zed**, for the click seam. `open-actions.conf` launches `zed` by name
-  when you click a file path; without it a click does nothing, and with
-  another editor you put its name in that file. The installer says what it
-  did not find.
+- **Sublime Text** (`brew install --cask sublime-text`), for the click seam.
+  `open-actions.conf` launches it as `subl` when you click a file path, and
+  `kitty.conf` has kitty look in `/opt/homebrew/bin`, where Homebrew links it
+  on Apple silicon. Without Sublime Text a click does nothing; with another
+  editor, you put its name in that file. The installer says what it did not find.
 
 ## The palette
 
@@ -71,13 +72,13 @@ No clone needed. To print the plan and stop, writing nothing — `bash -s --`
 hands the flag to the script:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.1.1/terminal/kitty/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.2.0/terminal/kitty/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.1.1/terminal/kitty/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.2.0/terminal/kitty/install.sh | bash
 ```
 
 Or from a clone of this repository, `./terminal/kitty/install.sh`, with
@@ -105,8 +106,9 @@ instead.
 
 It
 
-1. looks for kitty, for the font, for bat and for Zed, and says what it did
-   not find. None of the four stops it, and it never launches kitty;
+1. looks for kitty, for the font, for bat and for Sublime Text's `subl`, and
+   says what it did not find. None of the four stops it, and it never
+   launches kitty;
 2. copies `kitty.conf` and `current-theme.conf` into
    `~/.config/kitty/preen/` — copies, never symlinks, each backed up beside
    itself as `<file>.unpreened.<timestamp>` if a different one was there,
@@ -212,11 +214,12 @@ map cmd+q quit
 
 `open-actions.conf` and `mime.types` are the kitty half of one behaviour: a
 file path printed in the terminal is a link, and clicking it opens the file in
-Zed — at the matching line when the link carries one, in a new tab when it is
-a directory. Another editor is one edit away: the three `action launch` lines
-name `zed`. `mime.types` is there because Python's table, which kitty
-matches against, has no entry for Kotlin, Gradle, Svelte, `.tsx`,
-`.properties` or `.zsh`, and mislabels `.rs`, `.ts` and `.sql`.
+Sublime Text — at the matching line when the link carries one, in a new tab
+when it is a directory. Another editor is one find-and-replace away: each
+`action launch` line that opens a file names `subl`. `mime.types` is there
+because Python's table, which kitty matches against, has no entry for Kotlin,
+Gradle, Svelte, `.tsx`, `.properties` or `.zsh`, and mislabels `.rs`, `.ts`
+and `.sql`.
 
 The other half is the shell writing those links — `rg --hyperlink-format=kitty`
 and `eza --hyperlink` — and it lives in `shell/` and `ripgrep/` in this

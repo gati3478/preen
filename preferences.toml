@@ -1852,8 +1852,8 @@ accumulate = true
 want_any = "combiningchars"
 
 [pref.editor_env]
-value = "EDITOR is a real editor — zed --wait locally, nano over SSH"
-why = "Non-modal per the criteria; the fallback is nano deliberately NOT vi, so the headless case cannot land in modal editing either. Text asserts both branches exist; live asserts this machine resolves the GUI one."
+value = "EDITOR is a real editor — subl -w locally, nano over SSH"
+why = "Non-modal per the criteria. Sublime Text because a file met in passing wants the lean, fast editor, Zed being for projects opened on purpose; -w holds git until the file is closed. The fallback is nano deliberately NOT vi, so the headless case cannot land in modal editing either. Text asserts both branches exist; live asserts this machine resolves the GUI one."
 
 [pref.editor_env.targets.zshenv]
 key = "EDITOR"
@@ -1864,12 +1864,12 @@ want_any_contain = "nano"
 target = "zshenv"
 key = "EDITOR"
 accumulate = true
-want_any_contain = "zed --wait"
+want_any_contain = "subl -w"
 
 [pref.editor_env.targets.zsh_live]
 key = "params"
 accumulate = true
-want_any_contain = "EDITOR=zed --wait"
+want_any_contain = "EDITOR=subl -w"
 
 # VISUAL outranks EDITOR in most lookup chains (git, less's v, crontab), so a
 # diverged VISUAL would route around everything above while it stayed green.
@@ -1883,7 +1883,7 @@ want = "$EDITOR"
 target = "zsh_live"
 key = "params"
 accumulate = true
-want_any = "VISUAL=zed --wait"
+want_any = "VISUAL=subl -w"
 
 [pref.editor_env.targets.mac_nano_is_pico]
 state = "unreachable"
@@ -2689,7 +2689,7 @@ want_any = "REPORTTIME=10"
 
 [pref.buffer_to_editor]
 value = "Ctrl+X Ctrl+E edits the buffer in $EDITOR"
-why = "A multi-line command belongs in the editor EDITOR names (zed --wait), not nursed through ZLE. Text asserts the binding as written; live asserts the widget exists and the key resolves after every init has had its chance to bind."
+why = "A multi-line command belongs in the editor EDITOR names (subl -w), not nursed through ZLE. Text asserts the binding as written; live asserts the widget exists and the key resolves after every init has had its chance to bind."
 
 [pref.buffer_to_editor.targets.zshrc]
 key = "bindkey"
@@ -2828,8 +2828,8 @@ key = "hyperlink-format"
 want = "kitty"
 
 [pref.hyperlink_actions]
-value = "a search hit, or a path:line in plain output, opens in Zed at its line; a directory opens as a new tab there; an extensionless executable and any other text file open in Zed; hovering with cmd shows where the click will land"
-why = "The link is the address of the thing the eye just found; the click should land there, not in whatever app owns the extension. Zed is the editor (pref.editor_env), a tab is named by where it is (pref.tab_identity), and the rest — images, PDFs, binaries — stays with the platform default. ⚠️ That last clause has one deliberate exception: the `inode/executable` entry sends extensionless executables to Zed, and it cannot tell a shell script from a compiled binary. The scripts are this repo's own bin/, clicked from a listing daily; a misclicked binary costs one garbage buffer. Entry ORDER is part of the preference, not presentation — kitty takes the first entry whose criteria all match, so `mime text/*` is last because it matches everything above it too."
+value = "a search hit, or a path:line in plain output, opens in Sublime Text at its line; a directory opens as a new tab there; an extensionless executable and any other text file open in Sublime Text; hovering with cmd shows where the click will land"
+why = "The link is the address of the thing the eye just found; the click should land there, not in whatever app owns the extension. A file met in passing opens in Sublime Text, the lean editor (pref.editor_env), a tab is named by where it is (pref.tab_identity), and the rest — images, PDFs, binaries — stays with the platform default. ⚠️ That last clause has one deliberate exception: the `inode/executable` entry sends extensionless executables to Sublime Text, and it cannot tell a shell script from a compiled binary. The scripts are this repo's own bin/, clicked from a listing daily; a misclicked binary costs one garbage buffer. Entry ORDER is part of the preference, not presentation — kitty takes the first entry whose criteria all match, so `mime text/*` is last because it matches everything above it too."
 
 # One row per behaviour the `why` names, each pinning a whole entry in file
 # order. Rows over the individual directives would assert a bag: the reader
@@ -2850,10 +2850,24 @@ target = "kitty"
 key = "show_hyperlink_targets"
 want = "cmd"
 
+# Each open-actions entry that opens a file launches `subl` by name. kitty
+# looks on the PATH it started with (launchd's, from the Dock), ~/.local/bin,
+# ~/bin and the `+` entries of exe_search_path, then /etc/paths and
+# /etc/paths.d, and last on the PATH of a login shell it starts for the
+# purpose. /opt/homebrew/bin, where `subl` lives, is only on that last one,
+# so this line keeps a click's editor from waiting on a shell's startup
+# files. Any `-/opt/homebrew/bin` line would undo it and still pass here: no
+# matcher says "and nothing else takes it back".
+[pref.hyperlink_actions.targets.kitty_exe_search_path]
+target = "kitty"
+key = "exe_search_path"
+accumulate = true
+want_any = "+/opt/homebrew/bin"
+
 [pref.hyperlink_actions.targets.kitty_search_hit]
 target = "kitty_open_action_blocks"
 key = "block1"
-want = "protocol file; fragment_matches ^[0-9]+$; action launch --type=background zed -- ${FILE_PATH}:${FRAGMENT}"
+want = "protocol file; fragment_matches ^[0-9]+$; action launch --type=background subl -- ${FILE_PATH}:${FRAGMENT}"
 
 # Ahead of the text entry deliberately: a directory has no mime type Python
 # would call text, but it does match nothing else, and an entry that shadowed
@@ -2872,7 +2886,7 @@ want = "protocol file; mime inode/directory; action launch --type=tab --cwd=${FI
 [pref.hyperlink_actions.targets.kitty_executable_editor]
 target = "kitty_open_action_blocks"
 key = "block3"
-want = "protocol file; mime inode/executable; action launch --type=background zed -- ${FILE_PATH}"
+want = "protocol file; mime inode/executable; action launch --type=background subl -- ${FILE_PATH}"
 
 # A compiler's or test runner's path:line is plain text; this makes it a link.
 # The extension must start with a letter, so an IP:port stays text. kitty
@@ -2883,12 +2897,12 @@ key = "detect_url_regex"
 accumulate = true
 want_any = '[[:alnum:]_./-]+\.[[:alpha:]][[:alnum:]]*:[0-9]+(:[0-9]+)?'
 
-# What a click on that link does. --cwd=current starts Zed in the clicked
+# What a click on that link does. --cwd=current starts subl in the clicked
 # window's directory, where a relative path from a tool run there resolves.
 [pref.hyperlink_actions.targets.kitty_file_reference_editor]
 target = "kitty_open_action_blocks"
 key = "block4"
-want = 'url ^[\w./-]+\.[A-Za-z]\w*:\d+(:\d+)?$; action launch --type=background --cwd=current zed -- ${URL}'
+want = 'url ^[\w./-]+\.[A-Za-z]\w*:\d+(:\d+)?$; action launch --type=background --cwd=current subl -- ${URL}'
 
 # LAST, and that is the whole of its correctness — specifically behind the
 # fragment entry, which tests no mime, so a text file's `#line` link matches
@@ -2896,7 +2910,7 @@ want = 'url ^[\w./-]+\.[A-Za-z]\w*:\d+(:\d+)?$; action launch --type=background 
 [pref.hyperlink_actions.targets.kitty_text_editor]
 target = "kitty_open_action_blocks"
 key = "block5"
-want = "protocol file; mime text/*; action launch --type=background zed -- ${FILE_PATH}"
+want = "protocol file; mime text/*; action launch --type=background subl -- ${FILE_PATH}"
 
 # The stack's extensions that Python's mimetypes table lacks (Kotlin, Gradle,
 # Svelte, .tsx, .properties, .zsh) or, through macOS's /etc/apache2/mime.types

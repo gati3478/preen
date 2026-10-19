@@ -18,13 +18,13 @@ No clone needed. To list each setting that differs and stop, writing
 nothing — `bash -s --` hands the flag to the script:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.1.1/macos/apply.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.2.0/macos/apply.sh | bash -s -- --dry-run
 ```
 
 To apply:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.1.1/macos/apply.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.2.0/macos/apply.sh | bash
 ```
 
 Or from a clone of this repository, `./macos/apply.sh`, with `--dry-run` for

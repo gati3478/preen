@@ -87,8 +87,8 @@ one costs only what it does:
 - **eza**, for `ls`, `ll` and `lt`, recent enough for `--hyperlink=auto`;
   without it they stay what they were.
 - **bat**, for manual pages and fzf's preview.
-- **zoxide** for `z`, **mise** for per-directory runtimes, and **Zed** as
-  `$EDITOR` — nano without it.
+- **zoxide** for `z`, **mise** for per-directory runtimes, and **Sublime
+  Text** as `$EDITOR`, `subl -w` — nano without it.
 
 The installer names each it did not find, and the release fzf and eza need.
 
@@ -98,13 +98,13 @@ No clone needed. To print the plan and stop, writing nothing — `bash -s --`
 hands the flag to the script:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.1.1/shell/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.2.0/shell/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.1.1/shell/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.2.0/shell/install.sh | bash
 ```
 
 Or from a clone of this repository, `./shell/install.sh`, with `--dry-run`

@@ -14,19 +14,21 @@ path=("$HOME/.local/bin" $path)
 path+=(/opt/homebrew/bin(N-/) /usr/local/bin(N-/))
 
 # ── Editor ─────────────────────────────────────────────────
-# Here, not .zshrc: `git commit`, `git rebase -i` and visudo read $EDITOR
-# from whatever spawned them. --wait is load-bearing — without it git sees
-# an empty buffer and aborts. The fallback is nano, deliberately not vi: the
-# headless case must not land in modal editing. Guarded on the binary, so a
-# machine without Zed degrades instead of failing.
+# Sublime Text, lean and fast: a file met in passing opens there, and Zed
+# stays for projects opened on purpose. Here, not .zshrc: `git commit`,
+# `git rebase -i` and visudo read $EDITOR from whatever spawned them. -w is
+# load-bearing — without it subl returns at once, and git reads a message
+# nobody has written yet and aborts. The fallback is nano, deliberately not
+# vi: the headless case must not land in modal editing. Guarded on the
+# binary, so a machine without Sublime Text degrades instead of failing.
 # ⚠️ On THIS machine `nano` is pico — /usr/bin/nano is a symlink to
 # /usr/bin/pico and no real nano is installed — so the branch lands in an
 # editor with no rc file, and a nanorc taste cannot follow it here.
 # A recorded ceiling, not drift: preferences.toml, `editor_env / mac_nano_is_pico`.
-if [ -n "$SSH_CONNECTION" ] || ! command -v zed >/dev/null 2>&1; then
+if [ -n "$SSH_CONNECTION" ] || ! command -v subl >/dev/null 2>&1; then
   export EDITOR='nano'
 else
-  export EDITOR='zed --wait'
+  export EDITOR='subl -w'
 fi
 export VISUAL="$EDITOR"
 

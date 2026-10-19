@@ -5,6 +5,17 @@ from it. A major release moves where or how a file lands, or drops a flag; a
 minor one adds a piece, a row, a flag or a check; a patch changes values,
 fixes and docs.
 
+## v1.2.0
+
+A file clicked in kitty opens in Sublime Text, at its line when the link
+carries one: `terminal/kitty/open-actions.conf` launches `subl`, and
+`kitty.conf` adds `exe_search_path +/opt/homebrew/bin`, so kitty finds it
+without a login shell's startup files. `shell/`'s zshenv sets `$EDITOR` to
+`subl -w`, still nano over ssh or without Sublime Text; the kitty and shell
+installers and `bin/bootstrap` look for `subl` where they looked for `zed`.
+`preen doctor` asserts the new line, and its handler-table reader also
+reads an entry LaunchServices keys by file extension.
+
 ## v1.1.1
 
 `preen doctor --quiet` leaves a ceiling that waits on a manual re-check to

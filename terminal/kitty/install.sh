@@ -15,7 +15,7 @@ and if you have no kitty.conf yet it becomes that line alone. Copies, never
 symlinks, and nothing here points back at this repo afterwards.
 
   from a clone:    ./terminal/kitty/install.sh [flags]
-  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.1.1/terminal/kitty/install.sh | bash
+  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.2.0/terminal/kitty/install.sh | bash
 
 There is nothing to ask, so nothing is asked.
 
@@ -75,7 +75,7 @@ done
 # otherwise fetched from the mirror exactly as the configs are — same trust,
 # same mechanism — and checked for its marker line before it is sourced.
 PIECE="terminal/kitty"   # this piece's path under the mirror root
-PREEN_REF=v1.1.1   # this installer's release: the tag it fetches from, and the helper's marker
+PREEN_REF=v1.2.0   # this installer's release: the tag it fetches from, and the helper's marker
 # A slash ending an override would double the one joined after it, and leave
 # a root taken from it a level too deep.
 trim_slash() { printf '%s' "$1" | sed 's#/*$##'; }   # trim_slash <url> → it with any trailing slash dropped
@@ -132,6 +132,8 @@ KITTY_APP="/Applications/kitty.app/Contents/MacOS/kitty"
 FONT_FILE_PREFIX="FiraCodeNerdFontMono"   # how the cask names the files
 FONT_NAME="FiraCode Nerd Font Mono"       # how kitty.conf asks for it
 FONT_CASK="font-fira-code-nerd-font"
+# kitty.conf's exe_search_path: kitty looks for subl here whatever PATH holds.
+EXE_SEARCH_DIR="/opt/homebrew/bin"
 # The home the shipped tab title collapses to '~'. bin/bootstrap carries the
 # same constant for the same line; kitty expands no variable in that option.
 AUTHORED_HOME="/Users/gati3478"
@@ -182,9 +184,9 @@ locate_root_file terminal/bat/config '--theme="ansi"' '--theme="ansi"'
 
 # ── dependencies ─────────────────────────────────────────────────────────────
 # Each is a warning and never a refusal: the files are worth having before the
-# thing that reads them, and an adopter may install kitty, the font, bat or Zed
-# after this run. Nothing below launches kitty — the binary is located and
-# named, not executed.
+# thing that reads them, and an adopter may install kitty, the font, bat or
+# Sublime Text after this run. Nothing below launches kitty — the binary is
+# located and named, not executed.
 echo "== dependencies =="
 kitty_bin=""
 if [ -x "$KITTY_APP" ]; then
@@ -219,11 +221,12 @@ else
   echo "bat not on PATH — this config pages the scrollback through it, so until bat is there the scrollback pager opens on nothing (brew install bat)"
 fi
 
-zed_bin="$(command -v zed 2>/dev/null || true)"
-if [ -n "$zed_bin" ]; then
-  echo "zed at $(short "$zed_bin")"
+subl_bin="$(command -v subl 2>/dev/null || true)"
+if [ -z "$subl_bin" ] && [ -x "$EXE_SEARCH_DIR/subl" ]; then subl_bin="$EXE_SEARCH_DIR/subl"; fi
+if [ -n "$subl_bin" ]; then
+  echo "subl at $(short "$subl_bin")"
 else
-  echo "zed not on PATH — open-actions.conf launches it when you click a file path, so a click does nothing until it is there, or until you put your editor's name in that file (brew install --cask zed)"
+  echo "subl not on PATH or in $EXE_SEARCH_DIR, where kitty.conf has kitty look too — open-actions.conf launches it when you click a file path, so a click does nothing until it is there, or until you put your editor's name in that file (brew install --cask sublime-text)"
 fi
 
 # ── the tab title ────────────────────────────────────────────────────────────

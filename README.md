@@ -16,11 +16,11 @@ whether to take `starship.toml` too and what to call your account; without
 it, the dry run says how to get it, and the install stops before any write.
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.1.1/prompt/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.2.0/prompt/install.sh | bash -s -- --dry-run
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.1.1/prompt/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.2.0/prompt/install.sh | bash
 ```
 
 Every other piece installs the same way, one line each:
@@ -32,35 +32,35 @@ Every other piece installs the same way, one line each:
 writes nothing; each page says what its piece changes.
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.1.1/terminal/kitty/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.2.0/terminal/kitty/install.sh | bash
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.1.1/shell/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.2.0/shell/install.sh | bash
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.1.1/terminal/tmux/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.2.0/terminal/tmux/install.sh | bash
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.1.1/git/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.2.0/git/install.sh | bash
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.1.1/editor/zed/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.2.0/editor/zed/install.sh | bash
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.1.1/editor/sublime/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.2.0/editor/sublime/install.sh | bash
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.1.1/gh/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.2.0/gh/install.sh | bash
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.1.1/macos/apply.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.2.0/macos/apply.sh | bash
 ```
 
 Each prints its plan and makes every refusal before its first write. Every
@@ -187,7 +187,7 @@ row names, or else `~/.zshrc.local`, `~/.config/kitty/local.conf`,
 | zsh | word motion stops at every character but a letter or digit (`WORDCHARS=''`) | zsh's default, `WORDCHARS='*?_-.[]~=/&;!#$%^(){}<>'` |
 | zsh | Up and Down search history by what is typed before the cursor | `bindkey '^[[A' up-line-or-history`<br>`bindkey '^[[B' down-line-or-history`<br>`bindkey '^[OA' up-line-or-history`<br>`bindkey '^[OB' down-line-or-history` |
 | zsh | `ls` is eza, whose flags are not all ls's: `ls -ltr` is an error | `unalias ls` |
-| zsh | `$EDITOR` is `zed --wait` where `~/.zshenv` finds `zed` — on PATH, in Homebrew's bin or `/usr/local/bin` — else nano, and always nano over ssh | `export EDITOR=… VISUAL=…` in `~/.zshenv.local` |
+| zsh | `$EDITOR` is `subl -w`, Sublime Text, where `~/.zshenv` finds `subl` — on PATH, in Homebrew's bin or `/usr/local/bin` — else nano, and always nano over ssh | `export EDITOR=… VISUAL=…` in `~/.zshenv.local` |
 | zsh | over ssh, where tmux is installed, a shell attaches to the tmux session `remote`, and leaving tmux ends the login | `unset SSH_CONNECTION` in `~/.zprofile.local`; tools that read it then see no ssh session |
 | zsh | `~/.zprofile` carries the author's JetBrains Toolbox, SDKMAN and Playdate lines — PATH entries and a `PLAYDATE_SDK_PATH` export, harmless where those are absent — and Antigravity's, which puts `~/.local/bin` ahead of Homebrew. Where a JDK 21 is installed, `JAVA_HOME` is it | `unset PLAYDATE_SDK_PATH` in `~/.zprofile.local`; `path=("$HOMEBREW_PREFIX/bin" $path)` there puts Homebrew back ahead; for another JDK, `export JAVA_HOME=…` and `path=("$JAVA_HOME/bin" $path)` there, since JDK 21's `bin` is ahead of `/usr/bin` |
 | rg | searches hidden files but never `.git`, and ignores case until the pattern holds a capital | `unset RIPGREP_CONFIG_PATH` in `~/.zshenv.local` |

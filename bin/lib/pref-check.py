@@ -1791,7 +1791,7 @@ def read_zsh(path, key, accumulate=False, **_opts):
                       the value is the rest of the line, verbatim
 
     Text sees the PROGRAM, not its effect: every conditional branch
-    appears (EDITOR yields both 'nano' and 'zed --wait'), and eval-created
+    appears (EDITOR yields both 'nano' and 'subl -w'), and eval-created
     bindings are invisible — assert those through zshcap instead. A
     guarded `[ -f ... ] && source ...` line's first word is `[`, so plugin
     source gates are also zshcap territory. Non-accumulate returns the
@@ -2569,7 +2569,10 @@ def read_lshandler(path, key, **_opts):
 
     `path` is the domain holding the table
     (com.apple.LaunchServices/com.apple.launchservices.secure), `key` a content
-    type such as public.zip-archive. The answer is that entry's
+    type such as public.zip-archive, or `<tag class>:<tag>` such as
+    public.filename-extension:conf for an entry the table keys by
+    LSHandlerContentTagClass and LSHandlerContentTag instead; no content type
+    holds a colon. The answer is that entry's
     LSHandlerRoleAll, the bundle id NSWorkspace's setDefaultApplication writes,
     lowercased as LaunchServices stores it. A type
     with no entry, or one set for a single role only, reads None: its default is
@@ -2584,8 +2587,14 @@ def read_lshandler(path, key, **_opts):
         if proc.returncode != 0:
             raise ReadError(f"defaults export {path}: {proc.stderr.strip() or 'failed'}")
         _LSHANDLERS[path] = plistlib.loads(proc.stdout.encode()).get("LSHandlers", [])
+    tag_class, is_tag, tag = key.lower().partition(":")
     for entry in _LSHANDLERS[path]:
-        if entry.get("LSHandlerContentType", "").lower() == key.lower():
+        if is_tag:
+            hit = (entry.get("LSHandlerContentTagClass", "").lower() == tag_class
+                   and entry.get("LSHandlerContentTag", "").lower() == tag)
+        else:
+            hit = entry.get("LSHandlerContentType", "").lower() == key.lower()
+        if hit:
             return entry.get("LSHandlerRoleAll")
     return None
 
