@@ -16,10 +16,11 @@
 # so nothing below has a second, pretend path.
 #
 # The line below is the marker a caller greps for before it sources this file;
-# it is matched whole, so nothing may join it.
+# it names this release, which must be the caller's, and it is matched whole,
+# so nothing may join it.
 #
 # shellcheck disable=SC2034  # PREEN_INSTALL_LIB, INTERACTIVE and ORIGIN are read by the caller that sources this, which shellcheck cannot see from here
-PREEN_INSTALL_LIB=1
+PREEN_INSTALL_LIB=v1.0.0
 
 STAMP="$(date +%Y%m%d-%H%M%S)"   # one per run, so a run's backups sort together
 SHIPPED=""   # lib/shipped, once locate_sources has found or fetched it
@@ -150,9 +151,7 @@ locate_sources() { # locate_sources <marker file> — set SRC and ORIGIN: beside
     mkdir -p "$SRC"
     echo "== fetching from $SOURCE_URL =="
     fetch "$1"
-    # Missing, it only makes a copy an earlier run made read as yours. Until
-    # the installers fetch a tagged release, a run fetched mid-publish can read
-    # a list from the other side of that publish.
+    # Missing, it only makes a copy an earlier run made read as yours.
     SHIPPED="$WORK/shipped"
     curl -fsSL "$ROOT_URL/lib/shipped" -o "$SHIPPED" 2>/dev/null || rm -f "$SHIPPED"
   fi

@@ -46,13 +46,13 @@ prints without cship too, or with one below the floor, beside the two ways
 to install it.
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/prompt/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/prompt/install.sh | bash -s -- --dry-run
 ```
 
 Then the install, one line, no clone:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/prompt/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/prompt/install.sh | bash
 ```
 
 Or from a clone of this repository, `./prompt/install.sh`. The script does
@@ -99,7 +99,7 @@ answers one; with both answered nothing is asked, and with no terminal the
 defaults are taken — `starship.toml` left alone, the account module hidden:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/prompt/install.sh | bash -s -- --with-starship --account-label personal
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/prompt/install.sh | bash -s -- --with-starship --account-label personal
 ./prompt/install.sh --no-starship --no-account
 ```
 
@@ -118,7 +118,8 @@ then writes its bare one back, label and timer gone, your `cship.toml` left
 alone. After upgrading cship that way, run this installer again: it
 recognises the bare entry and takes it over.
 
-**Updating.** Run the install line again; from a clone, `git pull`, then
+**Updating.** Run the install line from this page again: it names the newest
+release. From a clone, `git pull`, then
 `./prompt/install.sh`. An earlier copy this setup shipped comes back
 `updated`, with no backup — `starship.toml` only when you take it again,
 with `--with-starship` or a yes. One you edited is backed up beside itself first,

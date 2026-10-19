@@ -71,13 +71,13 @@ No clone needed. To print the plan and stop, writing nothing — `bash -s --`
 hands the flag to the script:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/terminal/kitty/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/terminal/kitty/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/terminal/kitty/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/terminal/kitty/install.sh | bash
 ```
 
 Or from a clone of this repository, `./terminal/kitty/install.sh`, with
@@ -136,9 +136,10 @@ It
    line is `--theme="ansi"`, the terminal's own palette, and
    `scrollback_pager` names no theme of its own;
 6. appends `include preen/kitty.conf` to `~/.config/kitty/kitty.conf`, once.
-   Your file is not otherwise touched, and if you have none it becomes that
-   one line. The append is last, so a run that stops earlier never leaves an
-   include pointing at files that are not there.
+   Nothing else in your file changes, but a last line with no newline gets
+   one, and if you have no kitty.conf it becomes that one line. The append is
+   last, so a run that stops earlier never leaves an include pointing at
+   files that are not there.
 
 A re-run with nothing changed rewrites nothing and takes no backup: the copies
 come back `unchanged` and the include line `already there`.
@@ -158,7 +159,8 @@ source file that is missing, empty, or not the file it claims to be.
 
 ## Updating
 
-Run the install line again; from a clone, `git pull`, then
+Run the install line from this page again: it names the newest release.
+From a clone, `git pull`, then
 `./terminal/kitty/install.sh`. An earlier copy this setup shipped comes back
 `updated`, with no backup. One you edited is not: a copy in `preen/` is
 backed up beside itself first, and one of the files kitty reads from

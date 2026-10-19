@@ -89,13 +89,13 @@ No clone needed. To print the plan and stop, writing nothing — `bash -s --`
 hands the flag to the script:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/terminal/tmux/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/terminal/tmux/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/terminal/tmux/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/terminal/tmux/install.sh | bash
 ```
 
 Or from a clone of this repository, `./terminal/tmux/install.sh`, with
@@ -123,9 +123,10 @@ It
    different one was there, left untouched if identical, and replaced with
    no backup if it is an earlier copy this setup shipped;
 3. appends `source-file -q ~/.config/tmux/preen/tmux.conf` to the file named
-   above, once. Your file is not otherwise touched, and with none it becomes
-   that line. The append is last, so a run that stops earlier never leaves
-   the line pointing at a file that is not there.
+   above, once. Nothing else in your file changes, but a last line with no
+   newline gets one, and with neither file there it becomes that line. The
+   append is last, so a run that stops earlier never leaves the line pointing
+   at a file that is not there.
 
 A re-run with nothing changed rewrites nothing and takes no backup: the copy
 comes back `unchanged` and the line `already there`.
@@ -152,7 +153,8 @@ started with no config and stopped when the run ends.
 
 ## Updating
 
-Run the install line again; from a clone, `git pull`, then
+Run the install line from this page again: it names the newest release.
+From a clone, `git pull`, then
 `./terminal/tmux/install.sh`. An earlier copy this setup shipped comes back
 `updated`, with no backup; one you edited is backed up beside itself first.
 A line of yours belongs in `~/.config/tmux/local.conf`, or below the

@@ -50,13 +50,13 @@ No clone needed. To print the plan and stop, writing nothing — `bash -s --`
 hands the flag to the script:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/gh/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/gh/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/gh/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/gh/install.sh | bash
 ```
 
 Or from a clone of this repository, `./gh/install.sh`, with `--dry-run` for
@@ -96,7 +96,8 @@ gives a key a value other than plain words.
 
 ## Updating
 
-Run the install line again; from a clone, `git pull`, then `./gh/install.sh`.
+Run the install line from this page again: it names the newest release.
+From a clone, `git pull`, then `./gh/install.sh`.
 gh reads one file and has no overlay, so a re-run sets back each key that
 differs, an undo of yours included, after backing up `config.yml`.
 

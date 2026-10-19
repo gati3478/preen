@@ -98,13 +98,13 @@ No clone needed. To print the plan and stop, writing nothing — `bash -s --`
 hands the flag to the script:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/shell/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/shell/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/shell/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/shell/install.sh | bash
 ```
 
 Or from a clone of this repository, `./shell/install.sh`, with `--dry-run`
@@ -168,10 +168,11 @@ It
    included;
 4. appends `source ~/.config/zsh/preen/zshenv` to the zshenv zsh reads,
    `$include ~/.config/zsh/preen/inputrc` to `~/.inputrc` and
-   `source ~/.config/zsh/preen/zshrc` to the zshrc zsh reads, each once. Your
-   files are not otherwise touched, and one you have not got becomes that
-   line. The appends are last, so a run that stops earlier never leaves a line
-   pointing at files that are not there.
+   `source ~/.config/zsh/preen/zshrc` to the zshrc zsh reads, each once.
+   Nothing else in your files changes, but a last line with no newline gets
+   one, and a file you have not got becomes that line. The appends are last,
+   so a run that stops earlier never leaves a line pointing at files that are
+   not there.
 
 A re-run with nothing changed rewrites nothing and takes no backup: the
 copies come back `unchanged` and each line `already there`.
@@ -195,7 +196,8 @@ not the file it claims to be.
 
 ## Updating
 
-Run the install line again; from a clone, `git pull`, then
+Run the install line from this page again: it names the newest release.
+From a clone, `git pull`, then
 `./shell/install.sh`. An earlier copy this setup shipped comes back
 `updated`, with no backup. One you edited is not: a copy in
 `~/.config/zsh/preen/` is backed up beside itself first, and `~/.hushlogin`

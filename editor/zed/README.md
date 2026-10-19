@@ -95,13 +95,13 @@ No clone needed. To print the plan and stop, writing nothing — `bash -s --`
 hands the flag to the script:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/editor/zed/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/editor/zed/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/editor/zed/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/editor/zed/install.sh | bash
 ```
 
 Or from a clone of this repository, `./editor/zed/install.sh`, with
@@ -146,7 +146,8 @@ that is missing, empty, or not the file it claims to be.
 
 ## Updating
 
-Run the install line again; from a clone, `git pull`, then
+Run the install line from this page again: it names the newest release.
+From a clone, `git pull`, then
 `./editor/zed/install.sh`. An earlier copy this setup shipped comes back
 `updated`, with no backup. One you edited is not: an edited
 `global_settings.json` is backed up beside itself first, and an edited

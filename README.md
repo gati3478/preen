@@ -16,91 +16,91 @@ whether to take `starship.toml` too and what to call your account; without
 it, the dry run says how to get it, and the install stops before any write.
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/prompt/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/prompt/install.sh | bash -s -- --dry-run
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/prompt/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/prompt/install.sh | bash
 ```
 
 The terminal, [`terminal/kitty/`](terminal/kitty/README.md), the same way:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/terminal/kitty/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/terminal/kitty/install.sh | bash -s -- --dry-run
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/terminal/kitty/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/terminal/kitty/install.sh | bash
 ```
 
 The shell, [`shell/`](shell/README.md), the same way:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/shell/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/shell/install.sh | bash -s -- --dry-run
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/shell/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/shell/install.sh | bash
 ```
 
 The multiplexer, [`terminal/tmux/`](terminal/tmux/README.md), the same way:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/terminal/tmux/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/terminal/tmux/install.sh | bash -s -- --dry-run
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/terminal/tmux/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/terminal/tmux/install.sh | bash
 ```
 
 The git config, [`git/`](git/README.md), the same way:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/git/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/git/install.sh | bash -s -- --dry-run
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/git/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/git/install.sh | bash
 ```
 
 Zed's config, [`editor/zed/`](editor/zed/README.md), the same way:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/editor/zed/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/editor/zed/install.sh | bash -s -- --dry-run
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/editor/zed/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/editor/zed/install.sh | bash
 ```
 
 Sublime Text's, [`editor/sublime/`](editor/sublime/README.md), the same way:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/editor/sublime/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/editor/sublime/install.sh | bash -s -- --dry-run
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/editor/sublime/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/editor/sublime/install.sh | bash
 ```
 
 gh's config, [`gh/`](gh/README.md), the same way:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/gh/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/gh/install.sh | bash -s -- --dry-run
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/gh/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/gh/install.sh | bash
 ```
 
 System Settings, [`macos/`](macos/README.md), the same way:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/macos/apply.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/macos/apply.sh | bash -s -- --dry-run
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/macos/apply.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/macos/apply.sh | bash
 ```
 
 Each prints its plan and makes every refusal before its first write. Every
@@ -133,13 +133,14 @@ its keys that differs through `gh config set`, after backing up your
 it names that differs on your Mac, with `defaults`, after saving a script
 that puts the old values back. `--help` is each script's manual.
 
-To update a piece, run its line again. A copy the setup shipped is replaced
-with no backup; a file you edited is backed up first, or, where the piece
-copies only where you have none of your own, left alone. Each page names
-where a line of yours belongs instead, but the statusline's: cship and
-starship each read one file, so carry an edit of yours over from the backup.
-gh's and `macos/apply.sh` set each value that differs again, after their
-backups.
+To update a piece, run its line from this page again: each names the newest
+release. A line you saved earlier fetches the release it names. A copy the
+setup shipped is replaced with no backup; a file you edited is backed up
+first, or, where the piece copies only where you have none of your own, left
+alone. Each page names where a line of yours belongs instead, but the
+statusline's: cship and starship each read one file, so carry an edit of
+yours over from the backup. gh's and `macos/apply.sh` set each value that
+differs again, after their backups.
 
 ## Take the setup
 
@@ -342,6 +343,7 @@ bin/               bootstrap, preen — apply and doctor — and what the doctor
 lib/               install.sh, the half the installers share; shipped, the versions of each piece's files, which tell a copy the setup made from your edit
 manifest.tsv       the source's public rows: file → live path → link or copy → permissions, where set
 preferences.toml   each preference's value and why, and the rows that check it
+CHANGELOG.md       each release, and what its version number promises
 LICENSE            MIT
 ```
 
@@ -388,7 +390,9 @@ the statusline's and kitty's pages each carry a palette table.
 Fork or clone, keep `manifest.tsv`'s format and the two verbs, `preen apply` and
 `preen doctor`, replace the rows with your own files, and delete every directory
 you do not want along with its rows. The checks in `bin/preen-doctor` probe the
-tools the author runs; read them and cut what is not yours.
+tools the author runs; read them and cut what is not yours. An installer piped
+from your fork still fetches its files from this release unless
+`PREEN_SOURCE` names your fork's tree, as a URL or `file://`.
 
 ## Not here
 

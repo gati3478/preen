@@ -18,13 +18,13 @@ No clone needed. To list each setting that differs and stop, writing
 nothing — `bash -s --` hands the flag to the script:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/macos/apply.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/macos/apply.sh | bash -s -- --dry-run
 ```
 
 To apply:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/macos/apply.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/macos/apply.sh | bash
 ```
 
 Or from a clone of this repository, `./macos/apply.sh`, with `--dry-run` for
@@ -52,7 +52,8 @@ restore script that puts back what changed.
 
 ## Updating
 
-Run the script again; from a clone, `git pull`, then `./macos/apply.sh`.
+Run the apply line from this page again: it names the newest release.
+From a clone, `git pull`, then `./macos/apply.sh`.
 System Settings have no overlay, so a re-run sets back each setting that
 differs, one you changed since included, saving what it replaces first:
 `--dry-run` lists them.

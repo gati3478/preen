@@ -561,7 +561,8 @@ if [ "$SOURCE_REPO" = yes ]; then
     warn "publish/.last-published is missing — whether the public mirror is current goes unchecked"
   elif [ -d "$MIRROR/.git" ]; then
     here=$(mirror_fingerprint "$REPO" 2>/dev/null || echo none)
-    marker=$(cat "$REPO/publish/.last-published" 2>/dev/null || echo none)
+    # Its first field: the version beside it names the release, not what ships.
+    marker=$(awk 'NR == 1 { print $1 }' "$REPO/publish/.last-published" 2>/dev/null || echo none)
     if [ "$here" = "$marker" ]; then
       ok "public mirror is current"
     else

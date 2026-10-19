@@ -14,13 +14,14 @@ whole. Copies, never symlinks, and nothing here points back at this repo
 afterwards: a setting of yours belongs in your settings.json.
 
   from a clone:    ./editor/zed/install.sh [flags]
-  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/editor/zed/install.sh | bash
+  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/editor/zed/install.sh | bash
 
 There is nothing to ask, so nothing is asked.
 
 keymap.json and tasks.json are read by Zed from ~/.config/zed under those
 names and no others, so a file of yours at one of them is left exactly as it
-is and said so. Run this again to update: an earlier copy this setup
+is and said so. To update, run the install line from this piece's page
+again, which names the newest release: an earlier copy this setup
 shipped is replaced with no backup; anything else is overwritten only after
 a timestamped backup beside it; a symlink at global_settings.json is moved
 aside, never written through; and a re-run with nothing changed rewrites
@@ -34,6 +35,11 @@ and writes nothing.
 
   --dry-run   print what the run would touch and stop, having written nothing
   -h, --help  print this and exit
+
+  PREEN_SOURCE  piped, a preen tree to fetch from instead of this release,
+                as a URL or file://
+  ZED_SOURCE    piped, this piece's directory in such a tree; the rest
+                comes from the tree it is in, unless PREEN_SOURCE names one
 EOF
 }
 set -euo pipefail
@@ -57,8 +63,12 @@ done
 # otherwise fetched from the mirror exactly as the configs are — same trust,
 # same mechanism — and checked for its marker line before it is sourced.
 PIECE="editor/zed"   # this piece's path under the mirror root
-ROOT_URL="${PREEN_SOURCE:-https://raw.githubusercontent.com/gati3478/preen/main}"
-SOURCE_URL="${ZED_SOURCE:-$ROOT_URL/$PIECE}"
+PREEN_REF=v1.0.0   # this installer's release: the tag it fetches from, and the helper's marker
+# A slash ending an override would double the one joined after it, and leave
+# a root taken from it a level too deep.
+trim_slash() { printf '%s' "$1" | sed 's#/*$##'; }   # trim_slash <url> → it with any trailing slash dropped
+ROOT_URL="$(trim_slash "${PREEN_SOURCE:-https://raw.githubusercontent.com/gati3478/preen/$PREEN_REF}")"
+SOURCE_URL="$(trim_slash "${ZED_SOURCE:-$ROOT_URL/$PIECE}")"
 # ZED_SOURCE names this piece's directory and the helper sits at the root
 # above it, so an override takes the root with it instead of leaving it on the
 # mirror. Two levels are stripped, because PIECE is two deep.
@@ -71,14 +81,21 @@ trap 'rm -rf "$WORK"' EXIT
 
 # Beside this script in either tree — `lib/` in the mirror, `public/lib/` in the
 # private one — else fetched from the root the configs come from. Never the
-# directory the shell happens to be standing in.
+# directory the shell happens to be standing in. Its marker line names its
+# release, and one of another release may not do what this installer asks.
+helper_ok() { # helper_ok <file> <where it is from> → true when it is this release's helper, false when it is no helper; stops the run on another release's
+  grep -qxF "PREEN_INSTALL_LIB=$PREEN_REF" "$1" && return 0
+  grep -q '^PREEN_INSTALL_LIB=' "$1" || return 1
+  echo "install.sh: $2 is preen $(sed -n 's/^PREEN_INSTALL_LIB=//p' "$1") but this installer is $PREEN_REF" >&2
+  exit 1
+}
 LIB=""
 candidate="$SELF_DIR/../../lib/install.sh"
-if [ -f "$candidate" ] && grep -q '^PREEN_INSTALL_LIB=1$' "$candidate"; then LIB="$candidate"; fi
+if [ -f "$candidate" ] && helper_ok "$candidate" "$candidate"; then LIB="$candidate"; fi
 if [ -z "$LIB" ]; then
   LIB="$WORK/lib.sh"
   curl -fsSL "$ROOT_URL/lib/install.sh" -o "$LIB" 2>/dev/null || { echo "install.sh: could not fetch $ROOT_URL/lib/install.sh" >&2; exit 1; }
-  grep -q '^PREEN_INSTALL_LIB=1$' "$LIB" || { echo "install.sh: $ROOT_URL/lib/install.sh is not the shared installer helper" >&2; exit 1; }
+  helper_ok "$LIB" "$ROOT_URL/lib/install.sh" || { echo "install.sh: $ROOT_URL/lib/install.sh is not the shared installer helper" >&2; exit 1; }
   # A download cut off past the marker line passes the check above and then
   # fails to parse — and a parse failure inside `source` is masked to exit 0 by
   # the EXIT trap, so `curl … | bash && echo installed` would print installed.

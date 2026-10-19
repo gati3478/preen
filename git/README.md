@@ -75,13 +75,13 @@ No clone needed. To print the plan and stop, writing nothing — `bash -s --`
 hands the flag to the script:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/git/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/git/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/git/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/git/install.sh | bash
 ```
 
 Or from a clone of this repository, `./git/install.sh`, with `--dry-run` for
@@ -115,9 +115,10 @@ It
    `unchanged` when it holds this config's bytes, and `left alone` when it is
    anything else, a symlink included;
 4. appends `[include] path = ~/.config/git/preen/gitconfig` to the file named
-   above, once. Your file is not otherwise touched, and with none it becomes
-   that line. The append is last, so a run that stops earlier never leaves
-   the line pointing at a file that is not there.
+   above, once. Nothing else in your file changes, but a last line with no
+   newline gets one, and with neither file there it becomes that line. The
+   append is last, so a run that stops earlier never leaves the line pointing
+   at a file that is not there.
 
 A re-run with nothing changed rewrites nothing and takes no backup: the copy
 comes back `unchanged` and the line `already there`.
@@ -146,7 +147,8 @@ read does not stop the run's own read.
 
 ## Updating
 
-Run the install line again; from a clone, `git pull`, then
+Run the install line from this page again: it names the newest release.
+From a clone, `git pull`, then
 `./git/install.sh`. An earlier copy this setup shipped comes back `updated`,
 with no backup. One you edited is not: the copy in `~/.config/git/preen/` is
 backed up beside itself first, and `~/.config/git/ignore` is left alone. A
