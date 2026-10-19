@@ -98,13 +98,13 @@ No clone needed. To print the plan and stop, writing nothing — `bash -s --`
 hands the flag to the script:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.2/shell/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.1.0/shell/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.2/shell/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.1.0/shell/install.sh | bash
 ```
 
 Or from a clone of this repository, `./shell/install.sh`, with `--dry-run`
@@ -160,8 +160,8 @@ It
    palette; ncdu's, `~/.config/ncdu/config`, from
    [`terminal/ncdu/`](../terminal/ncdu/); and ripgrep's,
    `~/.config/ripgrep/config`, from [`ripgrep/`](../ripgrep/), which the
-   zshenv points rg at whenever it is there — so not while
-   `RIPGREP_CONFIG_PATH` names another file, and the plan says so. The run
+   zshenv points rg at unless `RIPGREP_CONFIG_PATH` already names a file —
+   so not while it names another one, and the plan says so. The run
    says `updated` of an earlier copy it replaced; any other file already at
    one of them stays as it is: the run says `unchanged` when it holds this
    config's bytes, and `left alone` when it is anything else, a symlink

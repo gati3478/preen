@@ -5,6 +5,26 @@ from it. A major release moves where or how a file lands, or drops a flag; a
 minor one adds a piece, a row, a flag or a check; a patch changes values,
 fixes and docs.
 
+## v1.1.0
+
+`shell/`'s zshenv points rg at `~/.config/ripgrep/config` only where
+`RIPGREP_CONFIG_PATH` is unset, so a variable of your own wins in the shell
+as it already did in the installer; the installer's `--help` names more of
+the refusals it makes before the first write.
+`terminal/tmux/` drops its `xterm-kitty` true-colour override, which kitty's
+own terminfo makes redundant. An installer run from its install line
+fetches `lib/shipped`, the list that tells an earlier copy of the setup's
+from your edit, only when a file is already where it would copy one.
+`editor/sublime/` drops `remember_open_files`, which `hot_exit` at
+Sublime's default makes redundant, and writes
+`trim_trailing_white_space_on_save` and `open_files_in_new_window` as the
+strings Build 4215 documents, `"all"` and `"never"`. `preen doctor` asks
+atuin which config it reads, and fails when that is not the deployed one,
+as with a `~/.atuin/config.toml`; it asserts kitty's scrollbar, shown while
+scrolled, against kitty's own default; and a `[surfaces]` version command
+given a `host` runs on that machine over ssh. A `host`, a target's too, now
+starts with a letter or digit, so ssh never reads one as an option.
+
 ## v1.0.2
 
 The front page says what each piece writes beyond its wiring, what an

@@ -3190,7 +3190,7 @@ def resolve_target(name, entry, targets, where="the spec"):
     if problem := layer_problem(tname, t):
         return None, None, problem
     if t.get("host"):
-        if not re.fullmatch(r"[A-Za-z0-9._-]+", t["host"]):
+        if not (isinstance(t["host"], str) and SSH_HOST.fullmatch(t["host"])):
             return None, None, f"target '{tname}' has an unusable host '{t['host']}'"
         # The path is interpolated into a program that runs on the remote
         # machine, so only a plain path is accepted: ~/-relative, or absolute
@@ -3218,6 +3218,9 @@ def resolve_target(name, entry, targets, where="the spec"):
 _REMOTE = {}          # host -> {remote_path: local_path | None}  or  ReadSkip
 _REMOTE_DIR = ""
 _SSH_OPTS = ["-o", "BatchMode=yes", "-o", "ConnectTimeout=8"]
+# A `host`, a target's or a version command's: an ssh alias only — a leading
+# `-` would reach ssh as an option.
+SSH_HOST = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
 
 
 def _remote_fetch(host, targets):
@@ -3562,7 +3565,8 @@ def emit_ceiling_correspondence(spec):
 # version of every tool a closed surface names and compares it with the
 # version the surface was closed at — never by launching an application: a
 # bundle's Info.plist, Homebrew's linked keg, a manifest, an archive name, or
-# one CLI binary run with one version flag in an empty world.
+# one CLI binary run with one version flag in an empty world — or, given a
+# `host`, on that machine over ssh.
 # A moved version is a WARN naming the surface, because a bump is a signal for
 # a pass, not drift in a value; an unreadable one is a warn too, since an app
 # that moved is an event of its own kind. Nothing here may crash the run, and
@@ -3598,6 +3602,8 @@ COMMAND_TIMEOUT = float(os.environ.get("PREF_COMMAND_TIMEOUT") or 10)
 # through, and nowhere durable to write — and the timeout ends it as
 # unreadable.
 COMMAND_PATH = "/usr/bin:/bin:/usr/sbin:/sbin"
+# Connect (ConnectTimeout in _SSH_OPTS), authenticate, print one version line.
+REMOTE_COMMAND_TIMEOUT = 30
 
 
 def _scrub(text):
@@ -3662,7 +3668,12 @@ def surface_problems(tool):
         _, problem = _command_argv(command)
         if problem:
             problems.append(problem)
-    unknown = sorted(set(tool) - set(SURFACE_READERS) - {"at", "member"})
+    if "host" in tool:
+        if "command" not in tool:
+            problems.append("`host` goes with `command` — the machine the version command runs on")
+        if not (isinstance(tool["host"], str) and SSH_HOST.fullmatch(tool["host"])):
+            problems.append("`host` is a plain ssh host alias — letters, digits, . _ -, starting with a letter or digit")
+    unknown = sorted(set(tool) - set(SURFACE_READERS) - {"at", "member", "host"})
     if unknown:
         problems.append(f"unknown field(s): {', '.join(unknown)}")
     return problems
@@ -3758,10 +3769,34 @@ def _read_zip_version(tool):
     return _version_from_json(data, f"{path}:{member}")
 
 
+def _read_remote_command_version(host, argv):
+    """The command's version line as `host` prints it — a governed machine's
+    tools move with its own package manager, which nothing here sees.
+    Deliberately NOT the empty world: ssh needs the real HOME's config and
+    agent. sshd hands the command to the account's shell there with -c, a
+    non-login shell. An unreachable host is unreadable like any command that
+    fails — offline is not an event.
+    """
+    head = argv[0]
+    # Quoted, since a shell reads it there; ~/ expands on the host.
+    remote = ('"$HOME"/' + shlex.quote(head[2:]) if head.startswith("~/") else shlex.quote(head)) + " " + argv[1]
+    what = f"{' '.join(argv)} on {host}"
+    try:
+        out = subprocess.run(["ssh", "-n", *_SSH_OPTS, host, remote], capture_output=True, text=True,
+                             errors="replace", stdin=subprocess.DEVNULL, timeout=REMOTE_COMMAND_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        raise ReadError(f"{what} did not answer within {REMOTE_COMMAND_TIMEOUT} s")
+    except (OSError, ValueError, subprocess.SubprocessError) as exc:
+        raise ReadError(f"ssh to {host} — {exc}")
+    return _version_line(what, out)
+
+
 def _read_command_version(tool):
     argv, problem = _command_argv(tool["command"])
     if problem:
         raise ReadError(problem)
+    if "host" in tool:
+        return _read_remote_command_version(tool["host"], argv)
     head = os.path.expanduser(argv[0])
     if "/" not in head:
         resolved = shutil.which(head)
@@ -3782,18 +3817,23 @@ def _read_command_version(tool):
             raise ReadError(f"{' '.join(argv)} ran past {COMMAND_TIMEOUT:g} s — a flag that starts the program is not a version flag")
         except (OSError, ValueError, subprocess.SubprocessError) as exc:
             raise ReadError(f"{argv[0]} — {exc}")
+    return _version_line(" ".join(argv), out)
+
+
+def _version_line(what, out):
+    """The version line a finished command printed, or raise ReadError."""
     # The first non-empty line, from stdout or — `ssh -V` — stderr.
     line = next((l.strip() for stream in (out.stdout, out.stderr)
                  for l in stream.splitlines() if l.strip()), "")
     if out.returncode != 0:
-        raise ReadError(f"{' '.join(argv)} exited {out.returncode}" + (f" — {line}" if line else ""))
+        raise ReadError(f"{what} exited {out.returncode}" + (f" — {line}" if line else ""))
     if not line:
-        raise ReadError(f"{' '.join(argv)} printed nothing")
+        raise ReadError(f"{what} printed nothing")
     if not _DIGIT.search(line):
         # A line with no digit is not a version — a usage line, a warning, a
         # shell's "command not found". Stamping `at` from it would read as
         # closed forever.
-        raise ReadError(f"{' '.join(argv)} printed '{line}', which carries no digit — not a version")
+        raise ReadError(f"{what} printed '{line}', which carries no digit — not a version")
     return line
 
 

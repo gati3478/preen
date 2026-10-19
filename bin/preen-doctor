@@ -272,6 +272,53 @@ fixture() { # fixture <name> → a new directory under FIXTURES; fails when ther
 }
 NO_FIXTURE="could not make a scratch directory in ${TMPDIR:-/tmp}"
 
+# atuin reads ~/.atuin/config.toml over the deployed file whenever it exists
+# (atuin's own first run, before preen's, writes one there), and
+# ATUIN_CONFIG_DIR, ATUIN_HOME and XDG_CONFIG_HOME move it too, so the row's
+# text reads stay green on a file atuin no longer reads. `atuin info` names
+# the file it reads, and opens its databases, so they go to a fixture: the
+# ATUIN_* variables beat the config's own paths. Where the file atuin
+# resolves is missing, it ignores ATUIN_DATA_DIR, writes a default config
+# there and creates its data directory, so the check skips. The order is
+# config_path's, in atuin-common's dirs.rs.
+atuin_unmade="" atuin_resolved=""
+if [ -n "${ATUIN_CONFIG_DIR:-}" ]; then
+  atuin_unmade=ATUIN_CONFIG_DIR atuin_resolved="$ATUIN_CONFIG_DIR/config.toml"
+else
+  case "${ATUIN_HOME:-}" in
+    /*) atuin_unmade=ATUIN_HOME atuin_resolved="$ATUIN_HOME/config.toml" ;;
+    *)
+      if [ ! -e "$HOME/.atuin/config.toml" ]; then
+        case "${XDG_CONFIG_HOME:-}" in
+          /*) atuin_unmade=XDG_CONFIG_HOME atuin_resolved="$XDG_CONFIG_HOME/atuin/config.toml" ;;
+        esac
+      fi ;;
+  esac
+fi
+[ -z "$atuin_resolved" ] || [ ! -e "$atuin_resolved" ] || atuin_unmade=""
+if ! command -v atuin >/dev/null 2>&1; then
+  warn "atuin not installed — skipping the atuin config-path check"
+elif [ ! -f "$HOME/.config/atuin/config.toml" ]; then
+  :
+elif [ -n "$atuin_unmade" ]; then
+  warn "$atuin_unmade names an atuin config.toml that does not exist, which atuin info would create — skipping the atuin config-path check"
+elif ! atuin_fixture="$(fixture atuin)"; then
+  warn "$NO_FIXTURE — skipping the atuin config-path check"
+else
+  # The path is printed quoted, a " or \ in it backslash-escaped.
+  atuin_cfg="$(ATUIN_DATA_DIR="$atuin_fixture" ATUIN_DB_PATH="$atuin_fixture/history.db" \
+    ATUIN_RECORD_STORE_PATH="$atuin_fixture/records.db" atuin info </dev/null 2>/dev/null \
+    | sed -n 's/^client config: "\(.*\)"$/\1/p' | sed 's/\\\(.\)/\1/g')"
+  rm -rf "$atuin_fixture"
+  if [ -z "$atuin_cfg" ]; then
+    warn "atuin info named no client config — skipping the atuin config-path check"
+  elif [ "$(short "$atuin_cfg")" = "~/.config/atuin/config.toml" ]; then
+    ok "atuin reads the deployed config (~/.config/atuin/config.toml)"
+  else
+    bad "atuin reads $(short "$atuin_cfg"), not ~/.config/atuin/config.toml — the deployed config is detached"
+  fi
+fi
+
 # eza rides the terminal's 16 ANSI colours BY DEFAULT (measured 27-08-2026:
 # only 4-bit SGR codes in its output) — a state no text reader can see, and
 # one a version bump could change silently. Proven behaviourally: a fixture

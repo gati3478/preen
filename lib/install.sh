@@ -20,10 +20,10 @@
 # so nothing may join it.
 #
 # shellcheck disable=SC2034  # PREEN_INSTALL_LIB, INTERACTIVE and ORIGIN are read by the caller that sources this, which shellcheck cannot see from here
-PREEN_INSTALL_LIB=v1.0.2
+PREEN_INSTALL_LIB=v1.1.0
 
 STAMP="$(date +%Y%m%d-%H%M%S)"   # one per run, so a run's backups sort together
-SHIPPED=""   # lib/shipped, once locate_sources has found or fetched it
+SHIPPED=""   # lib/shipped's path, once locate_sources has set it: in the clone, or where ours() fetches it to
 
 die() { echo "install.sh: $*" >&2; exit 1; }   # say why the run stops, and stop it
 
@@ -137,9 +137,9 @@ fetch() { # fetch <file> — one of this piece's files from SOURCE_URL into SRC,
 }
 # curl -f already refuses a 404; a caller still checks that what arrived is the
 # file it asked for, because a 200 of the wrong bytes is a success.
-# Only the marker file is fetched here, and lib/shipped, which ours() reads; a
-# piece fetches its other files itself, after this, and knows it is on the
-# fetched path when SRC is under WORK.
+# Only the marker file is fetched here; lib/shipped is fetched by ours(), the
+# one reader, when first asked. A piece fetches its other files itself, after
+# this, and knows it is on the fetched path when SRC is under WORK.
 locate_sources() { # locate_sources <marker file> — set SRC and ORIGIN: beside the caller when <marker file> is there, else a fetched copy; and SHIPPED
   if [ -n "$SELF_DIR" ] && [ -f "$SELF_DIR/$1" ]; then
     SRC="$SELF_DIR"
@@ -151,9 +151,7 @@ locate_sources() { # locate_sources <marker file> — set SRC and ORIGIN: beside
     mkdir -p "$SRC"
     echo "== fetching from $SOURCE_URL =="
     fetch "$1"
-    # Missing, it only makes a copy an earlier run made read as yours.
     SHIPPED="$WORK/shipped"
-    curl -fsSL "$ROOT_URL/lib/shipped" -o "$SHIPPED" 2>/dev/null || rm -f "$SHIPPED"
   fi
 }
 clone_root() { # clone_root → the root of the clone SRC is in, PIECE's depth above it
@@ -214,10 +212,16 @@ backup_name() { # backup_name <file> → a name beside it that nothing holds yet
 # lib/shipped lists every blob each file here has held, "<blob id> <path in
 # the mirror>" a line, so a copy an earlier run made is told from your edit.
 # Without the list, or anything to hash with, only the current bytes count as
-# this setup's.
+# this setup's. Fetched, the list comes on the first file asked about, so a run
+# with nothing in the way fetches none; a failed fetch leaves it empty — no
+# list — and on disk, so a call inside `$(…)` does not fetch it again.
 ours() { # ours <file> <its path in the mirror> → true when <file> is a plain file holding bytes this setup shipped at that path
   local id
-  [ -n "$2" ] && [ -f "$SHIPPED" ] && [ -f "$1" ] && [ ! -L "$1" ] && id="$(blob_id "$1")" && grep -qxF -- "$id $2" "$SHIPPED"
+  [ -n "$2" ] && [ -f "$1" ] && [ ! -L "$1" ] || return 1
+  if [ "$SHIPPED" = "$WORK/shipped" ] && ! there "$SHIPPED"; then
+    curl -fsSL "$ROOT_URL/lib/shipped" -o "$SHIPPED" 2>/dev/null || : > "$SHIPPED"
+  fi
+  [ -s "$SHIPPED" ] && id="$(blob_id "$1")" && grep -qxF -- "$id $2" "$SHIPPED"
 }
 # git's blob id: sha-1 over "blob <size>", a NUL, then the bytes. Asked of git
 # where there is a real one, else of shasum or sha1sum, each sha-1 by default.

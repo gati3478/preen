@@ -235,8 +235,6 @@ path = "~/.zshrc"
 format = "nanorc"
 path = "~/.inputrc"
 
-# link-mode: atuin writes this file once, at its first run, and never again —
-# created 14-08-2026, its mtime was unchanged at 27-08-2026 through daily use.
 [targets.atuin]
 format = "toml"
 path = "~/.config/atuin/config.toml"
@@ -938,8 +936,14 @@ want = "200000"
 value = "shown only while scrolled back"
 why = "A scrollbar says how far back the view is; at the live end there is nothing to say. kitty's shipped `scrolled` is kept by ruling (26-08-2026); tmux's `modal` shows one only in copy mode."
 
-# kitty's half is its shipped default and not asserted. From 3.8 the bar
-# overlays the pane's edge rather than narrowing the pane.
+# kitty's half is its shipped default, read off kitty's own reference, so an
+# upstream flip fails it.
+[pref.scrollbar.targets.kitty]
+key = "scrollbar"
+want = "scrolled"
+unset_reads_default = true
+
+# From 3.8 the bar overlays the pane's edge rather than narrowing the pane.
 [pref.scrollbar.targets.tmux]
 key = "pane-scrollbars"
 want = "modal"
@@ -1273,8 +1277,10 @@ want = "on"
 
 # Without RGB tmux draws each hex in the bar as the nearest of 256 colours, so
 # pref.terminal_palette's tmux rows would assert colours it does not draw. An
-# SSH client presenting xterm-256color gets RGB only from this line (kitty's
-# own terminfo declares Tc). Exact, so the line edited to `RGB@`, the
+# SSH client presenting xterm-256color, whose terminfo lacks 24-bit colour,
+# gets RGB from this line unless tmux learns it another way — COLORTERM, or
+# the terminal naming itself when asked; kitty's own entry carries it
+# (setrgbf, setrgbb). Exact, so the line edited to `RGB@`, the
 # capability removed, fails; a later line appending `RGB@` would not, and no
 # matcher here can say "and nothing after it takes it back".
 [pref.gates.targets.tmux_rgb_ssh]
@@ -2000,7 +2006,7 @@ want = "3000"
 #   would slip past; a substring matcher cannot say "is unset".
 [pref.tmux_keys]
 value = "the shipped keys wherever tmux already ships the guessable one; a letter only where it ships nothing"
-why = "prefix+arrow selects a pane and prefix+option+arrow resizes it, on both 3.8 and 3.5a, out of the box. An hjkl/HJKL block would restate all of it under vim letters and cost `l` (last-window) and `L` (switch-client -l), and it is modal idiom outside copy-mode, the only place the non-modal criterion grants an exception (ruled 09-09-2026). Splits keep `|` and `-` because those are pictures of the divider they make, and tmux's own `%`/`\"` are not."
+why = "prefix+arrow selects a pane and prefix+option+arrow resizes it, on both 3.8 and 3.6a, out of the box. An hjkl/HJKL block would restate all of it under vim letters and cost `l` (last-window) and `L` (switch-client -l), and it is modal idiom outside copy-mode, the only place the non-modal criterion grants an exception (ruled 09-09-2026). Splits keep `|` and `-` because those are pictures of the divider they make, and tmux's own `%`/`\"` are not."
 
 [pref.tmux_keys.targets.tmux_split_h]
 target = "tmux_keys"

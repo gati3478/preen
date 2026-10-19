@@ -79,13 +79,13 @@ No clone needed. To print the plan and stop, writing nothing — `bash -s --`
 hands the flag to the script:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.2/editor/sublime/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.1.0/editor/sublime/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.2/editor/sublime/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.1.0/editor/sublime/install.sh | bash
 ```
 
 Or from a clone of this repository, `./editor/sublime/install.sh`, with
@@ -198,9 +198,9 @@ default: there the undo names the editor's font.
 | Terminus's panel is Gruvbox Dark Hard | in `Packages/User/Terminus.sublime-settings`:<br>`"theme": "adaptive",` |
 | Terminus's panel is FiraCode Nerd Font Mono at 16 | in `Packages/User/Terminus.sublime-settings`:<br>`"view_settings": {},`<br>in `Packages/User/Terminus View.sublime-settings`, `"font_face"` and `"font_size"` naming the editor's font |
 
-The rest are quieter — `trim_trailing_white_space_on_save`,
-`open_files_in_new_window` and `remember_open_files` — and each is set back
-the same way, by its key in your `Packages/User/Preferences.sublime-settings`.
+The rest are quieter — `trim_trailing_white_space_on_save` and
+`open_files_in_new_window` — and each is set back the same way, by its key in
+your `Packages/User/Preferences.sublime-settings`.
 
 ## Leaving
 

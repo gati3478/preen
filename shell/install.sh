@@ -24,12 +24,12 @@ starts is not followed either. Copies, never symlinks, and nothing here
 points back at this repo afterwards. ~/.hushlogin, and atuin's, bat's,
 ripgrep's and ncdu's configs under ~/.config, are copied only where none
 exists, or an earlier copy this setup shipped does. ripgrep's is not copied
-while RIPGREP_CONFIG_PATH names another file: the copied zshenv exports it
-naming ~/.config/ripgrep/config whenever that file is there. ~/.zprofile is
-never touched.
+while RIPGREP_CONFIG_PATH names another file, which rg reads instead: the
+copied zshenv sets it, naming ~/.config/ripgrep/config, only where it is
+unset and that file is there. ~/.zprofile is never touched.
 
   from a clone:    ./shell/install.sh [flags]
-  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.2/shell/install.sh | bash
+  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.1.0/shell/install.sh | bash
 
 There is nothing to ask, so nothing is asked.
 
@@ -44,9 +44,13 @@ To update, run the install line from this piece's page again, which names
 the newest release: an earlier copy this setup shipped is replaced
 with no backup; anything else in ~/.config/zsh/preen is overwritten only
 after a timestamped backup beside it; and a re-run with nothing changed
-rewrites nothing. Every refusal comes before the first write: a symlinked
-~/.config, ~/.config/zsh or preen/, or ~/.config/atuin, bat, ripgrep or ncdu when its file would be copied, or a symlinked directory
-on the way to the .zshenv or .zshrc zsh reads; a symlinked .zshrc, .zshenv
+rewrites nothing. Every refusal comes before the first write; among them: a
+symlinked ~/.config, ~/.config/zsh or preen/, or one the run can neither
+write into nor create, and ~/.config/atuin, bat, ripgrep or ncdu likewise
+when the run would create its file there; a symlinked directory on the way
+to the .zshenv or .zshrc zsh reads; when there is no ~/.hushlogin, a ~ the
+run cannot write into; a .zshenv, .zshrc or ~/.inputrc missing from a
+directory the run cannot create it in; a symlinked .zshrc, .zshenv
 or ~/.inputrc whose target lacks its line, which belongs in the target; one
 of them that lacks its line and cannot be read and appended to; a zsh file
 that would carry the appended line into its last command — its last line
@@ -86,7 +90,7 @@ done
 # otherwise fetched from the mirror exactly as the configs are — same trust,
 # same mechanism — and checked for its marker line before it is sourced.
 PIECE="shell"   # this piece's path under the mirror root
-PREEN_REF=v1.0.2   # this installer's release: the tag it fetches from, and the helper's marker
+PREEN_REF=v1.1.0   # this installer's release: the tag it fetches from, and the helper's marker
 # A slash ending an override would double the one joined after it, and leave
 # a root taken from it a level too deep.
 trim_slash() { printf '%s' "$1" | sed 's#/*$##'; }   # trim_slash <url> → it with any trailing slash dropped
@@ -301,9 +305,9 @@ if [ ! -e "$INPUTRC" ] && [ ! -L "$INPUTRC" ] && [ -f "$SYSTEM_INPUTRC" ]; then 
 # and a directory that only holds one is never written under.
 atuin_copy=no
 if [ ! -e "$ATUIN_CONF" ] && [ ! -L "$ATUIN_CONF" ]; then atuin_copy=yes; fi
-# The copied zshenv exports RIPGREP_CONFIG_PATH naming ripgrep's config
-# whenever that file is there, so one created where the environment names
-# another file would replace that choice.
+# rg reads the file RIPGREP_CONFIG_PATH names, and the copied zshenv sets it
+# only where it is unset, so a copy made while it names another file would
+# be read by nothing.
 rg_copy=yes
 if [ -n "${RIPGREP_CONFIG_PATH:-}" ] && [ "$(squeeze "$RIPGREP_CONFIG_PATH")" != "$(squeeze "$RG_CONF")" ]; then rg_copy=no; fi
 

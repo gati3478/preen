@@ -18,13 +18,12 @@
   "highlight_line": true,
   "scroll_past_end": true,
   "spell_check": true,
-  "trim_trailing_white_space_on_save": true,
-  "remember_open_files": true,
+  "trim_trailing_white_space_on_save": "all",
   "theme": "ayu-light.sublime-theme",
   // Vendored, not from the gruvbox package — that package is abandoned
   // (last push 04-03-2023) and so is every Sublime alternative. A
   // .sublime-color-scheme is unique by its name, not its path: same-named
   // files in any package are merged into one (Default's ui.py).
   "color_scheme": "Packages/preen/gruvbox-light-hard.sublime-color-scheme",
-  "open_files_in_new_window": false,
+  "open_files_in_new_window": "never",
 }

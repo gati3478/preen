@@ -36,8 +36,9 @@ export VISUAL="$EDITOR"
 # and the scope agreement (--hidden, like GLOB_DOTS and fd) is for all of
 # them. Flags on the command line still override. Guarded on the file:
 # in a home with the shell but not ripgrep's config, rg names the missing
-# file on every call.
-if [ -f "$HOME/.config/ripgrep/config" ]; then
+# file on every call. And on the variable: one already set names the file
+# its owner chose.
+if [ -z "${RIPGREP_CONFIG_PATH:-}" ] && [ -f "$HOME/.config/ripgrep/config" ]; then
   export RIPGREP_CONFIG_PATH="$HOME/.config/ripgrep/config"
 fi
 
