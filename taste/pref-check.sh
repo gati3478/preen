@@ -2,8 +2,8 @@
 #
 # The Python half does the reading and deciding; this half only colours the
 # result, so the section looks like every other check rather than like a foreign
-# tool bolted on. Defines run_pref_checks(), which expects ok()/bad()/warn() to
-# already exist in the caller.
+# tool bolted on. Defines run_pref_checks <the directory holding pref-check.py>,
+# which expects ok()/bad()/warn() to already exist in the caller.
 #
 # Degrades politely rather than failing the run: an absent python3, macOS's
 # python3 stub with no Command Line Tools behind it, or a python older than
@@ -12,8 +12,7 @@
 # the manifest verification look broken.
 
 run_pref_checks() {
-  local repo="$1"
-  local script="$repo/bin/lib/pref-check.py"
+  local script="$1/pref-check.py"
 
   # Before any python3 runs: on a Mac without the Command Line Tools it is a
   # stub that raises an install dialog. bare_shim is the caller's (preen
@@ -36,13 +35,12 @@ run_pref_checks() {
   # adopter's ~/Library/Caches/com.apple.python.
   export PYTHONDONTWRITEBYTECODE=1
 
-  # Guard on the spec. The mirror runs this function too, against a spec in the
-  # flat layout with no per-machine half. A checkout or mirror whose spec has
-  # not been written yet must stay silent rather than report a checker that
-  # found nothing.
+  # Guard on the spec. The mirror runs this function too, against a spec with
+  # no per-machine half. A checkout or mirror whose spec has not been written
+  # yet must stay silent rather than report a checker that found nothing.
   #
   # The spec is several files, a shipped half and one per machine, and the
-  # shipped half sits at a different depth in the mirror, so this half ASKS the
+  # shipped half sits in another directory in the mirror, so this half ASKS the
   # Python rather than carrying a second copy of its discovery rule. rc 3 is
   # "this checkout has no spec at all", the one answer that keeps the section
   # silent. Every other failure — no python3, a python too old for tomllib, a

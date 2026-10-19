@@ -14,7 +14,7 @@ whole. Copies, never symlinks, and nothing here points back at this repo
 afterwards: a setting of yours belongs in your settings.json.
 
   from a clone:    ./editor/zed/install.sh [flags]
-  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/editor/zed/install.sh | bash
+  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.0.0/editor/zed/install.sh | bash
 
 There is nothing to ask, so nothing is asked.
 
@@ -63,7 +63,7 @@ done
 # otherwise fetched from the mirror exactly as the configs are — same trust,
 # same mechanism — and checked for its marker line before it is sourced.
 PIECE="editor/zed"   # this piece's path under the mirror root
-PREEN_REF=v1.3.0   # this installer's release: the tag it fetches from, and the helper's marker
+PREEN_REF=v2.0.0   # this installer's release: the tag it fetches from, and the helper's marker
 # A slash ending an override would double the one joined after it, and leave
 # a root taken from it a level too deep.
 trim_slash() { printf '%s' "$1" | sed 's#/*$##'; }   # trim_slash <url> → it with any trailing slash dropped
@@ -171,28 +171,17 @@ else
 fi
 
 # ── keymap.json and tasks.json, as they stand ────────────────────────────────
-# Read before the writes, so the closing says what the copy-if-absent did.
-fixed_state() { # fixed_state <name> → absent, ours (the shipped bytes, or an earlier copy the run updates), setup (a link into a clone of the whole setup) or yours
-  local dst="$ZED_DIR/$1"
-  if ! there "$dst"; then
-    echo absent
-  elif links_into_clone "$dst"; then
-    echo setup
-  elif [ ! -L "$dst" ] && { cmp -s "$SRC/$1" "$dst" || ours "$dst" "$PIECE/$1"; }; then
-    echo ours
-  else
-    echo yours
-  fi
-}
-keymap_state="$(fixed_state keymap.json)"
-tasks_state="$(fixed_state tasks.json)"
+# Read before the writes, by the decision copy_if_absent acts on, so the plan
+# and the closing say what the copy-if-absent did.
+keymap_state="$(if_absent_outcome "$SRC/keymap.json" "$ZED_DIR/keymap.json" "$PIECE/keymap.json")"
+tasks_state="$(if_absent_outcome "$SRC/tasks.json" "$ZED_DIR/tasks.json" "$PIECE/tasks.json")"
 
 # ── what this run will touch, said before the first write ────────────────────
 [ -d "$CONFIG_HOME" ] || touching "$CONFIG_HOME" "the directory configs live under, created"
 [ -d "$ZED_DIR" ] || touching "$ZED_DIR" "Zed's config directory, created"
-touching "$LAYER" "the settings, read under your settings.json"
-touching "$ZED_DIR/keymap.json" "the keymap — copied if absent or an earlier copy"
-touching "$ZED_DIR/tasks.json" "the tasks — copied if absent or an earlier copy"
+touching_place "$SRC/settings.json" "$LAYER" "$PIECE/settings.json" "the settings, read under your settings.json"
+touching "$ZED_DIR/keymap.json" "the keymap — $(outcome_words "$keymap_state")"
+touching "$ZED_DIR/tasks.json" "the tasks — $(outcome_words "$tasks_state")"
 show_plan
 
 # ── the last refusals, before the first write ────────────────────────────────
@@ -222,15 +211,17 @@ for f in $FIXED_FILES; do copy_if_absent "$SRC/$f" "$ZED_DIR/$f" "$PIECE/$f"; do
 # ── what Zed reads now ───────────────────────────────────────────────────────
 echo
 echo "Zed reads $(short "$LAYER") under $(short "$ZED_DIR/settings.json"), which this run never reads or writes: a key you set there wins over ours, an object there merges with ours key by key, and an array there replaces ours whole."
+# kept-linked and kept-unwritable never happen here: a ZED_DIR that is a
+# symlink, or that the run cannot write, is refused.
 case "$keymap_state" in
-  absent|ours) echo "keymap.json: alt-g spawns the lazygit task in the centre pane, alt-z toggles soft wrap and alt-i inlay hints." ;;
-  setup) echo "keymap.json: a link into a clone of the whole setup, left as it is — the setup's keymap stays in force." ;;
-  yours) echo "keymap.json: yours, left as it is, so this keymap's alt-g, alt-z and alt-i are not added — they are in $ORIGIN/keymap.json, to copy into yours." ;;
+  copied|unchanged|updated) echo "keymap.json: alt-g spawns the lazygit task in the centre pane, alt-z toggles soft wrap and alt-i inlay hints." ;;
+  kept-setup) echo "keymap.json: a link into a clone of the whole setup, left as it is — the setup's keymap stays in force." ;;
+  *) echo "keymap.json: yours, left as it is, so this keymap's alt-g, alt-z and alt-i are not added — they are in $ORIGIN/keymap.json, to copy into yours." ;;
 esac
 case "$tasks_state:$keymap_state" in
-  absent:*|ours:*) echo "tasks.json: the lazygit task alt-g spawns, and the rust: and node: tasks, in Zed's task picker." ;;
-  setup:*) echo "tasks.json: a link into a clone of the whole setup, left as it is — the setup's tasks stay in force." ;;
-  yours:yours) echo "tasks.json: yours, left as it is — these tasks are in $ORIGIN/tasks.json, to copy into yours." ;;
-  yours:*) echo "tasks.json: yours, left as it is, so alt-g spawns a task only where yours, or a project's .zed/tasks.json, has one labelled lazygit — these tasks are in $ORIGIN/tasks.json, to copy into yours." ;;
+  copied:*|unchanged:*|updated:*) echo "tasks.json: the lazygit task alt-g spawns, and the rust: and node: tasks, in Zed's task picker." ;;
+  kept-setup:*) echo "tasks.json: a link into a clone of the whole setup, left as it is — the setup's tasks stay in force." ;;
+  *:kept-yours) echo "tasks.json: yours, left as it is — these tasks are in $ORIGIN/tasks.json, to copy into yours." ;;
+  *) echo "tasks.json: yours, left as it is, so alt-g spawns a task only where yours, or a project's .zed/tasks.json, has one labelled lazygit — these tasks are in $ORIGIN/tasks.json, to copy into yours." ;;
 esac
 echo "Next: open Zed — one already running reads global_settings.json again when it changes."

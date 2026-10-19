@@ -11,7 +11,7 @@ alone. Copies, never symlinks, and nothing here points back at this repo
 afterwards.
 
   from a clone:    ./prompt/install.sh [flags]
-  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/prompt/install.sh | bash -s -- [flags]
+  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.0.0/prompt/install.sh | bash -s -- [flags]
 
 It asks two questions when it has a terminal to ask on and a cship it can
 use. The first two flag pairs below answer one each; with both answered it
@@ -90,7 +90,7 @@ done
 # otherwise fetched from the mirror exactly as the configs are — same trust,
 # same mechanism — and checked for its marker line before it is sourced.
 PIECE="prompt"   # this piece's path under the mirror root
-PREEN_REF=v1.3.0   # this installer's release: the tag it fetches from, and the helper's marker
+PREEN_REF=v2.0.0   # this installer's release: the tag it fetches from, and the helper's marker
 # A slash ending an override would double the one joined after it, and leave
 # a root taken from it a level too deep.
 trim_slash() { printf '%s' "$1" | sed 's#/*$##'; }   # trim_slash <url> → it with any trailing slash dropped
@@ -343,7 +343,9 @@ if [ "$with_starship" = yes ]; then wanted="cship.toml starship.toml"; fi
 for f in $wanted; do
   if [ -d "$CONFIG_DIR/$f" ] && [ ! -L "$CONFIG_DIR/$f" ]; then die "$(short "$CONFIG_DIR/$f") is a directory. Nothing was changed."; fi
 done
-if [ "$with_starship" = yes ] && [ "$starship_linked" = no ] && [ "$SRC" = "$WORK/src" ]; then fetch starship.toml; fi
+# Fetched for the plan too when the question is skipped, so the plan can say
+# what taking it would do.
+if { [ "$with_starship" = yes ] || [ "$starship_unasked" = yes ]; } && [ "$starship_linked" = no ] && [ "$SRC" = "$WORK/src" ]; then fetch starship.toml; fi
 
 # ── the copies ───────────────────────────────────────────────────────────────
 # The copy is the source byte for byte, or with the account hidden: cship's
@@ -359,29 +361,57 @@ prepare_copy() { # prepare_copy <source> <copy> hide|keep
     END { if (header != 1 || slot != 1) exit 1 }
   ' "$1" > "$2" || die "$ORIGIN/cship.toml is not the shape this installer knows — [cship.account] and its slot in lines must each appear once"
 }
+if [ "$cship_linked" = no ]; then
+  if [ "$account_mode" = hide ]; then prepare_copy "$SRC/cship.toml" "$WORK/cship.toml" hide; else prepare_copy "$SRC/cship.toml" "$WORK/cship.toml" keep; fi
+fi
+
+# ── settings.json: what the wiring will do ───────────────────────────────────
+command="$(sq "$cship_bin")"
+if [ "$account_mode" = label ]; then
+  # The same path cship gives a multi-account launcher: the process that
+  # starts cship states the account, and cship fetches nothing for it.
+  command="CSHIP_ACCOUNT='{\"organization_name\":\"$account_label\"}' $command"
+fi
+manual_entry="\"statusLine\": { \"type\": \"command\", \"command\": \"${command//\"/\\\"}\", \"refreshInterval\": $REFRESH_SECONDS }"
+settings_outcome() { # settings_outcome → what the wiring will do: created, added or replaced (each written), unchanged, or other, nopython or nodir (each left as it is, the entry printed to add by hand)
+  case "$settings_state" in
+    absent) if [ -f "$SETTINGS" ]; then echo added; else echo created; fi ;;
+    cship)
+      if [ "$existing_command" = "$command" ] && [ "$existing_refresh" = "$REFRESH_SECONDS" ]; then echo unchanged; else echo replaced; fi ;;
+    *) echo "$settings_state" ;;
+  esac
+}
 
 # ── what this run will touch, said before the first write ────────────────────
 [ -d "$CONFIG_DIR" ] || touching "$CONFIG_DIR" "the directory configs live under, created"
 if [ "$cship_linked" = yes ]; then
   echo "$(short "$CONFIG_DIR/cship.toml") is linked by the setup — left as it is"
 else
-  touching "$CONFIG_DIR/cship.toml" "the statusline's config"
+  touching_place "$WORK/cship.toml" "$CONFIG_DIR/cship.toml" "$PIECE/cship.toml" "the statusline's config"
 fi
 if [ "$starship_linked" = yes ]; then
   echo "$(short "$CONFIG_DIR/starship.toml") is linked by the setup — left as it is"
 elif [ "$with_starship" = yes ]; then
-  touching "$CONFIG_DIR/starship.toml" "line 1, and your shell prompt with it"
+  touching_place "$SRC/starship.toml" "$CONFIG_DIR/starship.toml" "$PIECE/starship.toml" "line 1, and your shell prompt with it"
 elif [ "$starship_unasked" = yes ]; then
-  touching "$CONFIG_DIR/starship.toml" "line 1, and your shell prompt with it — if you take it when asked"
+  touching "$CONFIG_DIR/starship.toml" "line 1, and your shell prompt with it — $(outcome_words "$(place_outcome "$SRC/starship.toml" "$CONFIG_DIR/starship.toml" "$PIECE/starship.toml")"), if you take it when asked"
 fi
-case "$settings_state" in absent|cship) touching "$SETTINGS" "the statusLine entry$settings_through" ;; esac
+case "$(settings_outcome)" in
+  created)   touching "$SETTINGS" "the statusLine entry — created, holding it$settings_through" ;;
+  added)     touching "$SETTINGS" "the statusLine entry — backed up, then added$settings_through" ;;
+  replaced)  touching "$SETTINGS" "the statusLine entry — backed up, then replaced: it runs cship already$settings_through" ;;
+  unchanged) touching "$SETTINGS" "the statusLine entry — unchanged: it runs this already" ;;
+  other)     touching "$SETTINGS" "the statusLine entry — left alone (it runs something else); the entry is printed to set by hand" ;;
+  nopython)  touching "$SETTINGS" "the statusLine entry — not written ($no_python); the entry is printed to add by hand" ;;
+  nodir)     touching "$SETTINGS" "the statusLine entry — not written (no $(short "$CLAUDE_DIR")); the entry is printed to add once Claude Code is installed" ;;
+esac
 show_plan
 if [ "$dry_run" = yes ]; then
   echo
   case "$starship_unasked:$account_unasked" in
-    yes:yes) echo "With cship $CSHIP_FLOOR or newer, a real run asks first whether to take starship.toml, and what line 2 calls your account." ;;
+    yes:yes) echo "With cship $CSHIP_FLOOR or newer, a real run asks first whether to take starship.toml, and what line 2 calls your account; the plan above is for a blank answer to the second." ;;
     yes:no)  echo "With cship $CSHIP_FLOOR or newer, a real run asks first whether to take starship.toml." ;;
-    no:yes)  echo "With cship $CSHIP_FLOOR or newer, a real run asks first what line 2 calls your account." ;;
+    no:yes)  echo "With cship $CSHIP_FLOOR or newer, a real run asks first what line 2 calls your account; the plan above is for a blank answer." ;;
   esac
   echo "Nothing was written. Drop --dry-run to do it."
   exit 0
@@ -393,7 +423,6 @@ if [ "$cship_linked" = yes ] && [ "$starship_linked" = yes ]; then
   echo "nothing to copy — cship.toml and starship.toml are the setup's links into its clone, left as they are"
 fi
 if [ "$cship_linked" = no ]; then
-  if [ "$account_mode" = hide ]; then prepare_copy "$SRC/cship.toml" "$WORK/cship.toml" hide; else prepare_copy "$SRC/cship.toml" "$WORK/cship.toml" keep; fi
   copy_into "$WORK/cship.toml" "$CONFIG_DIR/cship.toml" "$PIECE/cship.toml"
 fi
 if [ "$starship_linked" = no ]; then
@@ -407,13 +436,6 @@ fi
 # ── settings.json ────────────────────────────────────────────────────────────
 echo
 echo "== wiring =="
-command="$(sq "$cship_bin")"
-if [ "$account_mode" = label ]; then
-  # The same path cship gives a multi-account launcher: the process that
-  # starts cship states the account, and cship fetches nothing for it.
-  command="CSHIP_ACCOUNT='{\"organization_name\":\"$account_label\"}' $command"
-fi
-manual_entry="\"statusLine\": { \"type\": \"command\", \"command\": \"${command//\"/\\\"}\", \"refreshInterval\": $REFRESH_SECONDS }"
 # settings.json is not placed the way the configs are: it is one key merged into
 # a file Claude Code itself writes through a symlink — one hop, a temp file
 # renamed onto the link's target (2.1.280) — so a symlink here is written
@@ -447,20 +469,19 @@ PY
 }
 wired="not wired"
 label_applied=no
-case "$settings_state" in
-  absent) wire ;;
-  cship)
-    if [ "$existing_command" = "$command" ] && [ "$existing_refresh" = "$REFRESH_SECONDS" ]; then
-      echo "unchanged       $(short "$SETTINGS") — statusLine already runs this"
-      wired="unchanged — statusLine already runs this"
-      label_applied=yes
-    else
-      # cship's own installer writes `"command": "cship"` and nothing else;
-      # this config wants the same binary with a refresh timer and, if you
-      # gave one, the label. Same tool, so it is taken over — and said.
-      echo "statusLine in $(short "$SETTINGS") runs cship already ($existing_command) — replacing it with this config's entry"
-      wire
-    fi
+case "$(settings_outcome)" in
+  created|added) wire ;;
+  unchanged)
+    echo "unchanged       $(short "$SETTINGS") — statusLine already runs this"
+    wired="unchanged — statusLine already runs this"
+    label_applied=yes
+    ;;
+  replaced)
+    # cship's own installer writes `"command": "cship"` and nothing else;
+    # this config wants the same binary with a refresh timer and, if you
+    # gave one, the label. Same tool, so it is taken over — and said.
+    echo "statusLine in $(short "$SETTINGS") runs cship already ($existing_command) — replacing it with this config's entry"
+    wire
     ;;
   other)
     wired="left alone — statusLine runs something else"

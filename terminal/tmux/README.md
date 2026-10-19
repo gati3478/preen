@@ -89,13 +89,13 @@ No clone needed. To print the plan and stop, writing nothing — `bash -s --`
 hands the flag to the script:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/terminal/tmux/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.0.0/terminal/tmux/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/terminal/tmux/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.0.0/terminal/tmux/install.sh | bash
 ```
 
 Or from a clone of this repository, `./terminal/tmux/install.sh`, with
@@ -107,11 +107,12 @@ plan for an empty home:
 ~/.config                                  the directory configs live under, created
 ~/.config/tmux                             tmux's config directory, created
 ~/.config/tmux/preen                       this config's own directory, created
-~/.config/tmux/preen/tmux.conf             the config
+~/.config/tmux/preen/tmux.conf             the config — copied
 ~/.config/tmux/tmux.conf                   created: source-file -q ~/.config/tmux/preen/tmux.conf
 ```
 
-A file of yours without the line reads `one line appended: <line>` instead.
+Each line says what this run does to your home: a file of yours without the
+line reads `one line appended: <line>`.
 
 It
 

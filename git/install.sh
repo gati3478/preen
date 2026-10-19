@@ -18,7 +18,7 @@ never symlinks, and nothing here points back at this repo afterwards.
 there, or an earlier copy this setup shipped is.
 
   from a clone:    ./git/install.sh [flags]
-  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/git/install.sh | bash
+  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.0.0/git/install.sh | bash
 
 There is nothing to ask, so nothing is asked.
 
@@ -74,7 +74,7 @@ done
 # otherwise fetched from the mirror exactly as the config is — same trust,
 # same mechanism — and checked for its marker line before it is sourced.
 PIECE="git"   # this piece's path under the mirror root
-PREEN_REF=v1.3.0   # this installer's release: the tag it fetches from, and the helper's marker
+PREEN_REF=v2.0.0   # this installer's release: the tag it fetches from, and the helper's marker
 # A slash ending an override would double the one joined after it, and leave
 # a root taken from it a level too deep.
 trim_slash() { printf '%s' "$1" | sed 's#/*$##'; }   # trim_slash <url> → it with any trailing slash dropped
@@ -249,8 +249,8 @@ fi
 [ -d "$CONFIG_HOME" ] || touching "$CONFIG_HOME" "the directory configs live under, created"
 [ -d "$GIT_DIR_XDG" ] || touching "$GIT_DIR_XDG" "git's config directory, created"
 [ -d "$PREEN_DIR" ] || touching "$PREEN_DIR" "this config's own directory, created"
-touching "$COPY" "the config"
-touching "$IGNORE" "the global ignore — copied if absent or an earlier copy"
+touching_place "$SRC/gitconfig" "$COPY" "$PIECE/gitconfig" "the config"
+touching_if_absent "$SRC/ignore" "$IGNORE" "$PIECE/ignore" "the global ignore"
 touching_line "$TARGET" "$LINE"
 show_plan
 

@@ -15,7 +15,7 @@ you keep your own settings, is never read or written. Copies, never
 symlinks, and nothing here points back at this repo afterwards.
 
   from a clone:    ./editor/sublime/install.sh [flags]
-  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/editor/sublime/install.sh | bash
+  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.0.0/editor/sublime/install.sh | bash
 
 There is nothing to ask, so nothing is asked.
 
@@ -66,7 +66,7 @@ done
 # otherwise fetched from the mirror exactly as the config is — same trust,
 # same mechanism — and checked for its marker line before it is sourced.
 PIECE="editor/sublime"   # this piece's path under the mirror root
-PREEN_REF=v1.3.0   # this installer's release: the tag it fetches from, and the helper's marker
+PREEN_REF=v2.0.0   # this installer's release: the tag it fetches from, and the helper's marker
 # A slash ending an override would double the one joined after it, and leave
 # a root taken from it a level too deep.
 trim_slash() { printf '%s' "$1" | sed 's#/*$##'; }   # trim_slash <url> → it with any trailing slash dropped
@@ -230,15 +230,16 @@ what_file() { # what_file <name> → what it is, for the plan
     *) echo "Terminus's settings" ;;
   esac
 }
+# A file linked into a clone of the whole setup is left as it is; any other
+# is place()'s to decide.
+file_outcome() { # file_outcome <name> → what the run will do to it in Packages/preen: kept-setup, or place()'s outcome
+  if links_into_clone "$PREEN_DIR/$1"; then echo kept-setup; else place_outcome "$SRC/$1" "$PREEN_DIR/$1" "$PIECE/$1"; fi
+}
 for d in "${CHAIN[@]}"; do
   [ -d "$d" ] || touching "$d" "$(what_dir "$d"), created"
 done
 for f in "${FILES[@]}"; do
-  if links_into_clone "$PREEN_DIR/$f"; then
-    touching "$PREEN_DIR/$f" "links into a clone of the whole setup — left as it is"
-  else
-    touching "$PREEN_DIR/$f" "$(what_file "$f")"
-  fi
+  touching "$PREEN_DIR/$f" "$(what_file "$f") — $(outcome_words "$(file_outcome "$f")")"
 done
 show_plan
 
@@ -265,7 +266,7 @@ echo
 echo "== installing =="
 make_dir "$PREEN_DIR"
 for f in "${FILES[@]}"; do
-  if links_into_clone "$PREEN_DIR/$f"; then
+  if [ "$(file_outcome "$f")" = kept-setup ]; then
     record "left alone      $(short "$PREEN_DIR/$f")"
   else
     place "$SRC/$f" "$PREEN_DIR/$f" "$PIECE/$f"

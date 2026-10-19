@@ -98,13 +98,13 @@ No clone needed. To print the plan and stop, writing nothing — `bash -s --`
 hands the flag to the script:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/shell/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.0.0/shell/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/shell/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.0.0/shell/install.sh | bash
 ```
 
 Or from a clone of this repository, `./shell/install.sh`, with `--dry-run`
@@ -116,24 +116,28 @@ empty home, on a Mac:
 ~/.config                                  the directory configs live under, created
 ~/.config/zsh                              to hold this config's own directory, created
 ~/.config/zsh/preen                        this config's own directory, created
-~/.config/zsh/preen/zshrc                  the interactive shell's config
-~/.config/zsh/preen/zshenv                 what every zsh reads first: PATH, the editor
-~/.config/zsh/preen/inputrc                readline's settings, for bash and the rest
-~/.hushlogin                               silences login's Last login line — copied if absent or an earlier copy
+~/.config/zsh/preen/zshrc                  the interactive shell's config — copied
+~/.config/zsh/preen/zshenv                 what every zsh reads first: PATH, the editor — copied
+~/.config/zsh/preen/inputrc                readline's settings, for bash and the rest — copied
+~/.hushlogin                               silences login's Last login line — copied
 ~/.config/atuin                            atuin's config directory, created
-~/.config/atuin/config.toml                atuin's settings — copied if absent or an earlier copy
+~/.config/atuin/config.toml                atuin's settings — copied
 ~/.config/bat                              bat's config directory, created
-~/.config/bat/config                       bat's theme: the terminal's palette — copied if absent or an earlier copy
+~/.config/bat/config                       bat's theme: the terminal's palette — copied
 ~/.config/ripgrep                          ripgrep's config directory, created
-~/.config/ripgrep/config                   rg's flags: hidden files, smart case — copied if absent or an earlier copy
+~/.config/ripgrep/config                   rg's flags: hidden files, smart case — copied
 ~/.config/ncdu                             ncdu's config directory, created
-~/.config/ncdu/config                      ncdu's colours: the terminal's palette — copied if absent or an earlier copy
+~/.config/ncdu/config                      ncdu's colours: the terminal's palette — copied
 ~/.zshenv                                  created: source ~/.config/zsh/preen/zshenv
 ~/.inputrc                                 created: $include ~/.config/zsh/preen/inputrc
 ~/.zshrc                                   created: source ~/.config/zsh/preen/zshrc
 ```
 
-A file of yours without the line reads `one line appended: <line>` instead.
+Each line says what this run does to your home. A file of yours reads
+`backed up, then replaced` in `preen/` and `left alone (yours)` at the paths
+copied only where none is there; an earlier copy reads
+`updated (an earlier copy)`; and a file of yours without its line reads
+`one line appended: <line>`.
 
 Where `/etc/inputrc` exists, as on most Linux systems, readline stops reading
 it once `~/.inputrc` exists, so a new `~/.inputrc` includes it first:
@@ -218,21 +222,21 @@ For readline, a line below the `$include` in `~/.inputrc` wins.
 
 ## What changes
 
-The front page's
-[What changes when you take the setup](../README.md#what-changes-when-you-take-the-setup)
-lists the choices felt at once, each with its undo line. Its zsh and rg
-rows hold for this piece, with these exceptions:
+The choices felt at once, each with the lines that undo it, for
+`~/.zshrc.local` or below the appended line where its row names no other
+place.
 
-- the `~/.zprofile` row does not apply: this piece leaves your `~/.zprofile`
-  alone;
-- nothing here reads a `~/.zprofile.local`, so the undo of the zsh row on
-  tmux over ssh, `unset SSH_CONNECTION`, goes above the appended line in
-  your zshrc, before this config's tmux block runs;
-- the rg row holds only where the run copied ripgrep's config, never while
-  `RIPGREP_CONFIG_PATH` named another file.
-
-Where an undo line goes in `~/.zshrc.local`, a line below the appended one
-works as well.
+| What you notice | Undo |
+| --- | --- |
+| `>` refuses to overwrite a file; `>\|` does (`NO_CLOBBER`) | `unsetopt NO_CLOBBER` |
+| a mistyped command is offered a correction (`CORRECT`) | `unsetopt CORRECT` |
+| `*` matches dotfiles (`GLOB_DOTS`) | `unsetopt GLOB_DOTS` |
+| word motion stops at every character but a letter or digit (`WORDCHARS=''`) | zsh's default, `WORDCHARS='*?_-.[]~=/&;!#$%^(){}<>'` |
+| Up and Down search history by what is typed before the cursor | `bindkey '^[[A' up-line-or-history`<br>`bindkey '^[[B' down-line-or-history`<br>`bindkey '^[OA' up-line-or-history`<br>`bindkey '^[OB' down-line-or-history` |
+| where eza is installed, `ls` is eza, whose flags are not all ls's: `ls -ltr` is an error | `unalias ls` |
+| `$EDITOR` is `subl -w`, Sublime Text, where the zshenv finds `subl` — on PATH, in Homebrew's bin or `/usr/local/bin` — else nano, and always nano over ssh | `export EDITOR=… VISUAL=…` in `~/.zshenv.local` |
+| over ssh, where tmux is installed, a shell attaches to the tmux session `remote`, and leaving tmux ends the login | `unset SSH_CONNECTION` above the appended line in your zshrc, since this config's tmux block runs before `~/.zshrc.local` is read; tools that read it then see no ssh session |
+| where rg reads the ripgrep config this piece ships, it searches hidden files but never `.git`, and ignores case until the pattern holds a capital | `unset RIPGREP_CONFIG_PATH` in `~/.zshenv.local` |
 
 ## Leaving
 
@@ -245,13 +249,17 @@ works as well.
    instead.
 2. Delete `~/.config/zsh/preen/`, and `~/.config/zsh` with it where nothing
    else is in it.
-3. For `~/.hushlogin` and atuin's, bat's, ripgrep's and ncdu's configs,
-   read what the run said of each: `copied` or `updated` means the run put
-   it there, and it can go; `unchanged` or `left alone` means a file was
-   already there, and the run never touched it. The shipped `~/.hushlogin`
-   is empty, so an empty one of your own reads `unchanged`. Where the run said `created` of a
-   directory above one of them, that directory goes with its file. The kitty
-   piece copies bat's config too, so keep it while you keep that piece.
+3. For `~/.hushlogin` and atuin's, bat's, ripgrep's and ncdu's configs, read
+   what the run said of each: `copied`, `updated` or `unchanged` means the
+   file holds what this setup shipped, so it can go unless you had it before
+   the first run: the shipped `~/.hushlogin` is empty, so an empty one of
+   your own reads `unchanged` too. `left alone` means the run did not write
+   it. Run with `--dry-run`, the installer says why, as in
+   `left alone (yours)`; a file it calls `an earlier copy` is this setup's,
+   and its `copied` means nothing is there. Where the run said `created` of
+   a directory above one of them, that directory goes with its file. The
+   kitty piece copies bat's config too, so keep it while you keep that
+   piece.
 4. `~/.zsh_history` holds what this config recorded, and
    `~/.zcompdump-<zsh version>` beside it is the completion cache this zshrc
    writes. A history file of yours by another name is where it was.

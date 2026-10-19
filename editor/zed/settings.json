@@ -37,8 +37,8 @@
   // "boundary" = leading indentation, trailing spaces, tabs, and any run of
   // 2+ spaces; single spaces between words stay invisible. Zed's
   // `show_whitespaces` is a single enum, so this cannot be combined with
-  // "selection" (everything, but only inside a selection) — chosen 08-08-2026
-  // in favour of always-on leading/trailing.
+  // "selection" (everything, but only inside a selection), and seeing
+  // leading and trailing whitespace everywhere matters more.
   "show_whitespaces": "boundary",
   "whitespace_map": { "space": "·", "tab": "→" },
 

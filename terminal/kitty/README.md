@@ -72,13 +72,13 @@ No clone needed. To print the plan and stop, writing nothing — `bash -s --`
 hands the flag to the script:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/terminal/kitty/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.0.0/terminal/kitty/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/terminal/kitty/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.0.0/terminal/kitty/install.sh | bash
 ```
 
 Or from a clone of this repository, `./terminal/kitty/install.sh`, with
@@ -90,19 +90,25 @@ plan for a home with no `~/.config` yet:
 ~/.config                                  the directory configs live under, created
 ~/.config/kitty                            kitty's config directory, created
 ~/.config/kitty/preen                      this config's own directory, created
-~/.config/kitty/preen/kitty.conf           the config
-~/.config/kitty/preen/current-theme.conf   the palette it includes
-~/.config/kitty/preen/tab-title.conf       the tab title for this home — ours; local.conf stays yours
+~/.config/kitty/preen/kitty.conf           the config — copied
+~/.config/kitty/preen/current-theme.conf   the palette it includes — copied
+~/.config/kitty/preen/tab-title.conf       the tab title for this home — copied
 ~/.config/kitty/kitty.conf                 created: include preen/kitty.conf
-~/.config/kitty/open-actions.conf          what a click on a link does — copied if absent or an earlier copy
-~/.config/kitty/mime.types                 the file types behind it — copied if absent or an earlier copy
-~/.config/kitty/choose-files.conf          kitty's file picker, kitten choose-files — copied if absent or an earlier copy
+~/.config/kitty/open-actions.conf          what a click on a link does — copied
+~/.config/kitty/mime.types                 the file types behind it — copied
+~/.config/kitty/choose-files.conf          kitty's file picker, kitten choose-files — copied
 ~/.config/bat                              bat's config directory, created
-~/.config/bat/config                       bat's theme: the terminal's palette — copied if absent or an earlier copy
+~/.config/bat/config                       bat's theme: the terminal's palette — copied
 ```
 
-A `kitty.conf` of yours without the line reads `one line appended: <line>`
-instead.
+Each line says what this run does to your home. A file of yours reads
+`backed up, then replaced` in `preen/` and `left alone (yours)` at the fixed
+names below; an earlier copy reads `updated (an earlier copy)`. A
+`kitty.conf` of yours without the line reads `one line appended: <line>`,
+and after that line comes each setting in your `kitty.conf` above the
+include that this config also makes and no line of yours below it makes
+again — a file your `kitty.conf` includes is not read — as
+`line 2: cursor_shape (yours, above the include) loses to this config`.
 
 It
 
@@ -137,7 +143,9 @@ It
    earlier copy this setup shipped is. Its one
    line is `--theme="ansi"`, the terminal's own palette, and
    `scrollback_pager` names no theme of its own;
-6. appends `include preen/kitty.conf` to `~/.config/kitty/kitty.conf`, once.
+6. appends `include preen/kitty.conf` to `~/.config/kitty/kitty.conf`, once:
+   an include kitty reads as this config, spelled another way —
+   `./preen/kitty.conf`, the full path — is the line already there.
    Nothing else in your file changes, but a last line with no newline gets
    one, and if you have no kitty.conf it becomes that one line. The append is
    last, so a run that stops earlier never leaves an include pointing at
@@ -198,17 +206,19 @@ instead, and the include lands in `~/.config/kitty/local.conf`, which that
 setup reads last. `kitten choose-fonts` edits `kitty.conf` too, unless given
 the same `--config-file-name local.conf`.
 
-## Sessions
+## What changes
 
-cmd+q saves the open windows and tabs to `~/.config/kitty/last-session.kitty`,
-then quits, and kitty opens that session at launch. These two lines in
-`~/.config/kitty/preen/local.conf` undo it — the first stops the session
-opening at launch, the second makes cmd+q quit without saving:
+The choices felt at once, each with the lines that undo it in
+`~/.config/kitty/preen/local.conf`. Each undo is kitty 0.49.2's own default.
 
-```
-startup_session none
-map cmd+q quit
-```
+| What you notice | Undo |
+| --- | --- |
+| the left Option key is Alt, so characters typed with Option take the right one (`macos_option_as_alt`) | `macos_option_as_alt no` |
+| selecting text copies it, replacing the clipboard (`copy_on_select`) | `copy_on_select no` |
+| cmd+q saves the open windows and tabs to `~/.config/kitty/last-session.kitty`, and the next launch restores them (`startup_session`); before the first save, kitty logs that it cannot read the file and opens its usual window | `startup_session none`<br>`map cmd+q quit` |
+
+Of the session's two lines, the first stops the session opening at launch,
+the second makes cmd+q quit without saving.
 
 ## The click seam
 
@@ -238,16 +248,20 @@ cost nothing.
    made one; that file is yours.
 3. For `open-actions.conf`, `mime.types`, `choose-files.conf` and
    `~/.config/bat/config`, read what the run said of each: `copied`,
-   `updated` or `unchanged` means the file held this config's bytes and can
-   go; `left alone` means something else was there, a different file or a
-   symlink, and the run never touched it. Where it said `created` of
+   `updated` or `unchanged` means the file holds what this setup shipped, so
+   it can go unless you had it before the first run; `left alone` means the
+   run did not write it. Run with `--dry-run`, the installer says why, as in
+   `left alone (yours)`; a file it calls `an earlier copy` is this setup's,
+   and its `copied` means nothing is there. Where the run said `created` of
    `~/.config/bat`, that directory goes with its file. The shell piece
    copies bat's config too, so keep it while you keep that piece.
 4. Delete `~/.config/kitty/last-session.kitty`, the session cmd+q saves, if
    it is there.
 
-Where a backup was taken it sits beside the file it replaced, as
-`<file>.unpreened.<timestamp>`; move it back.
+A backup the run took sits in `~/.config/kitty/preen/` beside the copy, as
+`<file>.unpreened.<timestamp>`: what was there before a later run replaced
+it, your edits to it included. Keep it before you delete that directory, if
+you want those edits.
 
 Took the whole repository through `bin/bootstrap`? Then `~/.config/kitty/kitty.conf`
 is a link into your clone, which already carries this config: the installer

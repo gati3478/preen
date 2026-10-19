@@ -75,13 +75,13 @@ No clone needed. To print the plan and stop, writing nothing — `bash -s --`
 hands the flag to the script:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/git/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.0.0/git/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/git/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.0.0/git/install.sh | bash
 ```
 
 Or from a clone of this repository, `./git/install.sh`, with `--dry-run` for
@@ -93,12 +93,14 @@ empty home:
 ~/.config                                  the directory configs live under, created
 ~/.config/git                              git's config directory, created
 ~/.config/git/preen                        this config's own directory, created
-~/.config/git/preen/gitconfig              the config
-~/.config/git/ignore                       the global ignore — copied if absent or an earlier copy
+~/.config/git/preen/gitconfig              the config — copied
+~/.config/git/ignore                       the global ignore — copied
 ~/.gitconfig                               created: [include] path = ~/.config/git/preen/gitconfig
 ```
 
-A file of yours without the line reads `one line appended: <line>` instead.
+Each line says what this run does to your home. An ignore of yours reads
+`left alone (yours)`, an earlier copy `updated (an earlier copy)`, and a file
+of yours without the line `one line appended: <line>`.
 
 It
 
@@ -188,7 +190,7 @@ your `PAGER` names goes there in its place.
 
 | What you notice | Undo |
 | --- | --- |
-| `git pull` rebases your local commits onto the ones it fetched, instead of merging them | `[pull]`<br>`rebase = false` |
+| `git pull` rebases your local commits onto the ones it fetched, instead of merging them, and refuses while the working tree has local edits | `[pull]`<br>`rebase = false` |
 | `git log`, `git diff` and `git show` page through delta where it is installed, side by side with line numbers, and `git add -p` shows its hunks through it, in place of the pager your `PAGER` names | `[core]`<br>`pager = less`<br>`[interactive]`<br>`diffFilter = cat` |
 | a commit takes CRLF line endings in as LF (`core.autocrlf input`) | `[core]`<br>`autocrlf = false` |
 | rebasing a branch moves the other branches that point at commits it rewrites (`rebase.updateRefs`) | `[rebase]`<br>`updateRefs = false` |
@@ -211,9 +213,11 @@ the line or in `~/.gitconfig.local`.
    Where that line is all the file holds, delete the file.
 2. Delete `~/.config/git/preen/`.
 3. For `~/.config/git/ignore`, read what the run said: `copied`, `updated`
-   or `unchanged` means the file held this config's bytes and can go;
-   `left alone` means something else was there, and the run never touched
-   it.
+   or `unchanged` means the file holds what this setup shipped, so it can go
+   unless you had it before the first run; `left alone` means the run did
+   not write it. Run with `--dry-run`, the installer says why, as in
+   `left alone (yours)`; a file it calls `an earlier copy` is this setup's,
+   and its `copied` means nothing is there.
 4. `~/.gitconfig.local` is yours. Once the line is gone, nothing of this
    config includes it: move what it holds into your own file, or include it
    from there.

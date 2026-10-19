@@ -8,7 +8,7 @@
 # row still runs.
 #
 # Beside the targets and rows a check acts on, this file carries each
-# preference's `value` and a one-line `why`, and `bin/lib/pref-check.py`
+# preference's `value` and a one-line `why`, and the checker, `pref-check.py`,
 # asserts it against LIVE config — not against the copies in this repo, because
 # an application can rewrite a `copy`-mode file, so the live copy can
 # legitimately differ from the repo's, and the question is what the
@@ -410,7 +410,7 @@ want = "Fira Code"
 key = "font_face"
 want = "Fira Code"
 
-# ── Size (this machine) ────────────────────────────────────────────────────────
+# ── Size (the author's Mac) ────────────────────────────────────────────────────
 
 [pref.font_size_mac]
 value = "16"
@@ -2850,14 +2850,11 @@ target = "kitty"
 key = "show_hyperlink_targets"
 want = "cmd"
 
-# Each open-actions entry that opens a file launches `subl` by name. kitty
-# looks on the PATH it started with (launchd's, from the Dock), ~/.local/bin,
-# ~/bin and the `+` entries of exe_search_path, then /etc/paths and
-# /etc/paths.d, and last on the PATH of a login shell it starts for the
-# purpose. /opt/homebrew/bin, where `subl` lives, is only on that last one,
-# so this line keeps a click's editor from waiting on a shell's startup
-# files. Any `-/opt/homebrew/bin` line would undo it and still pass here: no
-# matcher says "and nothing else takes it back".
+# Each open-actions entry that opens a file launches `subl` by name, without
+# a shell. This puts Homebrew's bin, where `subl` lives, on kitty's own
+# search, so a click's editor does not wait on a login shell's startup files.
+# Any `-/opt/homebrew/bin` line would undo it and still pass here: no matcher
+# says "and nothing else takes it back".
 [pref.hyperlink_actions.targets.kitty_exe_search_path]
 target = "kitty"
 key = "exe_search_path"

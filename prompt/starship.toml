@@ -16,9 +16,8 @@ format = "$username$directory$git_branch$git_commit$git_state$git_status$fill$py
 
 # The tabs kitty restores right after a boot scan their directories with a
 # cold cache, all at once, and overran the 30 ms default: a WARN pair above
-# the first prompt. A warm scan costs ~5 µs an entry, so 100 ms is reached
-# only cold or past ~20 000 entries; there the prompt renders from a partial
-# scan, as it does at any timeout.
+# the first prompt. Past the limit the prompt renders from a partial scan,
+# as it does at any timeout.
 scan_timeout = 100
 
 [fill]
@@ -39,8 +38,8 @@ show_always = true
 format = "[$path]($style) "
 # false: name the directory the process is IN, not $PWD. cship runs starship
 # with cwd = the session's directory but inherits claude's launch-time $PWD, so
-# a worktree session named the launch directory on line 1 (02-09-2026). Where
-# no project path is a symlink, the shell prompt is unaffected.
+# a worktree session named the launch directory on line 1. Where no project
+# path is a symlink, the shell prompt is unaffected.
 use_logical_path = false
 style = "bold #ebdbb2"
 truncation_length = 3
@@ -69,8 +68,8 @@ format = "[$symbol($version)]($style) "
 version_format = "${major}"
 style = "#fb4934"
 
-# Badge only. starship reads the version from `kotlinc`; this machine's Kotlin
-# is Gradle's embedded compiler — a recorded ceiling.
+# Badge only: starship reads the version from `kotlinc`, and Gradle's
+# embedded Kotlin compiler installs none.
 [kotlin]
 format = "[$symbol]($style)"
 

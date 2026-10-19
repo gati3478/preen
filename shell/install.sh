@@ -29,7 +29,7 @@ copied zshenv sets it, naming ~/.config/ripgrep/config, only where it is
 unset and that file is there. ~/.zprofile is never touched.
 
   from a clone:    ./shell/install.sh [flags]
-  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/shell/install.sh | bash
+  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.0.0/shell/install.sh | bash
 
 There is nothing to ask, so nothing is asked.
 
@@ -90,7 +90,7 @@ done
 # otherwise fetched from the mirror exactly as the configs are — same trust,
 # same mechanism — and checked for its marker line before it is sourced.
 PIECE="shell"   # this piece's path under the mirror root
-PREEN_REF=v1.3.0   # this installer's release: the tag it fetches from, and the helper's marker
+PREEN_REF=v2.0.0   # this installer's release: the tag it fetches from, and the helper's marker
 # A slash ending an override would double the one joined after it, and leave
 # a root taken from it a level too deep.
 trim_slash() { printf '%s' "$1" | sed 's#/*$##'; }   # trim_slash <url> → it with any trailing slash dropped
@@ -257,13 +257,15 @@ if [ -f "$HL_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh" ]; then
 else
   echo "zsh-autosuggestions not found in $(short "$HL_PREFIX/share"), where the zshrc looks — without it no suggestion is drawn ahead of the cursor (brew install zsh-autosuggestions)"
 fi
+# A tool is looked for where a zsh that read the copied zshenv finds it, not
+# on this shell's PATH alone: find_tool's directories.
 tool_line() { # tool_line <tool> <found note, or empty> <what goes without it> <how to install>
   local bin
-  bin="$(command -v "$1" 2>/dev/null || true)"
+  bin="$(find_tool "$1" || true)"
   if [ -n "$bin" ]; then
     echo "$1 at $(short "$bin")${2:+ — $2}"
   else
-    echo "$1 not on PATH — $3 ($4)"
+    echo "$1 not found $(tool_where) — $3 ($4)"
   fi
 }
 tool_line starship "" "the prompt stays the one your own lines set" "brew install starship"
@@ -314,22 +316,22 @@ if [ -n "${RIPGREP_CONFIG_PATH:-}" ] && [ "$(squeeze "$RIPGREP_CONFIG_PATH")" !=
 [ -d "$CONFIG_HOME" ] || touching "$CONFIG_HOME" "the directory configs live under, created"
 [ -d "$ZSH_DIR" ] || touching "$ZSH_DIR" "to hold this config's own directory, created"
 [ -d "$PREEN_DIR" ] || touching "$PREEN_DIR" "this config's own directory, created"
-touching "$PREEN_DIR/zshrc" "the interactive shell's config"
-touching "$PREEN_DIR/zshenv" "what every zsh reads first: PATH, the editor"
-touching "$PREEN_DIR/inputrc" "readline's settings, for bash and the rest"
-touching "$HUSHLOGIN" "silences login's Last login line — copied if absent or an earlier copy"
+touching_place "$SRC/zshrc" "$PREEN_DIR/zshrc" "$PIECE/zshrc" "the interactive shell's config"
+touching_place "$SRC/zshenv" "$PREEN_DIR/zshenv" "$PIECE/zshenv" "what every zsh reads first: PATH, the editor"
+touching_place "$SRC/inputrc" "$PREEN_DIR/inputrc" "$PIECE/inputrc" "readline's settings, for bash and the rest"
+touching_if_absent "$WORK/hushlogin" "$HUSHLOGIN" "$PIECE/hushlogin" "silences login's Last login line"
 if [ "$atuin_copy" = yes ] && [ ! -d "$ATUIN_DIR" ]; then touching "$ATUIN_DIR" "atuin's config directory, created"; fi
-touching "$ATUIN_CONF" "atuin's settings — copied if absent or an earlier copy"
+touching_if_absent "$SRC/atuin/config.toml" "$ATUIN_CONF" "$PIECE/atuin/config.toml" "atuin's settings"
 touching_dir_for "$BAT_CONF" "bat's config directory, created"
-touching "$BAT_CONF" "bat's theme: the terminal's palette — copied if absent or an earlier copy"
+touching_if_absent "$SRC_ROOT/terminal/bat/config" "$BAT_CONF" terminal/bat/config "bat's theme: the terminal's palette"
 if [ "$rg_copy" = yes ]; then
   touching_dir_for "$RG_CONF" "ripgrep's config directory, created"
-  touching "$RG_CONF" "rg's flags: hidden files, smart case — copied if absent or an earlier copy"
+  touching_if_absent "$SRC_ROOT/ripgrep/config" "$RG_CONF" ripgrep/config "rg's flags: hidden files, smart case"
 else
   touching "$RG_CONF" "not copied: RIPGREP_CONFIG_PATH is '$RIPGREP_CONFIG_PATH'"
 fi
 touching_dir_for "$NCDU_CONF" "ncdu's config directory, created"
-touching "$NCDU_CONF" "ncdu's colours: the terminal's palette — copied if absent or an earlier copy"
+touching_if_absent "$SRC_ROOT/terminal/ncdu/config" "$NCDU_CONF" terminal/ncdu/config "ncdu's colours: the terminal's palette"
 touching_line "$ZSHENV" "$ZSHENV_LINE"
 if [ "$inputrc_fresh" = yes ]; then
   touching "$INPUTRC" "created: $SYSTEM_INPUTRC_LINE, then $INPUTRC_LINE"

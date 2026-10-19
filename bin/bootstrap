@@ -273,10 +273,13 @@ if [ "$refused" = yes ]; then
 fi
 
 echo "== dependencies =="
-# A tool in a Homebrew prefix counts as installed, on this shell's PATH or not:
-# the setup's zprofile puts Homebrew on PATH in every login shell.
-in_brew() { # in_brew <tool> → true when a Homebrew prefix's bin/ holds <tool>
+# A tool off this shell's PATH counts as installed where the setup's zshenv
+# puts it on every zsh's: ~/.local/bin, and a Homebrew prefix's bin/. The
+# drop-ins' find_tool, in lib/install.sh, searches the same directories; this
+# file does not source that helper, whose ask, die and STAMP are the drop-ins'.
+in_tool_dirs() { # in_tool_dirs <tool> → true when ~/.local/bin or a Homebrew prefix's bin/ holds <tool>
   local prefix
+  if [ -f "$HOME/.local/bin/$1" ] && [ -x "$HOME/.local/bin/$1" ]; then return 0; fi
   # shellcheck disable=SC2086  # BREW_PREFIXES is a list, meant to split
   for prefix in $BREW_PREFIXES; do
     if [ -x "$prefix/bin/$1" ]; then return 0; fi
@@ -287,7 +290,7 @@ in_brew() { # in_brew <tool> → true when a Homebrew prefix's bin/ holds <tool>
 # on a Mac without the Command Line Tools is the stub, so it counts as missing.
 missing=""
 for tool in kitty zsh git starship fzf zoxide eza bat delta; do
-  if { ! command -v "$tool" >/dev/null 2>&1 || bare_shim "$tool"; } && ! in_brew "$tool"; then missing="$missing $tool"; fi
+  if { ! command -v "$tool" >/dev/null 2>&1 || bare_shim "$tool"; } && ! in_tool_dirs "$tool"; then missing="$missing $tool"; fi
 done
 # These two are Homebrew formulae, not commands on PATH, so `command -v`
 # cannot see them. Test the files shell/zshrc sources, under the prefixes it
@@ -329,7 +332,7 @@ without() { # without <tool> → what goes missing when it is not installed
 }
 optional=""
 for tool in fd rg atuin mise gh git-lfs tmux subl; do
-  command -v "$tool" >/dev/null 2>&1 || in_brew "$tool" || optional="$optional $tool"
+  command -v "$tool" >/dev/null 2>&1 || in_tool_dirs "$tool" || optional="$optional $tool"
 done
 # tmux.conf runs tpm from this path, where no package manager puts it.
 tpm=yes

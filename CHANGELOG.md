@@ -5,13 +5,60 @@ from it. A major release moves where or how a file lands, or drops a flag; a
 minor one adds a piece, a row, a flag or a check; a patch changes values,
 fixes and docs.
 
+## v2.0.0
+
+The author's preferences, as checks, move to `taste/`, with a page of their
+own: `preferences.toml` from the top level, and `pref-check.py`,
+`pref-check.sh` and `zcap.sh` from `bin/lib/`, which is gone. Taking one
+piece never needed them, and `preen doctor --taste` finds them in the new
+place; a script of yours that named the old paths needs the new ones.
+
+The README is a table of the pieces, each linked to its page, which gives
+its install line; the statusline's stays on the README too. What bootstrap
+does and finds in the way, the doctor, how `manifest.tsv` drives install
+and check, what changes under the
+whole setup, updating and leaving move to `bin/README.md`. There, What
+changes adds the starship prompt, and Leaving now recreates a symlink of
+yours a run replaced and keeps what an application wrote to a copied file.
+Each piece's page stands alone: kitty's gains What changes,
+the shell's lists its own, and each Leaving reads a file the run called
+`unchanged` as the setup's bytes, which can go unless the file was yours
+before. The statusline's Leaving deletes the `settings.json` backup, older
+than what Claude Code wrote since, rather than moving it back, and removes
+a `cship.toml` or `starship.toml` the run copied where you had none. Notes
+for a setup taken before v1.0.0 leave the pages;
+[v1.3.0's README](https://github.com/gati3478/preen/blob/v1.3.0/README.md)
+keeps them.
+
+A dry run's plan says what the run will do to your home, from the decision
+the run acts on: `copied`, `unchanged`, `updated (an earlier copy)`,
+`backed up, then replaced`, or `left alone` with the reason, as in
+`left alone (yours)`, where the plan used to state the rule, "copied if
+absent or an earlier copy". kitty's plan also names each setting of yours
+above the include line that this config makes again, and so overrides. An
+include of kitty's config spelled another way, `./preen/kitty.conf` or the
+full path, is now the line already there, where the kitty piece used to
+append a second one that kitty names a bad line at every launch. The statusline's plan says what becomes of
+`~/.claude/settings.json`, also where Claude Code is not installed yet, and
+its dry run stops, as a real run does, on a `cship.toml` source it cannot
+tailor. The kitty and shell pieces and `bin/bootstrap` look for a tool where
+the shell piece's zshenv puts one, `~/.local/bin`, `/opt/homebrew/bin` and
+`/usr/local/bin`, as well as on PATH, so `$EDITOR` and a click's editor are
+named as they will be found. The kitty piece's own `tab-title.conf`, written
+for another home, now reads `updated`.
+
+The comments in `terminal/kitty/kitty.conf`, `shell/`'s zshenv and inputrc,
+`prompt/starship.toml` and `editor/zed/settings.json` keep each line's
+reason and drop the measurements behind it; no setting changed.
+
 ## v1.3.0
 
 `preen doctor` gains a reader, `lsopen`, that asks LaunchServices for a
 content type's default app, whether a handler-table entry pins the type or
-LaunchServices ranks the app first. A reader whose tool hangs past its
-timeout fails its own row, where it crashed the preference checks and lost
-every row.
+LaunchServices ranks the app first. A reader that asks git, gh, ssh or
+osascript fails its own row when the tool hangs past its timeout; a hang in
+git, gh or ssh used to crash the preference checks and lose every row after
+it.
 
 ## v1.2.0
 

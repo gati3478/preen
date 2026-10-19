@@ -20,7 +20,7 @@
 # so nothing may join it.
 #
 # shellcheck disable=SC2034  # PREEN_INSTALL_LIB, INTERACTIVE and ORIGIN are read by the caller that sources this, which shellcheck cannot see from here
-PREEN_INSTALL_LIB=v1.3.0
+PREEN_INSTALL_LIB=v2.0.0
 
 STAMP="$(date +%Y%m%d-%H%M%S)"   # one per run, so a run's backups sort together
 SHIPPED=""   # lib/shipped's path, once locate_sources has set it: in the clone, or where ours() fetches it to
@@ -76,6 +76,29 @@ bare_shim() { # bare_shim <tool> → true when <tool> is macOS's /usr/bin stub w
   [ "$(command -v "$1" 2>/dev/null)" = "/usr/bin/$1" ] && [ -x /usr/bin/xcode-select ] || return 1
   dir="$(/usr/bin/xcode-select -p 2>/dev/null)" && [ -x "$dir/usr/bin/$1" ] && return 1
   return 0
+}
+
+# Where a tool this setup's files run is found: on PATH, else where the shell
+# piece's zshenv puts it for every zsh — ~/.local/bin first, Homebrew's two
+# bin directories last — which kitty's own search covers too. A Dock-started
+# kitty runs on a PATH without Homebrew's, so PATH alone undercounts.
+# bin/bootstrap, which cannot source this file, searches the same directories.
+TOOL_DIRS="/opt/homebrew/bin /usr/local/bin"
+find_tool() { # find_tool <tool> → its path, on PATH or in ~/.local/bin or a TOOL_DIRS directory; false when none holds it
+  local dir
+  if dir="$(command -v "$1" 2>/dev/null)" && [ -n "$dir" ]; then printf '%s\n' "$dir"; return 0; fi
+  # shellcheck disable=SC2086  # TOOL_DIRS is a list, meant to split
+  for dir in "$HOME/.local/bin" $TOOL_DIRS; do
+    if [ -f "$dir/$1" ] && [ -x "$dir/$1" ]; then printf '%s\n' "$dir/$1"; return 0; fi
+  done
+  return 1
+}
+tool_where() { # tool_where → where find_tool looks, for a line naming a tool it did not find: "on PATH, in ~/.local/bin, <dir> or <dir>"
+  printf 'on PATH, in ~/.local/bin'
+  # shellcheck disable=SC2086
+  set -- $TOOL_DIRS
+  while [ $# -gt 1 ]; do printf ', %s' "$1"; shift; done
+  if [ $# -eq 1 ]; then printf ' or %s' "$1"; fi
 }
 
 # A directory something else manages — a dotfiles repo linked in whole — would
@@ -186,6 +209,9 @@ locate_root_file() { # locate_root_file <path under the root> <its last line> <t
 # What the run will touch is registered as it is decided and printed while
 # nothing has moved yet; what each write did is said as it happens. A reader
 # sees the blast radius before the first write, and --dry-run is the plan alone.
+# Each line says what this run will do to this home, from the same decision
+# the write itself acts on (the *_outcome functions below), so the plan and
+# the run cannot disagree.
 TOUCHING=""
 touching() { # touching <path> <what it is> — register one destination for the plan
   TOUCHING="$TOUCHING$(printf '%-42s %s' "$(short "$1")" "$2")
@@ -231,27 +257,51 @@ blob_id() { # blob_id <file> → its blob id; false with nothing to hash with
   sum="$(command -v shasum || command -v sha1sum)" || return 1
   { printf 'blob %d\0' "$(wc -c < "$1")"; cat "$1"; } | "$sum" | cut -d' ' -f1
 }
+# What a write will do, in the plan's words. The run's own line for each is
+# its first word: `backed up`, then `copied`, for replaced; `left alone` for
+# each kept-.
+outcome_words() { # outcome_words <outcome> → the plan's words for it
+  case "$1" in
+    replaced) printf 'backed up, then replaced' ;;
+    updated) printf 'updated (an earlier copy)' ;;
+    kept-yours) printf 'left alone (yours)' ;;
+    kept-setup) printf "left alone (the whole setup's link)" ;;
+    kept-linked) printf 'left alone (an earlier copy, in a symlinked directory)' ;;
+    kept-unwritable) printf 'left alone (an earlier copy, in a directory this run cannot write)' ;;
+    *) printf '%s' "$1" ;;
+  esac
+}
 # A file is materialised as it should land, then compared with what is there:
 # identical is left untouched, so a re-run backs up nothing, and an earlier
 # copy this setup shipped is replaced with no backup, holding nothing of yours.
 # A symlink in the way is moved aside, link and all, even to identical
 # content — the file is being replaced, and writing through the link would
 # overwrite whatever it points at, a repo of yours say.
+place_outcome() { # place_outcome <materialised file> <destination> [its path in the mirror] → what place will do: copied, unchanged, updated or replaced
+  if ! there "$2"; then echo copied
+  elif [ ! -L "$2" ] && cmp -s "$1" "$2"; then echo unchanged
+  elif ours "$2" "${3:-}"; then echo updated
+  else echo replaced
+  fi
+}
 place() { # place <materialised file> <destination> [its path in the mirror] — the destination becomes this file, whatever was there backed up beside it unless this setup shipped it
   local src="$1" dst="$2" bak
-  if [ -e "$dst" ] || [ -L "$dst" ]; then
-    if [ ! -L "$dst" ] && cmp -s "$src" "$dst"; then record "unchanged       $(short "$dst")"; return 0; fi
-    if ours "$dst" "${3:-}"; then
+  case "$(place_outcome "$src" "$dst" "${3:-}")" in
+    unchanged) record "unchanged       $(short "$dst")"; return 0 ;;
+    updated)
       { rm -f "$dst" && cp "$src" "$dst"; } || die "could not write $(short "$dst")"
       record "updated         $(short "$dst")"
-      return 0
-    fi
-    bak="$(backup_name "$dst")"
-    mv "$dst" "$bak" || die "could not move $(short "$dst") aside"
-    record "backed up       $(short "$dst") -> $(short "$bak")"
-  fi
+      return 0 ;;
+    replaced)
+      bak="$(backup_name "$dst")"
+      mv "$dst" "$bak" || die "could not move $(short "$dst") aside"
+      record "backed up       $(short "$dst") -> $(short "$bak")" ;;
+  esac
   cp "$src" "$dst" || die "could not write $(short "$dst")"
   record "copied          $(short "$dst")"
+}
+touching_place() { # touching_place <materialised file> <destination> <its path in the mirror, or ""> <what it is> — register a destination place will write, with what it will do
+  touching "$2" "$4 — $(outcome_words "$(place_outcome "$1" "$2" "$3")")"
 }
 # Each directory made is said, so none appears that the run did not name.
 make_dir() { # make_dir <dir> — create <dir> and each missing directory above it, outermost first
@@ -269,17 +319,33 @@ copy_into() { # copy_into <file> <destination> [its path in the mirror] — plac
 # earlier copy this setup shipped, updated where the run could have copied it:
 # its directory not a symlink, and writable. The run says whether its bytes
 # are this file's, never whose the file is; a symlink, as in place(), is never
-# `unchanged`.
-copy_if_absent() { # copy_if_absent <file> <destination> [its path in the mirror] — copy only when nothing is at the destination, or an earlier copy this setup shipped; anything else there stays
-  if [ -e "$2" ] || [ -L "$2" ]; then
-    if [ ! -L "$2" ] && cmp -s "$1" "$2"; then record "unchanged       $(short "$2")"
-    elif [ ! -L "$(dirname "$2")" ] && [ -w "$(dirname "$2")" ] && ours "$2" "${3:-}"; then place "$1" "$2" "${3:-}"
-    else record "left alone      $(short "$2")"
+# `unchanged`. The plan says more, because a reader decides on it: whatever
+# is not this setup's bytes is yours — a symlink too — unless it links into a
+# clone of the whole setup.
+if_absent_outcome() { # if_absent_outcome <file> <destination> [its path in the mirror] → what copy_if_absent will do: copied, unchanged, updated, or kept-yours, kept-setup, kept-linked or kept-unwritable, each left alone
+  if ! there "$2"; then echo copied
+  elif [ ! -L "$2" ] && cmp -s "$1" "$2"; then echo unchanged
+  elif ours "$2" "${3:-}"; then
+    if [ -L "$(dirname "$2")" ]; then echo kept-linked
+    elif [ -w "$(dirname "$2")" ]; then echo updated
+    else echo kept-unwritable
     fi
-    return 0
+  elif links_into_clone "$2"; then echo kept-setup
+  else echo kept-yours
   fi
-  cp "$1" "$2" || die "could not write $(short "$2")"
-  record "copied          $(short "$2")"
+}
+copy_if_absent() { # copy_if_absent <file> <destination> [its path in the mirror] — copy only when nothing is at the destination, or an earlier copy this setup shipped; anything else there stays
+  case "$(if_absent_outcome "$1" "$2" "${3:-}")" in
+    copied)
+      cp "$1" "$2" || die "could not write $(short "$2")"
+      record "copied          $(short "$2")" ;;
+    unchanged) record "unchanged       $(short "$2")" ;;
+    updated) place "$1" "$2" "${3:-}" ;;
+    *) record "left alone      $(short "$2")" ;;
+  esac
+}
+touching_if_absent() { # touching_if_absent <file> <destination> <its path in the mirror, or ""> <what it is> — register a destination copy_if_absent will consider, with what it will do
+  touching "$2" "$4 — $(outcome_words "$(if_absent_outcome "$1" "$2" "$3")")"
 }
 # Such a file in a directory of its own, ~/.config/<tool>/: the directory is
 # made, and held to the symlink policy, only when the file is absent and so
@@ -299,31 +365,34 @@ copy_if_absent_into() { # copy_if_absent_into <file> <destination> [its path in 
 holds_line() { # holds_line <file> <line> → true when <file>, followed if a symlink, is a regular file holding that exact whole line
   [ -f "$1" ] && grep -qxF -- "$2" "$1" 2>/dev/null
 }
+line_outcome() { # line_outcome <file> <line> → what append_line_once will do: already there, appended or created
+  if holds_line "$1" "$2"; then echo "already there"
+  elif there "$1"; then echo appended
+  else echo created
+  fi
+}
 # A symlink is refused rather than followed: the target is a file something else
 # manages, and an append through the link lands in it. One whose file already
 # holds the line needs no append.
 append_line_once() { # append_line_once <file> <line> — the file ends up holding that exact line, once
   local file="$1" line="$2"
-  if holds_line "$file" "$line"; then record "already there   $(short "$file")"; return 0; fi
-  if [ -L "$file" ]; then die "$(short "$file") is a symlink to $(readlink "$file") — whatever manages that file should carry this line, not this installer"; fi
-  if [ -e "$file" ]; then
-    # A last line with no newline of its own would otherwise take this one onto its end.
-    [ -z "$(tail -c 1 "$file")" ] || printf '\n' >> "$file"
-    printf '%s\n' "$line" >> "$file"
-    record "appended        $(short "$file")"
-  else
-    printf '%s\n' "$line" > "$file"
-    record "created         $(short "$file")"
-  fi
+  case "$(line_outcome "$file" "$line")" in
+    "already there") record "already there   $(short "$file")" ;;
+    appended)
+      if [ -L "$file" ]; then die "$(short "$file") is a symlink to $(readlink "$file") — whatever manages that file should carry this line, not this installer"; fi
+      # A last line with no newline of its own would otherwise take this one onto its end.
+      [ -z "$(tail -c 1 "$file")" ] || printf '\n' >> "$file"
+      printf '%s\n' "$line" >> "$file"
+      record "appended        $(short "$file")" ;;
+    created)
+      printf '%s\n' "$line" > "$file"
+      record "created         $(short "$file")" ;;
+  esac
 }
-# A file append_line_once will write is registered by the tests it makes, so
-# the plan says what the run will do.
 touching_line() { # touching_line <file> <line> — register <file> for the plan as append_line_once will leave it: already there, one line appended, or created
-  if holds_line "$1" "$2"; then
-    touching "$1" "already there: $2"
-  elif [ -e "$1" ] || [ -L "$1" ]; then
-    touching "$1" "one line appended: $2"
-  else
-    touching "$1" "created: $2"
-  fi
+  case "$(line_outcome "$1" "$2")" in
+    "already there") touching "$1" "already there: $2" ;;
+    appended) touching "$1" "one line appended: $2" ;;
+    created) touching "$1" "created: $2" ;;
+  esac
 }

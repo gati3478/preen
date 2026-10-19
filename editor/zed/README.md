@@ -21,20 +21,18 @@ The installer copies `settings.json` to:
 ```
 
 Zed reads that file under your own `~/.config/zed/settings.json`, which the
-run never reads or writes. Measured on Zed 1.23.2 on macOS, each case in a
-config directory of its own:
+run never reads or writes. Zed layers, lowest first, its defaults, the
+settings extensions bring, `global_settings.json`, then `settings.json` with
+its per-release-channel and per-platform sections:
 
 - a key only `global_settings.json` sets applies;
 - a key both files set takes your `settings.json`'s value;
-- an object both set merges key by key — your `{ "path": … }` kept our
+- an object both set merges key by key — your `{ "path": … }` keeps our
   `"arguments"` beside it;
 - an array both set is yours whole — none of ours shows through;
 - without `global_settings.json`, Zed logs nothing for it and does not create
   it.
 
-Read in Zed's source at tag v1.23.2: Zed layers, lowest first, its
-defaults, the settings extensions bring, `global_settings.json`, then
-`settings.json` with its per-release-channel and per-platform sections.
 Above both go an active settings profile, a project's own
 `.zed/settings.json` for its files, and, on a remote development server,
 that machine's own `settings.json`. A profile whose `base` is `"default"`,
@@ -42,11 +40,15 @@ while active, sets the rest of your `settings.json` aside and keeps this
 file. `global_settings.json` takes no such sections, and nothing in Zed
 writes it.
 
-Some parts of Zed read `settings.json` alone, never this file. Among them,
-read at the tag: Zed's Settings editor (Your overrides, below) and the
-lists on its sandbox page; the settings sent to a remote server in remote
-development; the agent panel's layout; whether an edit-prediction provider
-was chosen explicitly; and the agent's fallback default model.
+Some parts of Zed read `settings.json` alone, never this file. Among them:
+Zed's Settings editor (Your overrides, below) and the lists on its sandbox
+page; the settings sent to a remote server in remote development; the agent
+panel's layout; whether an edit-prediction provider was chosen explicitly;
+and the agent's fallback default model.
+
+The five layering cases above were measured on Zed 1.23.2 on macOS, each in
+a config directory of its own, and the rest read in Zed's source at tag
+v1.23.2.
 
 - **`keymap.json` and `tasks.json`** are read from `~/.config/zed` under
   those names alone, one file each, so they cannot be layered: each is copied
@@ -95,13 +97,13 @@ No clone needed. To print the plan and stop, writing nothing — `bash -s --`
 hands the flag to the script:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/editor/zed/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.0.0/editor/zed/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/editor/zed/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.0.0/editor/zed/install.sh | bash
 ```
 
 Or from a clone of this repository, `./editor/zed/install.sh`, with
@@ -112,10 +114,14 @@ plan for an empty home:
 == will touch ==
 ~/.config                                  the directory configs live under, created
 ~/.config/zed                              Zed's config directory, created
-~/.config/zed/global_settings.json         the settings, read under your settings.json
-~/.config/zed/keymap.json                  the keymap — copied if absent or an earlier copy
-~/.config/zed/tasks.json                   the tasks — copied if absent or an earlier copy
+~/.config/zed/global_settings.json         the settings, read under your settings.json — copied
+~/.config/zed/keymap.json                  the keymap — copied
+~/.config/zed/tasks.json                   the tasks — copied
 ```
+
+Each line says what this run does to your home: a `keymap.json` or
+`tasks.json` of yours reads `left alone (yours)`, and an earlier copy
+`updated (an earlier copy)`.
 
 It
 
@@ -231,9 +237,11 @@ blocks — and each is set back the same way, by its key in your
    found it. Rename the one you want back to `global_settings.json`, or
    delete them.
 3. For `keymap.json` and `tasks.json`, read what the run said: `copied`,
-   `updated` or `unchanged` means the file held this config's bytes and can
-   go; `left alone` means something else was there, and the run never
-   touched it.
+   `updated` or `unchanged` means the file holds what this setup shipped, so
+   it can go unless you had it before the first run; `left alone` means the
+   run did not write it. Run with `--dry-run`, the installer says why, as in
+   `left alone (yours)`; a file it calls `an earlier copy` is this setup's,
+   and its `copied` means nothing is there.
 4. Your `settings.json` was never read or written.
 
 Took the whole repository through `bin/bootstrap`? Then

@@ -75,7 +75,7 @@ zcap() {
     echo "zcap: ERROR: raw output of \`$1\` contains an ESC byte (0x1B)." >&2
     echo "zcap: col -b discards escape sequences silently instead of" >&2
     echo "zcap: reporting them - refusing to hand it plausible-looking" >&2
-    echo "zcap: garbage. See the comment above zcap() in bin/lib/zcap.sh." >&2
+    echo "zcap: garbage. See the comment above zcap() in zcap.sh." >&2
     rm -f "$tmp"
     return 1
   fi

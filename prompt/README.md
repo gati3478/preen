@@ -46,13 +46,13 @@ prints without cship too, or with one below the floor, beside the two ways
 to install it.
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/prompt/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.0.0/prompt/install.sh | bash -s -- --dry-run
 ```
 
 Then the install, one line, no clone:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/prompt/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.0.0/prompt/install.sh | bash
 ```
 
 Or from a clone of this repository, `./prompt/install.sh`. The script does
@@ -99,7 +99,7 @@ answers one; with both answered nothing is asked, and with no terminal the
 defaults are taken — `starship.toml` left alone, the account module hidden:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/prompt/install.sh | bash -s -- --with-starship --account-label personal
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.0.0/prompt/install.sh | bash -s -- --with-starship --account-label personal
 ./prompt/install.sh --no-starship --no-account
 ```
 
@@ -117,20 +117,6 @@ installed cship it first runs `cship uninstall`, which deletes the entry,
 then writes its bare one back, label and timer gone, your `cship.toml` left
 alone. After upgrading cship that way, run this installer again: it
 recognises the bare entry and takes it over.
-
-**Updating.** Run the install line from this page again: it names the newest
-release. From a clone, `git pull`, then
-`./prompt/install.sh`. An earlier copy this setup shipped comes back
-`updated`, with no backup — `starship.toml` only when you take it again,
-with `--with-starship` or a yes. One you edited is backed up beside itself first,
-and so is a `cship.toml` with the account hidden, which no release shipped.
-cship reads that one file, with no overlay, and starship its own
-`starship.toml`, so carry an edit of yours over from the backup.
-
-**Leaving.** Each backup sits beside the file it replaced, as
-`<file>.unpreened.<timestamp>`; move it back. Then remove the `statusLine`
-entry from `settings.json`, or run `cship uninstall`, which removes the entry,
-the binary and its caches and leaves `cship.toml` where it is.
 
 Took the whole repository through `bin/bootstrap`? `cship.toml` and
 `starship.toml` are links into your clone, but `settings.json` is not wired.
@@ -287,6 +273,30 @@ Haiku `#b8bb26`. The table is the whole theme; `background`, `bg1` and
 published verbatim. A comment in `cship.toml` names `preferences.toml`, which
 ships with the whole setup but not with this directory; this page carries
 what an adopter needs.
+
+## Updating
+
+Run the install line from this page again: it names the newest release.
+From a clone, `git pull`, then `./prompt/install.sh`. An earlier copy this
+setup shipped comes back `updated`, with no backup — `starship.toml` only
+when you take it again, with `--with-starship` or a yes. One you edited is
+backed up beside itself first, and so is a `cship.toml` with the account
+hidden, which no release shipped. cship reads that one file, with no
+overlay, and starship its own `starship.toml`, so carry an edit of yours
+over from the backup.
+
+## Leaving
+
+1. Remove the `statusLine` entry from the `settings.json` the run wired, or
+   run `cship uninstall`, which removes the entry, the binary and its
+   caches. Delete any backup of `settings.json` beside it: it predates what
+   Claude Code wrote there since.
+2. Remove `~/.config/cship.toml`, and `~/.config/starship.toml` if you took
+   it, unless you had it before the first run. `cship uninstall` leaves
+   `cship.toml` where it is.
+3. Where one you had before was replaced, its earliest backup beside it,
+   `<file>.unpreened.<timestamp>`, is what was there: move it back. A later
+   backup is what a later run replaced.
 
 ## License
 

@@ -79,13 +79,13 @@ No clone needed. To print the plan and stop, writing nothing — `bash -s --`
 hands the flag to the script:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/editor/sublime/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.0.0/editor/sublime/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/editor/sublime/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.0.0/editor/sublime/install.sh | bash
 ```
 
 Or from a clone of this repository, `./editor/sublime/install.sh`, with
@@ -96,11 +96,14 @@ plan on a Mac where Sublime Text has run, which on Linux names
 ```
 == will touch ==
 ~/Library/Application Support/Sublime Text/Packages/preen this config's own package, created
-~/Library/Application Support/Sublime Text/Packages/preen/Preferences.sublime-settings the editor's settings
-~/Library/Application Support/Sublime Text/Packages/preen/gruvbox-light-hard.sublime-color-scheme the colour scheme
-~/Library/Application Support/Sublime Text/Packages/preen/Terminus.sublime-settings Terminus's settings
-~/Library/Application Support/Sublime Text/Packages/preen/Terminus View.sublime-settings Terminus's view settings
+~/Library/Application Support/Sublime Text/Packages/preen/Preferences.sublime-settings the editor's settings — copied
+~/Library/Application Support/Sublime Text/Packages/preen/gruvbox-light-hard.sublime-color-scheme the colour scheme — copied
+~/Library/Application Support/Sublime Text/Packages/preen/Terminus.sublime-settings Terminus's settings — copied
+~/Library/Application Support/Sublime Text/Packages/preen/Terminus View.sublime-settings Terminus's view settings — copied
 ```
+
+Each line says what this run does to your home. A file of yours reads
+`backed up, then replaced`, and an earlier copy `updated (an earlier copy)`.
 
 It
 

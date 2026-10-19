@@ -7,95 +7,44 @@ yours. It is [`prompt/`](prompt/README.md), one piece of preen: a macOS
 terminal and editor setup — kitty, zsh, tmux, Zed, Sublime Text — that checks
 itself against your live config. _Preen_: to groom to your own standard.
 
+Gruvbox Dark Hard where code runs — kitty, tmux, the statusline — and Gruvbox
+Light Hard where it is read — Zed, Sublime Text; Fira Code throughout, the
+Nerd Font build in the terminal.
+
 ## Take one piece
 
-[`prompt/`](prompt/README.md) is the Claude Code statusline, drawn by cship.
-The first block prints the plan and writes nothing; the second installs. With
+Each piece installs with a `curl … | bash` line on its page, and
+`bash -s -- --dry-run` in place of the final `bash` prints the plan for your
+home and writes nothing. A real run makes every refusal before its first
+write and saves what it replaces: a file of yours beside itself, System
+Settings' values in a script that puts them back. Your config gains an
+include line, a layer beneath it, or the keys the piece sets; a file with no
+such seam is copied where you have none, or replaced. Each page says which.
+
+| Piece | What it is |
+| --- | --- |
+| [`prompt/`](prompt/README.md) | the picture above: Claude Code's statusline, drawn by cship, under starship's prompt |
+| [`terminal/kitty/`](terminal/kitty/README.md) | kitty, the terminal: with `shell/`, a text file `rg` or `eza` prints opens in Sublime Text when clicked, at rg's matching line |
+| [`shell/`](shell/README.md) | zsh and readline: history searched by what you typed, and a `>` that refuses to overwrite |
+| [`terminal/tmux/`](terminal/tmux/README.md) | tmux for ssh: the prefix on C-Space, the mouse, true colour |
+| [`git/`](git/README.md) | git: pulls that rebase and diffs through delta; your name and email stay yours |
+| [`editor/zed/`](editor/zed/README.md) | Zed on the JetBrains keymap, with lazygit and tasks |
+| [`editor/sublime/`](editor/sublime/README.md) | Sublime Text, with Terminus, its terminal, to match |
+| [`gh/`](gh/README.md) | the GitHub CLI: ssh, delta, no telemetry |
+| [`macos/`](macos/README.md) | System Settings, among them the Dock, Finder, the trackpad and the clock |
+
+The statusline's plan comes first, then its install. With
 [cship](https://github.com/stephenleo/cship) 1.8.2 or newer, both first ask
 whether to take `starship.toml` too and what to call your account; without
 it, the dry run says how to get it, and the install stops before any write.
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/prompt/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.0.0/prompt/install.sh | bash -s -- --dry-run
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/prompt/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.0.0/prompt/install.sh | bash
 ```
-
-Every other piece installs the same way, one line each:
-[the terminal](terminal/kitty/README.md), [the shell](shell/README.md),
-[tmux](terminal/tmux/README.md), [git](git/README.md),
-[Zed](editor/zed/README.md), [Sublime Text](editor/sublime/README.md),
-[gh](gh/README.md) and [System Settings](macos/README.md).
-`bash -s -- --dry-run` in place of the final `bash` prints the plan and
-writes nothing; each page says what its piece changes.
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/terminal/kitty/install.sh | bash
-```
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/shell/install.sh | bash
-```
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/terminal/tmux/install.sh | bash
-```
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/git/install.sh | bash
-```
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/editor/zed/install.sh | bash
-```
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/editor/sublime/install.sh | bash
-```
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/gh/install.sh | bash
-```
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/macos/apply.sh | bash
-```
-
-Each prints its plan and makes every refusal before its first write. Every
-installer but gh's then copies its files into your config — copies, never
-symlinks, a file of yours it replaces backed up beside it — and wires them
-in:
-
-- the statusline's merges its `statusLine` key into
-  `~/.claude/settings.json`;
-- kitty's appends one `include` line to `~/.config/kitty/kitty.conf`;
-- the shell's appends one line each to the zshenv and zshrc zsh reads —
-  `~/.zshenv` and `~/.zshrc` unless `ZDOTDIR` moves them — and to
-  `~/.inputrc`;
-- tmux's appends one line to `~/.config/tmux/tmux.conf`, or to
-  `~/.tmux.conf` where only that is there;
-- git's appends one line to the file `git config --global` writes,
-  `~/.gitconfig` unless only `~/.config/git/config` is there;
-- Zed's and Sublime Text's write a layer beneath your own settings, never
-  into them: Zed's copies its settings to
-  `~/.config/zed/global_settings.json`, which Zed reads under your
-  `~/.config/zed/settings.json`, and its keymap and tasks only where you
-  have none of your own; Sublime Text's copies its files into a package of their own,
-  `Packages/preen`, which Sublime reads under your `Packages/User`.
-
-Some files are copied only where you have none of your own, among them
-bat's, ripgrep's and ncdu's configs; each page names its piece's. gh's sets
-each of its keys that
-differs through `gh config set`, and `macos/apply.sh` each System Settings
-value that differs through `defaults`, both after saving what they replace.
-`--help` is each script's manual.
-
-To update a piece, run its line from this page again: each names the newest
-release, and a line you saved fetches the release it names. A copy the setup
-shipped is replaced; a file you changed is backed up first or left alone,
-and each page says what becomes of a change of yours.
 
 ## Take the setup
 
@@ -114,254 +63,37 @@ cd ~/preen && ./bin/bootstrap --dry-run
 ./bin/preen doctor
 ```
 
-`bootstrap` names each missing tool, an optional one with what goes without
-it, and asks before it goes on without one the setup needs. It asks your
-name and email for git and sets them in `~/.gitconfig.local`, leaving the
-rest of that file as it is; deploys every row of `manifest.tsv`; and writes
-`~/.config/kitty/tab-title.conf`, which holds your home, the one path kitty's
-config language cannot template. Zed's and Sublime Text's settings are linked
-where their pieces copy them, `~/.config/zed/global_settings.json` and
-Sublime's `Packages/preen`, beneath your own `~/.config/zed/settings.json` and
-`Packages/User`, which bootstrap never writes. It ends by naming each
-overlay, the file of yours that wins over a shipped one, and everything it
-set aside. The statusline is linked but not wired: its installer, run from
-the clone, wires it.
+bootstrap asks your name and email for git, then deploys every row of
+`manifest.tsv`. [The setup's page](bin/README.md) says what it does with
+what it finds in the way, what changes, and how to update and leave.
 
-Every refusal, bootstrap's or `preen apply`'s, comes before the first write,
-and bootstrap never modifies your clone. What it finds in the way:
-
-- a symlinked directory between `~` and a file it deploys, the layout stow
-  leaves, is refused;
-- at a `link` row, a plain file of yours that differs from the shipped one
-  is kept beside itself as `<file>.unpreened.<stamp>`, `<stamp>` the run's
-  date and time;
-- at a `copy` row, a file of yours stays as it is: only a copy the setup
-  shipped is replaced;
-- a symlink is never written through: at a `link` row it is replaced and its
-  old target printed, at a `copy` row it is moved aside, except a link into
-  the clone left from when the row was a link, which the copy replaces;
-- a plain `~/.gitconfig`, or a `~/.ssh/config` plain or linked, becomes the
-  `.local` beside it, unless one is there or yours already names it; git
-  reads that file last and ssh first, so every line of yours wins; a
-  `~/.gitconfig` that names the git piece's copy is kept beside itself
-  instead, its lines bound for `~/.gitconfig.local` — never the git piece's
-  line, which bootstrap names;
-- your `~/.zshenv`, `~/.zprofile` and `~/.zshrc`, set aside as above, go
-  unread: their lines belong in the `.local` beside each, which the shipped
-  file sources — never the shell piece's line, which bootstrap names.
-
-The shipped `ssh/config` names Proton Pass's agent socket for every host.
-Keys on disk still sign; `IdentityAgent SSH_AUTH_SOCK` under `Host *` in
-`config.local` keeps an agent of your own.
-
-`preen doctor` reads every row back, then checks the tools, warning rather
-than failing where one is absent. The author's preferences are asserted
-against your live config only when asked (python 3.11 or newer), because
-they are the author's:
-
-```sh
-~/preen/bin/preen doctor --taste
-```
-
-## What changes when you take the setup
-
-Some of the author's choices are felt at once: the table lists them,
-[the shell's page](shell/README.md#what-changes) names where the zsh and rg
-rows differ for that piece alone, and
-[tmux's](terminal/tmux/README.md#what-changes),
-[git's](git/README.md#what-changes), [gh's](gh/README.md#what-changes),
-[Zed's](editor/zed/README.md#what-changes) and
-[Sublime Text's](editor/sublime/README.md#what-changes) pages list the rest
-of their choices, which the setup makes too, gh's only where you had no
-plain `config.yml` of your own. An undo goes in an overlay
-where its tool has one, and wins there over the shipped file: the one its
-row names, or else `~/.zshrc.local`, `~/.config/kitty/local.conf`,
-`~/.config/tmux/local.conf`, `~/.gitconfig.local`, `~/.ssh/config.local`,
-`~/.config/zed/settings.json` or Sublime's `Packages/User`.
-
-| Tool | What you notice | Undo |
-| --- | --- | --- |
-| zsh | `>` refuses to overwrite a file; `>\|` does (`NO_CLOBBER`) | `unsetopt NO_CLOBBER` |
-| zsh | a mistyped command is offered a correction (`CORRECT`) | `unsetopt CORRECT` |
-| zsh | `*` matches dotfiles (`GLOB_DOTS`) | `unsetopt GLOB_DOTS` |
-| zsh | word motion stops at every character but a letter or digit (`WORDCHARS=''`) | zsh's default, `WORDCHARS='*?_-.[]~=/&;!#$%^(){}<>'` |
-| zsh | Up and Down search history by what is typed before the cursor | `bindkey '^[[A' up-line-or-history`<br>`bindkey '^[[B' down-line-or-history`<br>`bindkey '^[OA' up-line-or-history`<br>`bindkey '^[OB' down-line-or-history` |
-| zsh | `ls` is eza, whose flags are not all ls's: `ls -ltr` is an error | `unalias ls` |
-| zsh | `$EDITOR` is `subl -w`, Sublime Text, where `~/.zshenv` finds `subl` — on PATH, in Homebrew's bin or `/usr/local/bin` — else nano, and always nano over ssh | `export EDITOR=… VISUAL=…` in `~/.zshenv.local` |
-| zsh | over ssh, where tmux is installed, a shell attaches to the tmux session `remote`, and leaving tmux ends the login | `unset SSH_CONNECTION` in `~/.zprofile.local`; tools that read it then see no ssh session |
-| zsh | `~/.zprofile` carries the author's JetBrains Toolbox, SDKMAN and Playdate lines — PATH entries and a `PLAYDATE_SDK_PATH` export, harmless where those are absent — and Antigravity's, which puts `~/.local/bin` ahead of Homebrew. Where a JDK 21 is installed, `JAVA_HOME` is it | `unset PLAYDATE_SDK_PATH` in `~/.zprofile.local`; `path=("$HOMEBREW_PREFIX/bin" $path)` there puts Homebrew back ahead; for another JDK, `export JAVA_HOME=…` and `path=("$JAVA_HOME/bin" $path)` there, since JDK 21's `bin` is ahead of `/usr/bin` |
-| rg | searches hidden files but never `.git`, and ignores case until the pattern holds a capital | `unset RIPGREP_CONFIG_PATH` in `~/.zshenv.local` |
-| kitty | the left Option key is Alt, so characters typed with Option take the right one (`macos_option_as_alt`) | `macos_option_as_alt no` |
-| kitty | selecting text copies it, replacing the clipboard (`copy_on_select`) | `copy_on_select no` |
-| kitty | cmd+q saves the session and the next launch restores it (`startup_session`); before the first save, kitty logs that it cannot read the file and opens its usual window | `startup_session none`<br>`map cmd+q quit` |
-| tmux | the prefix is C-Space, and C-b does nothing | `set -g prefix C-b`<br>`bind -N "Send the prefix key" C-b send-prefix`<br>`unbind C-Space` |
-| git | `git pull` rebases, and refuses while the working tree has local edits (`pull.rebase`) | `rebase = false` under `[pull]` |
-| git | git pages through delta, side by side, or through less without it | `pager = less` under `[core]` |
-| ssh | ssh asks Proton Pass's agent for every host (`IdentityAgent`) | `IdentityAgent SSH_AUTH_SOCK` under `Host *` |
-
-## Updating
-
-```sh
-cd ~/preen && git pull --rebase --no-autostash && ./bin/preen apply
-```
-
-A `link` row reads the clone, so it changes the moment the clone does.
-`preen apply` then deploys any new row and updates a `copy` row's file still
-holding a copy the setup shipped. One you or an application changed stays:
-`preen doctor` names it as yours, and one an update is due for as behind.
-
-A tool that edits `~/.zshrc` or `~/.gitconfig` edits the clone, because those
-are links, and the pull then refuses and changes nothing, whatever your own
-pull, rebase or merge settings say: that is what its flags are for.
-`git -C ~/preen status --short` names the file and `git -C ~/preen diff`
-shows the edit. Its lines belong in the `.local` overlay beside the live
-file; `git -C ~/preen checkout -- <file>` then clears it, and the pull goes
-through. Where `~/.config/zed/settings.json` is a link into the clone, as a
-bootstrap from before Zed's settings moved to `global_settings.json` left
-it, Zed writes the settings you change into the clone the same way, and has
-no `.local` overlay: keep those settings, clear the file, pull, then replace
-that link with a plain file holding them.
-
-`preen apply` deletes nothing. A row the pull removes, or points at another
-path, leaves the file it deployed: right after a pull,
-`git -C ~/preen diff ORIG_HEAD HEAD -- manifest.tsv` shows each as a `-`
-line whose target no `+` line names, and
-`git -C ~/preen log -p -- manifest.tsv` shows every such change, commit by
-commit, earlier pulls' included. Where the tool still reads that file, it
-can outrank the new row: a copy left in Sublime's `Packages/User` wins over
-`Packages/preen`, and a link left at `~/.config/zed/settings.json` takes
-Zed's writes into the clone. Delete a link into the clone. From a copied
-file, delete the setup's lines and keep yours; where none are yours, move
-its earliest backup back (§ Leaving), or delete the file where it has none.
-Keep `Package Control.sublime-settings` as it is: it lists the packages
-Package Control installed, and at Sublime's next start Package Control
-removes each it no longer lists.
-
-kitty's tab title does not follow the clone: bootstrap writes its line into
-`~/.config/kitty/tab-title.conf`, which wins over `kitty.conf`, so a change
-to it arrives with a re-run of `./bin/bootstrap`.
-
-## Leaving
-
-In this order:
-
-1. `~/preen/bin/preen doctor` lists under backups each file set aside beside
-   a deployed one.
-2. If you wired the statusline from the clone, delete the `statusLine` entry
-   from `~/.claude/settings.json`, and any backup of that file: it predates
-   what Claude Code wrote since.
-3. Remove the links: every `link` row of `manifest.tsv` points into `~/preen`.
-4. Move each backup back in its place. Among a file's stamped backups the
-   earliest is the original, what was there before anything here replaced
-   the file, whichever wrote it — bootstrap, `preen apply`, or a piece's
-   installer; the later ones are rewrites. One with no stamp,
-   `<file>.unpreened` or a numbered `<file>.unpreened.1`, comes from an older
-   `preen apply` or bootstrap, and its name says nothing about when: where a
-   file has one beside stamped ones, look inside before choosing.
-5. Remove each `copy` row's file that had no backup and that you did not have
-   before.
-6. Move `~/.gitconfig.local` to `~/.gitconfig` and `~/.ssh/config.local` to
-   `~/.ssh/config` where no backup went back: once the links are gone,
-   nothing reads them.
-7. Remove `~/.config/kitty/tab-title.conf`, which is the setup's, and the
-   clone.
-
-If you ran `macos/apply.sh`, `sh` the `macos.unpreened.*.sh` it named, to put
-back the settings it changed.
-
-Package Control, when it upgrades ayu, copies the setup's theme into Sublime
-Text's `Packages/User/Preferences.sublime-settings` as
-`"theme": "ayu-light.sublime-theme"`, which outlives the links: delete that
-line unless you set it yourself.
-
-Terminus, where it ran under the setup, generated
-`Packages/User/Terminus/Terminus.hidden-color-scheme` from the setup's
-palette, and `Packages/User/Terminus.hidden-color-scheme` from its
-background; both outlive the links. Delete them, and a Terminus you keep
-generates them again from its own settings when it next loads.
-
-## What is here
+Beside the pieces, the repository holds these; [`taste/`](taste/README.md)
+and [`bin/`](bin/README.md) each have a page of their own.
 
 ```
-prompt/            the Claude Code statusline; its own page and installer
-terminal/kitty/    the terminal; its own page and installer
-terminal/tmux/     tmux for SSH: true colour, mouse, a deep history, resurrect; its own page and installer
-terminal/bat/      one line: bat in the terminal's palette; the kitty and shell pieces copy it
-terminal/ncdu/     one line: ncdu in the terminal's palette; the shell piece copies it
-shell/             zsh, readline, hushlogin, atuin; its own page and installer
-editor/zed/        settings, a keymap on a JetBrains base, tasks; its own page and installer
-editor/sublime/    settings, Terminus to match, a vendored light scheme; its own page and installer
-git/               gitconfig, the global ignore, no identity — bootstrap asks for it; its own page and installer
-gh/                the CLI's own preferences; its own page and installer
+terminal/bat/      bat in the terminal's palette; the kitty and shell pieces copy it
+terminal/ncdu/     ncdu in the terminal's palette; the shell piece copies it
 ripgrep/           flags: hidden in, .git out, smart case, clickable matches; the shell piece copies it
-ssh/               an Include for your own config, then the agent line; no hosts. Not taken alone: an Include appended to your config falls under its last Host block, so this must open your config, and a piece only appends
-macos/             System Settings, run by hand: --dry-run lists each change, a run saves what it replaces; its own page
-bin/               bootstrap, preen — apply and doctor — and what the doctor runs
-lib/               install.sh, the half the installers share; shipped, the versions of each piece's files, which tell a copy the setup made from your edit
-manifest.tsv       the source's public rows: file → live path → link or copy → permissions, where set
-preferences.toml   each preference's value and why, and the rows that check it
+ssh/               an Include for your own config, then the agent line; no hosts, taken only with the whole setup
+bin/               bootstrap, and preen: apply and doctor
+lib/               install.sh, the installers' shared half; shipped, the list that tells the setup's copies from yours
+taste/             the author's preferences, as checks preen doctor --taste runs
+manifest.tsv       a row per deployed file: its live path, link or copy, permissions where set
 CHANGELOG.md       each release, and what its version number promises
 LICENSE            MIT
 ```
 
-## The model
-
-**One table drives install and verification.** `manifest.tsv` maps each file
-here to its live path and says whether the row is a symlink or a copy.
-`preen apply` installs from it; `preen doctor` checks against it. There is
-no second list, so "installed" and "checked" read the same row.
-
-**`link` or `copy`, decided by who writes the file.** Where an application only
-reads its config, the live file is a symlink and the repo file _is_ the config.
-Where it writes the file too — gh's and atuin's `config set`, kitty's theme
-picker, Zed's keymap editor and its task saves — the row is a copy: the write
-would follow a link into the clone, and the next `git pull` would refuse.
-
-**A piece stands alone through the tool's own include or lower layer.**
-kitty reads its includes last-wins, so `terminal/kitty/` lands under a
-directory of its own plus one `include` line in your `kitty.conf`, never an
-edit inside it; the files kitty reads by name from its config root are
-copied only where you have none of your own. zsh's include is `source` and
-readline's `$include`, so `shell/` lands the same way, one line appended to
-each of your files; tmux's is `source-file` and git's `[include]`, so
-`terminal/tmux/` and `git/` do too.
-Zed reads `global_settings.json` beneath your `settings.json`, and Sublime
-Text a package beneath your `Packages/User`, so `editor/zed/` and
-`editor/sublime/` land in that lower layer, and your keys win over it but
-for the exceptions Zed's page names; the keymap and tasks Zed reads by name
-alone are copied only where you have none of your own.
-A tool with one file and no include is written by an installer: the
-statusline's is copied and tailored, gh's keys are merged into yours
-through gh's own writer, `gh config set`, and bat's, ripgrep's and ncdu's
-are copied only where you have none of your own by the shell piece, bat's
-by kitty's too. Nothing a piece installs points back here.
-
-**Themes are a family, not one scheme.** Gruvbox Dark Hard where code runs —
-kitty, tmux, the statusline — and Gruvbox Light Hard where it is read — Zed,
-Sublime; Fira Code throughout, the Nerd Font build in the terminal.
-kitty's palette is its own included file, so a swap touches one file, and
-the statusline's and kitty's pages each carry a palette table.
-
 ## Make it yours
 
-Fork or clone, keep `manifest.tsv`'s format and the two verbs, `preen apply` and
-`preen doctor`, replace the rows with your own files, and delete every directory
-you do not want along with its rows. The checks in `bin/preen-doctor` probe the
-tools the author runs; read them and cut what is not yours. An installer piped
-from your fork still fetches its files from this release unless
+Fork or clone, keep `manifest.tsv`'s format and the two verbs, `preen apply`
+and `preen doctor`, and replace the rows and directories with your own; the
+doctor's checks probe the tools the author runs, so cut what is not yours.
+An installer piped from your fork fetches from this release unless
 `PREEN_SOURCE` names your fork's tree, as a URL or `file://`.
 
 ## Not here
 
-These files are generated from a private repository and published as they
-are, so no pull requests, please: open an issue instead.
-
-What cannot ship stays in that repository: the IntelliJ IDEA tree (it names an
-employer), the fonts, the Obsidian snippets, the real ssh hosts, the git
-identity, each machine's overlays and its half of `preferences.toml`, the
-personal scripts, the prose that argues every preference and the wiki around
-it, and the tools that generate this mirror. Nothing here reads those, and
-nothing breaks without them: `preen doctor --taste` says once that the prose
-is absent, and carries on.
+These files are generated from a private repository, so open an issue rather
+than a pull request; what cannot ship stays there, and nothing here needs it.
 
 MIT.

@@ -1,14 +1,10 @@
 # Readline's rc — the zsh line editor's taste in another library's words.
-# Read on this Mac by Apple's /bin/bash when invoked by name, by Homebrew's
-# gpg, and by mise's python REPL. NOT by Homebrew's python@3.14, whose readline
-# module links libedit — nor by `sqlite3`, which resolves to Apple's build for
-# the same reason (Homebrew's sqlite is keg-only and off PATH).
 #
 # No bindings: the emacs keymap is readline's shipped default, and the Meta
 # motions arrive as they do for zsh.
 #
 # `colored-stats` is deliberately absent — it paints completions from
-# LS_COLORS, which this machine leaves unset so eza's built-ins are not
+# LS_COLORS, which this setup leaves unset so eza's built-ins are not
 # overridden, and Apple's bash 3.2 readline predates the option entirely.
 set bell-style none
 set completion-ignore-case on

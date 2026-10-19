@@ -46,7 +46,6 @@ done
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MANIFEST="$REPO/manifest.tsv"
 FAILED=0
-[ -f "$REPO/bin/lib/pref-check.sh" ] && source "$REPO/bin/lib/pref-check.sh"
 
 ok()   { [ "$QUIET" = yes ] || printf '  \033[32mok\033[0m    %s\n' "$1"; }
 bad()  { printf '  \033[31mFAIL\033[0m  %s\n' "$1"; FAILED=1; }
@@ -89,6 +88,10 @@ SOURCE_REPO=no
 # is no test — an adopter's clone may grow a hosts/, a publish/ or a .githooks/
 # of its own, and this repo's taste would then be asserted on it.
 [ -f "$REPO/bin/lib/stage-mirror.sh" ] && SOURCE_REPO=yes
+
+# The preference checker: beside that list here, in taste/ in the mirror.
+if [ "$SOURCE_REPO" = yes ]; then TASTE_DIR="$REPO/bin/lib"; else TASTE_DIR="$REPO/taste"; fi
+[ -f "$TASTE_DIR/pref-check.sh" ] && source "$TASTE_DIR/pref-check.sh"
 
 # preen pull, which reconciles a copy row back into the repo, is named only
 # where it exists; a copy of this repo without it gets the manual remedy.
@@ -704,7 +707,9 @@ fi
 # other warn, so --quiet's cut is made there. Passed both ways: a PREEN_QUIET
 # inherited from the caller never quiets a full run.
 if declare -f run_pref_checks >/dev/null 2>&1 && { [ "$SOURCE_REPO" = yes ] || [ "$TASTE" = yes ]; }; then
-  PREEN_QUIET="$QUIET" run_pref_checks "$REPO" || FAILED=1
+  PREEN_QUIET="$QUIET" run_pref_checks "$TASTE_DIR" || FAILED=1
+elif [ "$SOURCE_REPO" = yes ] || [ "$TASTE" = yes ]; then
+  warn "preference checks skipped — ${TASTE_DIR#"$REPO"/}/pref-check.sh is missing"
 fi
 
 echo "--"

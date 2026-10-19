@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""usage: python3 bin/lib/pref-check.py [--spec-files | --validate-spec | --prove | --read TARGET KEY]
+"""usage: python3 pref-check.py [--spec-files | --validate-spec | --prove | --read TARGET KEY]
 
 Assert the preference spec against LIVE application config. With no argument,
 run every assertion.
@@ -15,7 +15,8 @@ The spec is one document in one or more files: the shipped preferences.toml,
 plus one file per machine in a checkout that has them (see spec_files).
 
 Emits one TAB-separated `status<TAB>message` line per assertion, for
-bin/lib/pref-check.sh to colour the same way preen doctor colours everything else.
+pref-check.sh beside it to colour the same way preen doctor colours everything
+else.
 Statuses: ok | fail | warn, plus `section` for a heading the wrapper prints bare.
 
 Reads the DEPLOYED path, never this repo's copy: a `copy`-mode entry's repo file
@@ -83,21 +84,16 @@ try:
 except ImportError:
     sys.exit("pref-check: needs python >= 3.11 (tomllib)")
 
-REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-# The mirror carries `public/`'s files at its top level, so anything shipped
-# from it sits one directory higher there. Every path this file derives from the
-# repo takes the first of the two that exists — never both, which for the spec
-# would merge one document with itself.
-LAYOUTS = ("public", "")
-
-
-def _shipped(*parts):
-    """A repo path that the mirror flattens: public/<parts> here, <parts> there."""
-    for top in LAYOUTS:
-        candidate = os.path.join(REPO, top, *parts) if top else os.path.join(REPO, *parts)
-        if os.path.exists(candidate):
-            return candidate
-    return os.path.join(REPO, LAYOUTS[0], *parts)
+HERE = os.path.dirname(os.path.abspath(__file__))
+# The layout, decided once, by the test preen doctor uses for the source repo:
+# the list of what ships, which never ships itself, beside this file in
+# bin/lib/, with what ships under public/. Without it this is the mirror, which
+# keeps this file in taste/ beside the spec, and public/'s other files at its
+# top level. Every path below derives from these.
+SOURCE = os.path.isfile(os.path.join(HERE, "stage-mirror.sh"))
+REPO = os.path.dirname(os.path.dirname(HERE)) if SOURCE else os.path.dirname(HERE)
+PUBLIC = os.path.join(REPO, "public") if SOURCE else REPO
+SHIPPED_SPEC = os.path.join(PUBLIC if SOURCE else HERE, "preferences.toml")
 
 
 def spec_files():
@@ -108,7 +104,7 @@ def spec_files():
     [surfaces]. A [pref.X] header therefore lives in the shipped half while the
     entries that assert it live beside the host-bound targets they name. Either
     kind may be absent — a mirror has no hosts/, and a machine could ship
-    nothing — so a half is read when it is there and not looked for twice.
+    nothing — so a half is read when it is there.
 
     PREF_SPEC names the files outright, `os.pathsep`-separated, and stops
     discovery. Without it the only way to test this checker is to mutate the
@@ -117,10 +113,7 @@ def spec_files():
     env = os.environ.get("PREF_SPEC")
     if env:
         return [p for p in env.split(os.pathsep) if p], False
-    found = []
-    shipped = _shipped("preferences.toml")
-    if os.path.isfile(shipped):
-        found.append(shipped)
+    found = [SHIPPED_SPEC] if os.path.isfile(SHIPPED_SPEC) else []
     found += sorted(glob.glob(os.path.join(REPO, "hosts", "*", "preferences.toml")))
     return found, True
 
@@ -140,10 +133,10 @@ def _prose_path():
     preferences.md is the authority; the cross-check below keeps the two halves
     from disagreeing.
 
-    A spec DISCOVERED in the source layout pairs with docs/preferences.md,
-    whatever its files are called. In the FLAT layout there is none and there
-    never can be: docs/ does not ship, so naming that path in the mirror's own
-    doctor output would be both a lie and a private path in a public place.
+    A spec DISCOVERED in the source pairs with docs/preferences.md, whatever
+    its files are called. In the mirror there is none and there never can be:
+    docs/ does not ship, so naming that path in the mirror's own doctor output
+    would be both a lie and a private path in a public place.
     A single PREF_SPEC file derives its pair from its own name, so a fixture can
     supply one; several derive nothing, having no single name to derive from.
     """
@@ -151,7 +144,7 @@ def _prose_path():
     if env:
         return env, ""
     if SPEC_DISCOVERED:
-        if SPEC_FILES and SPEC_FILES[0] == os.path.join(REPO, "preferences.toml"):
+        if not SOURCE:
             return "", "no prose half ships with the mirror"
         return os.path.join(REPO, "docs", "preferences.md"), ""
     if len(SPEC_FILES) == 1:
@@ -164,14 +157,14 @@ PROSE, PROSE_ABSENT = _prose_path()
 # prompt/ taken alone, so the palette table in public/prompt/README.md is the
 # only statement of the palette a stranger adopting the statusline alone can read.
 # That makes it a DECLARED mirror, and the cross-check below is what earns it
-# the word "declared". In the mirror it is prompt/README.md — the same two
-# layouts the spec has, so it is found the same way.
-PUBLISHED = os.environ.get("PREF_PUBLISHED") or _shipped("prompt", "README.md")
+# the word "declared". In the mirror it is prompt/README.md: under PUBLIC, as in
+# the source.
+PUBLISHED = os.environ.get("PREF_PUBLISHED") or os.path.join(PUBLIC, "prompt", "README.md")
 # The kitty drop-in's page carries the palette too, read off the theme file that
 # ships beside it — so it is held to that file as well as to the spec. Checked
 # only when the prompt page is the repo's own: a fixture must not drag it in.
-PUBLISHED_THEME_PAGE = None if os.environ.get("PREF_PUBLISHED") else _shipped("terminal", "kitty", "README.md")
-SHIPPED_THEME = _shipped("terminal", "kitty", "current-theme.conf")
+PUBLISHED_THEME_PAGE = None if os.environ.get("PREF_PUBLISHED") else os.path.join(PUBLIC, "terminal", "kitty", "README.md")
+SHIPPED_THEME = os.path.join(PUBLIC, "terminal", "kitty", "current-theme.conf")
 
 # Which tables several files may CONTRIBUTE to, by their path from the document
 # root. `*` is any name. Everything not listed is atomic: a whole [targets.N], a
@@ -2632,10 +2625,10 @@ def read_lsopen(path, key, **_opts):
     LaunchServices' ranking alone has nothing there to assert. `key` takes
     lshandler's forms. The bundle id arrives in the bundle's own case and is
     lowercased as the table stores it, so rows on both readers spell an app one
-    way. No app reads None. A key naming no type is a ReadError: an unknown
-    type id, or a tag malformed for its class (public.mime-type:conf). A
-    misspelt tag class is not caught — macOS makes a dynamic type for any tag
-    under it, which no app opens — so it reads None.
+    way. No app reads None. A key that names no content type is a ReadError:
+    an unknown type id, or a tag malformed for its class
+    (public.mime-type:conf). A misspelt tag class is not caught — macOS makes a
+    dynamic type for any tag under it, which no app opens — so it reads None.
     `path` is unused: it names the domain whose table the resolver consults
     first, as zsh_live's path is ~/.zshrc though zshcap starts a shell. One
     osascript per key, ~0.06 s, cached per process.
@@ -2647,7 +2640,7 @@ def read_lsopen(path, key, **_opts):
         _LSOPEN[key] = proc.stdout.strip().partition("\t")[2]
     answer = _LSOPEN[key]
     if answer == "?":
-        raise ReadError(f"{key} names no content type this Mac knows")
+        raise ReadError(f"{key} names no content type")
     return None if answer == "-" else answer.lower()
 
 
