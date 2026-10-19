@@ -12,7 +12,7 @@ config.yml, gh first writes its own commented defaults. A key left blank here
 is not set, and hosts.yml is never written.
 
   from a clone:    ./gh/install.sh [flags]
-  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.1/gh/install.sh | bash
+  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.2/gh/install.sh | bash
 
 There is nothing to ask, so nothing is asked.
 
@@ -58,7 +58,7 @@ done
 # the mirror exactly as the config is — same trust, same mechanism — and
 # checked for its marker line before it is sourced.
 PIECE="gh"   # this piece's path under the mirror root
-PREEN_REF=v1.0.1   # this installer's release: the tag it fetches from, and the helper's marker
+PREEN_REF=v1.0.2   # this installer's release: the tag it fetches from, and the helper's marker
 # A slash ending an override would double the one joined after it, and leave
 # a root taken from it a level too deep.
 trim_slash() { printf '%s' "$1" | sed 's#/*$##'; }   # trim_slash <url> → it with any trailing slash dropped

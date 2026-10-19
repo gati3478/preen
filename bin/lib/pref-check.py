@@ -3583,7 +3583,11 @@ _KITTY_WORD = re.compile(r"\bkitt(?:y|en)\b", re.I)
 _DIGIT = re.compile(r"\d")
 # Homebrew's prefix: the linked keg is `opt/<formula>`, a symlink into the
 # Cellar whose target's basename IS the version — read off the filesystem, no
-# brew call. PREF_BREW_PREFIX lets the suite build a fixture Cellar.
+# brew call — plus `_<n>` when Homebrew rebuilt the formula without a new
+# release (git 2.56.0_1). The revision moves no option surface, so it is
+# dropped, as Homebrew's own PkgVersion splits it off. PREF_BREW_PREFIX lets
+# the suite build a fixture Cellar.
+_BREW_REVISION = re.compile(r"_\d+\Z")
 BREW_PREFIX = os.environ.get("PREF_BREW_PREFIX") or os.environ.get("HOMEBREW_PREFIX") or (
     "/opt/homebrew" if os.path.isdir("/opt/homebrew") else "/usr/local")
 ASAR_GLOB = os.environ.get("PREF_ASAR_GLOB") or OBSIDIAN_ASAR_GLOB
@@ -3706,9 +3710,10 @@ def _read_brew_version(name, tool):
         raise ReadError(f"{opt} points outside the Cellar, at {keg}")
     if not os.path.isdir(keg):
         raise ReadError(f"{opt} points at {keg}, which is not a keg directory")
-    version = os.path.basename(keg)
+    keg_name = os.path.basename(keg)
+    version = _BREW_REVISION.sub("", keg_name)
     if not _DIGIT.search(version):
-        raise ReadError(f"{opt} points at {version!r}, which carries no digit — not a version")
+        raise ReadError(f"{opt} points at {keg_name!r}, whose version {version!r} carries no digit")
     return version
 
 

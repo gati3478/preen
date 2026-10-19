@@ -5,6 +5,15 @@ from it. A major release moves where or how a file lands, or drops a flag; a
 minor one adds a piece, a row, a flag or a check; a patch changes values,
 fixes and docs.
 
+## v1.0.2
+
+The front page says what each piece writes beyond its wiring, what an
+update keeps, and what the setup changes, in fewer words; the
+exceptions stay on each piece's page. `shell/` copies atuin's config as
+atuin 18.24's template, with the same three settings set. `preen doctor`'s
+`[surfaces]` version check reads a Homebrew revision, git `2.56.0_1`, as
+the release it rebuilds rather than as a new version.
+
 ## v1.0.1
 
 The front page gives every piece past the statusline its install line

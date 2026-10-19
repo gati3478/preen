@@ -16,11 +16,11 @@ whether to take `starship.toml` too and what to call your account; without
 it, the dry run says how to get it, and the install stops before any write.
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.1/prompt/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.2/prompt/install.sh | bash -s -- --dry-run
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.1/prompt/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.2/prompt/install.sh | bash
 ```
 
 Every other piece installs the same way, one line each:
@@ -32,35 +32,35 @@ Every other piece installs the same way, one line each:
 writes nothing; each page says what its piece changes.
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.1/terminal/kitty/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.2/terminal/kitty/install.sh | bash
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.1/shell/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.2/shell/install.sh | bash
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.1/terminal/tmux/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.2/terminal/tmux/install.sh | bash
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.1/git/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.2/git/install.sh | bash
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.1/editor/zed/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.2/editor/zed/install.sh | bash
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.1/editor/sublime/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.2/editor/sublime/install.sh | bash
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.1/gh/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.2/gh/install.sh | bash
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.1/macos/apply.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.2/macos/apply.sh | bash
 ```
 
 Each prints its plan and makes every refusal before its first write. Every
@@ -85,22 +85,17 @@ in:
   have none of your own; Sublime Text's copies its files into a package of their own,
   `Packages/preen`, which Sublime reads under your `Packages/User`.
 
-The shell's and kitty's also copy bat's config, and the shell's ripgrep's
-and ncdu's, only where you have none of your own — ripgrep's not while
-`RIPGREP_CONFIG_PATH` names another file. gh's copies nothing: it sets each of
-its keys that differs through `gh config set`, after backing up your
-`~/.config/gh/config.yml`. `macos/apply.sh` sets each System Settings value
-it names that differs on your Mac, with `defaults`, after saving a script
-that puts the old values back. `--help` is each script's manual.
+Some files are copied only where you have none of your own, among them
+bat's, ripgrep's and ncdu's configs; each page names its piece's. gh's sets
+each of its keys that
+differs through `gh config set`, and `macos/apply.sh` each System Settings
+value that differs through `defaults`, both after saving what they replace.
+`--help` is each script's manual.
 
 To update a piece, run its line from this page again: each names the newest
-release. A line you saved earlier fetches the release it names. A copy the
-setup shipped is replaced with no backup; a file you edited is backed up
-first, or, where the piece copies only where you have none of your own, left
-alone. Each page names where a line of yours belongs instead, but the
-statusline's: cship and starship each read one file, so carry an edit of
-yours over from the backup. gh's and `macos/apply.sh` set each value that
-differs again, after their backups.
+release, and a line you saved fetches the release it names. A copy the setup
+shipped is replaced; a file you changed is backed up first or left alone,
+and each page says what becomes of a change of yours.
 
 ## Take the setup
 
@@ -170,18 +165,19 @@ they are the author's:
 
 ## What changes when you take the setup
 
-Some of the author's choices are felt at once. The zsh and rg rows hold for
-the shell piece taken alone too; [its page](shell/README.md#what-changes)
-names the exceptions. [tmux's page](terminal/tmux/README.md#what-changes),
+Some of the author's choices are felt at once: the table lists them,
+[the shell's page](shell/README.md#what-changes) names where the zsh and rg
+rows differ for that piece alone, and
+[tmux's](terminal/tmux/README.md#what-changes),
 [git's](git/README.md#what-changes), [gh's](gh/README.md#what-changes),
 [Zed's](editor/zed/README.md#what-changes) and
-[Sublime Text's](editor/sublime/README.md#what-changes) list the rest of
-their choices; they hold for the setup too. An undo line goes in an overlay,
-where it wins over the shipped file: the one its row names, or else
-its tool's — `~/.zshrc.local`, `~/.config/kitty/local.conf`,
+[Sublime Text's](editor/sublime/README.md#what-changes) pages list the rest
+of their choices, which the setup makes too, gh's only where you had no
+plain `config.yml` of your own. An undo goes in an overlay
+where its tool has one, and wins there over the shipped file: the one its
+row names, or else `~/.zshrc.local`, `~/.config/kitty/local.conf`,
 `~/.config/tmux/local.conf`, `~/.gitconfig.local`, `~/.ssh/config.local`,
-`~/.config/zed/settings.json` or Sublime's `Packages/User`. gh has none: an
-undo from its page makes `config.yml` yours, and `preen apply` leaves it.
+`~/.config/zed/settings.json` or Sublime's `Packages/User`.
 
 | Tool | What you notice | Undo |
 | --- | --- | --- |
