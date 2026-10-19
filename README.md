@@ -16,91 +16,51 @@ whether to take `starship.toml` too and what to call your account; without
 it, the dry run says how to get it, and the install stops before any write.
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/prompt/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.1/prompt/install.sh | bash -s -- --dry-run
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/prompt/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.1/prompt/install.sh | bash
 ```
 
-The terminal, [`terminal/kitty/`](terminal/kitty/README.md), the same way:
+Every other piece installs the same way, one line each:
+[the terminal](terminal/kitty/README.md), [the shell](shell/README.md),
+[tmux](terminal/tmux/README.md), [git](git/README.md),
+[Zed](editor/zed/README.md), [Sublime Text](editor/sublime/README.md),
+[gh](gh/README.md) and [System Settings](macos/README.md).
+`bash -s -- --dry-run` in place of the final `bash` prints the plan and
+writes nothing; each page says what its piece changes.
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/terminal/kitty/install.sh | bash -s -- --dry-run
-```
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/terminal/kitty/install.sh | bash
-```
-
-The shell, [`shell/`](shell/README.md), the same way:
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/shell/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.1/terminal/kitty/install.sh | bash
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/shell/install.sh | bash
-```
-
-The multiplexer, [`terminal/tmux/`](terminal/tmux/README.md), the same way:
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/terminal/tmux/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.1/shell/install.sh | bash
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/terminal/tmux/install.sh | bash
-```
-
-The git config, [`git/`](git/README.md), the same way:
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/git/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.1/terminal/tmux/install.sh | bash
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/git/install.sh | bash
-```
-
-Zed's config, [`editor/zed/`](editor/zed/README.md), the same way:
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/editor/zed/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.1/git/install.sh | bash
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/editor/zed/install.sh | bash
-```
-
-Sublime Text's, [`editor/sublime/`](editor/sublime/README.md), the same way:
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/editor/sublime/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.1/editor/zed/install.sh | bash
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/editor/sublime/install.sh | bash
-```
-
-gh's config, [`gh/`](gh/README.md), the same way:
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/gh/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.1/editor/sublime/install.sh | bash
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/gh/install.sh | bash
-```
-
-System Settings, [`macos/`](macos/README.md), the same way:
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/macos/apply.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.1/gh/install.sh | bash
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/macos/apply.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.1/macos/apply.sh | bash
 ```
 
 Each prints its plan and makes every refusal before its first write. Every
@@ -260,9 +220,10 @@ pull, rebase or merge settings say: that is what its flags are for.
 `git -C ~/preen status --short` names the file and `git -C ~/preen diff`
 shows the edit. Its lines belong in the `.local` overlay beside the live
 file; `git -C ~/preen checkout -- <file>` then clears it, and the pull goes
-through. Zed, where `~/.config/zed/settings.json` is a link into the clone,
-writes the settings you change into the clone the same way, and has no
-`.local` overlay: keep those settings, clear the file, pull, then replace
+through. Where `~/.config/zed/settings.json` is a link into the clone, as a
+bootstrap from before Zed's settings moved to `global_settings.json` left
+it, Zed writes the settings you change into the clone the same way, and has
+no `.local` overlay: keep those settings, clear the file, pull, then replace
 that link with a plain file holding them.
 
 `preen apply` deletes nothing. A row the pull removes, or points at another

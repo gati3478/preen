@@ -5,6 +5,15 @@ from it. A major release moves where or how a file lands, or drops a flag; a
 minor one adds a piece, a row, a flag or a check; a patch changes values,
 fixes and docs.
 
+## v1.0.1
+
+The front page gives every piece past the statusline its install line
+alone, each linked to its page, which keeps the piece's dry run; what taking
+the setup changes, and the map of the repository, come a screen sooner.
+Under Updating, the note on a linked Zed `settings.json` says what made the
+link: a bootstrap from before Zed's settings moved to
+`global_settings.json`.
+
 ## v1.0.0
 
 The first release. Each piece installs with one command, makes every refusal

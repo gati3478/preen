@@ -46,13 +46,13 @@ prints without cship too, or with one below the floor, beside the two ways
 to install it.
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/prompt/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.1/prompt/install.sh | bash -s -- --dry-run
 ```
 
 Then the install, one line, no clone:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/prompt/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.1/prompt/install.sh | bash
 ```
 
 Or from a clone of this repository, `./prompt/install.sh`. The script does
@@ -99,7 +99,7 @@ answers one; with both answered nothing is asked, and with no terminal the
 defaults are taken — `starship.toml` left alone, the account module hidden:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.0/prompt/install.sh | bash -s -- --with-starship --account-label personal
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.0.1/prompt/install.sh | bash -s -- --with-starship --account-label personal
 ./prompt/install.sh --no-starship --no-account
 ```
 
