@@ -294,9 +294,10 @@ class HostUnreachable(ReadSkip):
 def _tool_run(argv, **kw):
     """Run a reader's own tool, or ReadSkip if the machine does not have it.
 
-    Four readers hand the question to the application that owns the format —
-    `git config`, `gh config`, `ssh -G`, `defaults read` — which is what makes
-    them agree with the application rather than with a parser someone wrote.
+    The readers that call this hand the question to the application that owns
+    the format — `git config`, `gh config`, `ssh -G`, `defaults`,
+    LaunchServices' resolver through `osascript` — which is what makes them
+    agree with the application rather than with a parser someone wrote.
     The cost is the binary, and a machine without it is not a machine with
     drift: an absent tool is a measurement that could not be taken, the same
     ReadSkip the defaults oracle raises when kitty is not installed. Without
@@ -304,7 +305,8 @@ def _tool_run(argv, **kw):
 
     A tool named in PREEN_BARE_STUBS is absent too: macOS's /usr/bin stub with
     no Command Line Tools behind it, which raises an install dialog when run.
-    pref-check.sh finds those by a file test.
+    pref-check.sh finds those by a file test. A tool that outlives its
+    `timeout` is a ReadError: its row fails and the run goes on.
     """
     if os.path.basename(argv[0]) in os.environ.get("PREEN_BARE_STUBS", "").split():
         raise ReadSkip(f"{argv[0]} needs the Command Line Tools here (xcode-select --install)")
@@ -312,6 +314,8 @@ def _tool_run(argv, **kw):
         return subprocess.run(argv, capture_output=True, text=True, **kw)
     except OSError as exc:
         raise ReadSkip(f"{argv[0]} is not installed") from exc
+    except subprocess.TimeoutExpired as exc:
+        raise ReadError(f"{argv[0]} did not answer in {exc.timeout:g}s") from exc
 
 
 # ── readers ───────────────────────────────────────────────────────────────────
@@ -2599,10 +2603,59 @@ def read_lshandler(path, key, **_opts):
     return None
 
 
+_LSOPEN = {}
+# JXA has no $.UTType (nothing to ObjC.import), so the class is fetched by name.
+_LSOPEN_PROBE = r"""
+ObjC.import("AppKit");
+function run(argv) {
+  var UT = $.NSClassFromString("UTType"), out = [];
+  argv.forEach(function (key) {
+    var i = key.indexOf(":");
+    // undefined, not null: null bridges to NSNull, which throws.
+    var t = i >= 0 ? UT.typeWithTagTagClassConformingToType(key.slice(i + 1), key.slice(0, i), undefined) : UT.typeWithIdentifier(key);
+    if (t.isNil()) { out.push(key + "\t?"); return; }
+    var u = $.NSWorkspace.sharedWorkspace.URLForApplicationToOpenContentType(t);
+    if (u.isNil()) { out.push(key + "\t-"); return; }
+    out.push(key + "\t" + ObjC.unwrap($.NSBundle.bundleWithURL(u).bundleIdentifier));
+  });
+  return out.join("\n");
+}
+"""
+
+
+def read_lsopen(path, key, **_opts):
+    """Which app opens a content type: LaunchServices' own resolver.
+
+    NSWorkspace's URLForApplicationToOpenContentType answers the type's default
+    app. lshandler's table cannot: setDefaultApplication writes no entry when
+    the app already ranks first, so a type that opens in an app by
+    LaunchServices' ranking alone has nothing there to assert. `key` takes
+    lshandler's forms. The bundle id arrives in the bundle's own case and is
+    lowercased as the table stores it, so rows on both readers spell an app one
+    way. No app reads None. A key naming no type is a ReadError: an unknown
+    type id, or a tag malformed for its class (public.mime-type:conf). A
+    misspelt tag class is not caught — macOS makes a dynamic type for any tag
+    under it, which no app opens — so it reads None.
+    `path` is unused: it names the domain whose table the resolver consults
+    first, as zsh_live's path is ~/.zshrc though zshcap starts a shell. One
+    osascript per key, ~0.06 s, cached per process.
+    """
+    if key not in _LSOPEN:
+        proc = _tool_run(["osascript", "-l", "JavaScript", "-", key], input=_LSOPEN_PROBE, timeout=10)
+        if proc.returncode != 0:
+            raise ReadError(f"osascript rc={proc.returncode}: {proc.stderr.strip()[:200]}")
+        _LSOPEN[key] = proc.stdout.strip().partition("\t")[2]
+    answer = _LSOPEN[key]
+    if answer == "?":
+        raise ReadError(f"{key} names no content type this Mac knows")
+    return None if answer == "-" else answer.lower()
+
+
 READERS = {
     "jsonc": read_jsonc,
     "defaults": read_defaults,
     "lshandler": read_lshandler,
+    "lsopen": read_lsopen,
     "toml": read_toml,
     "kitty": read_kitty,
     "kittyblocks": read_kitty_blocks,
@@ -3988,12 +4041,13 @@ def emit(status, message, kind=""):
         _SINK.append((status, message, kind))
 
 
-# Formats whose "path" is not a file this checker could empty: two run the
-# application's own resolver over a live process, a `defaults` or `lshandler`
-# path is a preferences DOMAIN, and `tmuxcopy` watches what tmux does, which
-# nothing in its config decides. A row on one of them is out of --prove's
-# scope, and said so rather than dropped.
-LIVE_FORMATS = ("zshcap", "obsidiancap", "defaults", "lshandler", "tmuxcopy")
+# Formats whose "path" is not a file this checker could empty: `zshcap`,
+# `obsidiancap` and `lsopen` ask a live resolver (zsh's, Obsidian's,
+# LaunchServices'), a `defaults` or `lshandler` path is a preferences DOMAIN,
+# and `tmuxcopy` watches what tmux does, which nothing in its config decides.
+# A row on one of them is out of --prove's scope, and said so rather than
+# dropped.
+LIVE_FORMATS = ("zshcap", "obsidiancap", "defaults", "lshandler", "lsopen", "tmuxcopy")
 
 # The emptiest document each reader still accepts, MEASURED by handing one to
 # every reader with a key out of the real spec: each answered "absent" rather
@@ -4359,7 +4413,7 @@ def emit_assertions(spec, targets, came_from, read, quiet=False):
                 if path is None:
                     emit("warn", f"{label}: {t['path']} not on {host} — skipped")
                     continue
-            elif (not host and t["format"] not in ("defaults", "lshandler")   # a defaults domain is not a file
+            elif (not host and t["format"] not in ("defaults", "lshandler", "lsopen")   # a defaults domain is not a file
                   and not any(os.path.exists(p) for p in [path] + layer_paths(t))):
                 emit("warn", f"{label}: {t['path']} not deployed{', nor any layer under it' if t.get('over') else ''} — skipped")
                 continue

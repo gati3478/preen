@@ -16,11 +16,11 @@ whether to take `starship.toml` too and what to call your account; without
 it, the dry run says how to get it, and the install stops before any write.
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.2.0/prompt/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/prompt/install.sh | bash -s -- --dry-run
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.2.0/prompt/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/prompt/install.sh | bash
 ```
 
 Every other piece installs the same way, one line each:
@@ -32,35 +32,35 @@ Every other piece installs the same way, one line each:
 writes nothing; each page says what its piece changes.
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.2.0/terminal/kitty/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/terminal/kitty/install.sh | bash
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.2.0/shell/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/shell/install.sh | bash
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.2.0/terminal/tmux/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/terminal/tmux/install.sh | bash
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.2.0/git/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/git/install.sh | bash
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.2.0/editor/zed/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/editor/zed/install.sh | bash
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.2.0/editor/sublime/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/editor/sublime/install.sh | bash
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.2.0/gh/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/gh/install.sh | bash
 ```
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.2.0/macos/apply.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v1.3.0/macos/apply.sh | bash
 ```
 
 Each prints its plan and makes every refusal before its first write. Every

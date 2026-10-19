@@ -24,8 +24,9 @@ run_pref_checks() {
     warn "preference checks skipped — python3 needs the Command Line Tools here (xcode-select --install)"
     return 0
   fi
-  # Of the tools the checker runs (git, gh, ssh, defaults), git alone is such a
-  # stub. Named in PREEN_BARE_STUBS, its rows skip rather than run it.
+  # Of the tools the readers start through _tool_run (git, gh, ssh, defaults,
+  # osascript), git alone is such a stub. Named in PREEN_BARE_STUBS, its rows
+  # skip rather than run it.
   local stubs=""
   if declare -f bare_shim >/dev/null 2>&1 && bare_shim git; then
     stubs="git"

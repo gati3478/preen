@@ -5,6 +5,14 @@ from it. A major release moves where or how a file lands, or drops a flag; a
 minor one adds a piece, a row, a flag or a check; a patch changes values,
 fixes and docs.
 
+## v1.3.0
+
+`preen doctor` gains a reader, `lsopen`, that asks LaunchServices for a
+content type's default app, whether a handler-table entry pins the type or
+LaunchServices ranks the app first. A reader whose tool hangs past its
+timeout fails its own row, where it crashed the preference checks and lost
+every row.
+
 ## v1.2.0
 
 A file clicked in kitty opens in Sublime Text, at its line when the link
