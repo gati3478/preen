@@ -530,6 +530,19 @@ want_all_contain = "+calt"
 key = "font_options"
 want_absent = "no_calt"
 
+# Zed's `calt` is on unless turned off; stated and asserted, so a default
+# flip cannot drop the ligatures unnoticed.
+[pref.ligatures.targets.zed]
+key = "buffer_font_features.calt"
+want = "true"
+
+# With no terminal.font_features at all, Zed's terminal turns `calt` off,
+# unlike its editor.
+[pref.ligatures.targets.zed_terminal]
+target = "zed"
+key = "terminal.font_features.calt"
+want = "true"
+
 # ── Whitespace rendering (NOT whitespace policy — that is .editorconfig's) ─────
 
 [pref.whitespace_rendering]
@@ -545,7 +558,7 @@ key = "draw_white_space"
 want = "leading,trailing,isolated,all_tabs"
 
 [pref.figure_features]
-value = "zero (slashed), onum (oldstyle)"
+value = "zero (dotted where the face draws one, else slashed), onum (oldstyle)"
 why = "0 and O should never be a guess; oldstyle figures sit better in running text."
 
 [pref.figure_features.targets.kitty]
@@ -567,10 +580,26 @@ state = "unreachable"
 recheck = "manual"
 evidence = "font_options takes the ligature toggles and ss01-ss10 only, not arbitrary OpenType tags"
 
+# On macOS Zed hands each tag in buffer_font_features to CoreText as written,
+# so Fira Code's own `zero` and `onum` apply.
 [pref.figure_features.targets.zed]
-state = "unreachable"
-recheck = "manual"
-evidence = "buffer_font_features exposes named features, but zero/onum are not wired to Fira Code's tables here — re-check when Zed's font_features docs change"
+key = "buffer_font_features.zero"
+want = "true"
+
+[pref.figure_features.targets.zed_onum]
+target = "zed"
+key = "buffer_font_features.onum"
+want = "true"
+
+[pref.figure_features.targets.zed_terminal]
+target = "zed"
+key = "terminal.font_features.zero"
+want = "true"
+
+[pref.figure_features.targets.zed_terminal_onum]
+target = "zed"
+key = "terminal.font_features.onum"
+want = "true"
 
 # ── Knowing which construct the caret is inside ────────────────────────────────
 

@@ -15,7 +15,7 @@ and if you have no kitty.conf yet it becomes that line alone. Copies, never
 symlinks, and nothing here points back at this repo afterwards.
 
   from a clone:    ./terminal/kitty/install.sh [flags]
-  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.0.0/terminal/kitty/install.sh | bash
+  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.1.0/terminal/kitty/install.sh | bash
 
 There is nothing to ask, so nothing is asked.
 
@@ -75,7 +75,7 @@ done
 # otherwise fetched from the mirror exactly as the configs are — same trust,
 # same mechanism — and checked for its marker line before it is sourced.
 PIECE="terminal/kitty"   # this piece's path under the mirror root
-PREEN_REF=v2.0.0   # this installer's release: the tag it fetches from, and the helper's marker
+PREEN_REF=v2.1.0   # this installer's release: the tag it fetches from, and the helper's marker
 # A slash ending an override would double the one joined after it, and leave
 # a root taken from it a level too deep.
 trim_slash() { printf '%s' "$1" | sed 's#/*$##'; }   # trim_slash <url> → it with any trailing slash dropped
@@ -210,7 +210,7 @@ done
 if [ -n "$font_file" ]; then
   echo "$FONT_NAME at $(short "$(dirname "$font_file")")"
 else
-  echo "$FONT_NAME not found in $(short "$HOME/Library/Fonts") or /Library/Fonts — without it kitty falls back to its own monospace face, and the ligatures, the slashed zero and the oldstyle figures this config asks for are not there (brew install --cask $FONT_CASK)"
+  echo "$FONT_NAME not found in $(short "$HOME/Library/Fonts") or /Library/Fonts — without it kitty falls back to its own monospace face, and the ligatures, the dotted zero and the oldstyle figures this config asks for are not there (brew install --cask $FONT_CASK)"
 fi
 
 bat_bin="$(find_tool bat || true)"

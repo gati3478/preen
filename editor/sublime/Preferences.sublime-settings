@@ -5,7 +5,6 @@
 {
   "font_face": "Fira Code",
   "font_size": 16,
-  "font_options": ["dlig"],
   "rulers": [80, 100, 120],
   // Matches how Zed and IDEA render whitespace, as closely as Sublime allows.
   // Zed shows "boundary" (indentation, trailing, tabs, runs of 2+ spaces) and

@@ -1,7 +1,7 @@
 # kitty · Gruvbox Dark Hard
 
 A [kitty](https://sw.kovidgoyal.net/kitty/) configuration in Gruvbox Dark Hard
-on FiraCode Nerd Font Mono, with ligatures, a slashed zero and oldstyle
+on FiraCode Nerd Font Mono, with ligatures, a dotted zero and oldstyle
 figures turned on in the font itself. The caret is a thick underline that the
 shell is told not to fight; selecting text copies it; fifty thousand lines of
 scrollback page through [bat](https://github.com/sharkdp/bat); the audio bell
@@ -72,13 +72,13 @@ No clone needed. To print the plan and stop, writing nothing — `bash -s --`
 hands the flag to the script:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.0.0/terminal/kitty/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.1.0/terminal/kitty/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.0.0/terminal/kitty/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.1.0/terminal/kitty/install.sh | bash
 ```
 
 Or from a clone of this repository, `./terminal/kitty/install.sh`, with

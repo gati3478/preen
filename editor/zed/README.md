@@ -1,8 +1,9 @@
 # Zed · Gruvbox Light Hard
 
 The author's [Zed](https://zed.dev). Gruvbox Light Hard, a theme Zed ships,
-on Fira Code with ligatures; the caret an underline, in the editor and its
-terminal, as in the author's kitty; rulers at 80, 100 and 120; whitespace
+on Fira Code with ligatures, a dotted zero and oldstyle figures, and the
+caret an underline, in the editor and its terminal, as in the author's kitty;
+rulers at 80, 100 and 120; whitespace
 shown at line edges and beside other spaces; the JetBrains keymap, so IDEA's
 keys carry over; a file saved when focus leaves it, and formatted when saved;
 inlay hints, inline diagnostics and sticky scroll; the project panel on the
@@ -97,13 +98,13 @@ No clone needed. To print the plan and stop, writing nothing — `bash -s --`
 hands the flag to the script:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.0.0/editor/zed/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.1.0/editor/zed/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.0.0/editor/zed/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.1.0/editor/zed/install.sh | bash
 ```
 
 Or from a clone of this repository, `./editor/zed/install.sh`, with
@@ -194,14 +195,17 @@ remove it to have them back.
 The choices felt at once, each with the lines that set it back, for your
 `~/.config/zed/settings.json`. Each undo value is Zed 1.23.2's own default,
 read from the default settings its binary carries; none was run in Zed here.
-The one exception is `buffer_font_features`: Zed's default names no
-feature, and yours merges with ours, so the undo turns off `dlig`, which is off
-unless asked for; `calt`, which ours also names, is on unless turned off.
+The exceptions are the font features: Zed's defaults name none, and yours
+merge with ours key by key, so an undo turns a feature off rather than
+removing it. `zero` and `onum` are off unless asked for; `calt` is on in the
+editor unless turned off, and off in the terminal while
+`terminal.font_features` is unset.
 
 | What you notice | Undo |
 | --- | --- |
 | the theme is Gruvbox Light Hard, whatever the system's appearance | `"theme": { "mode": "system", "light": "One Light", "dark": "One Dark" }` |
-| the editor's text is Fira Code at 16, its discretionary ligatures on | `"buffer_font_family": ".ZedMono",`<br>`"buffer_font_size": 15,`<br>`"buffer_font_features": { "dlig": false }` |
+| the editor's text is Fira Code at 16, with a dotted zero and oldstyle figures | `"buffer_font_family": ".ZedMono",`<br>`"buffer_font_size": 15,`<br>`"buffer_font_features": { "zero": false, "onum": false }` |
+| the terminal's text has ligatures, a dotted zero and oldstyle figures, as the editor's does | `"terminal": { "font_features": { "calt": false, "zero": false, "onum": false } }` |
 | the caret is an underline, in the editor and in the terminal | `"cursor_shape": "bar",`<br>`"terminal": { "cursor_shape": "block" }` |
 | rulers stand at columns 80, 100 and 120 | `"wrap_guides": []` |
 | whitespace shows as `·` and `→` at line edges, beside other spaces and at tabs, not only in a selection | `"show_whitespaces": "selection",`<br>`"whitespace_map": { "space": "•" }` |

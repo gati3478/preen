@@ -5,6 +5,23 @@ from it. A major release moves where or how a file lands, or drops a flag; a
 minor one adds a piece, a row, a flag or a check; a patch changes values,
 fixes and docs.
 
+## v2.1.0
+
+Zed's editor text takes Fira Code's dotted zero and oldstyle figures, as
+kitty's does: `buffer_font_features` names `zero` and `onum` beside `calt`,
+and `taste/` checks all three in Zed, where it had recorded the figures as
+out of reach. Fira Code's own zero is slashed and its `zero` feature dots
+it, so the pages say dotted where they said slashed; kitty, which sets the
+feature, has drawn a dotted zero all along.
+
+Zed's terminal takes the same three. With no `terminal.font_features`, Zed
+turns its terminal's ligatures off, so it drew none, with a slashed zero and
+lining figures; `taste/` checks all three there too.
+
+`dlig` leaves Zed's and Sublime Text's settings: Fira Code has no such
+feature, so neither drew a discretionary ligature, and their pages no longer
+claim one.
+
 ## v2.0.0
 
 The author's preferences, as checks, move to `taste/`, with a page of their

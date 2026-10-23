@@ -1,7 +1,7 @@
 # Sublime Text · Gruvbox Light Hard
 
-The author's Sublime Text. The text is Fira Code at 16, its discretionary
-ligatures on, coloured by a Gruvbox Light Hard scheme vendored here, inside
+The author's Sublime Text. The text is Fira Code at 16 with its
+ligatures, coloured by a Gruvbox Light Hard scheme vendored here, inside
 [ayu](https://github.com/dempfi/ayu)'s light theme; rulers stand at columns
 80, 100 and 120; white space is drawn at the start and end of a line, on a
 line holding nothing else, and at every tab; the caret's line is highlighted,
@@ -79,13 +79,13 @@ No clone needed. To print the plan and stop, writing nothing — `bash -s --`
 hands the flag to the script:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.0.0/editor/sublime/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.1.0/editor/sublime/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.0.0/editor/sublime/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.1.0/editor/sublime/install.sh | bash
 ```
 
 Or from a clone of this repository, `./editor/sublime/install.sh`, with
@@ -190,7 +190,7 @@ default: there the undo names the editor's font.
 
 | What you notice | Undo |
 | --- | --- |
-| the text is Fira Code at 16, its discretionary ligatures on (`dlig`) | `"font_face": "Menlo",`<br>`"font_size": 12,`<br>`"font_options": [],`<br>— on Linux `"Monospace"` and `10` |
+| the text is Fira Code at 16 | `"font_face": "Menlo",`<br>`"font_size": 12,`<br>— on Linux `"Monospace"` and `10` |
 | the text is coloured by Gruvbox Light Hard | `"color_scheme": "Mariana.sublime-color-scheme",` |
 | the window around it is ayu's light theme, once ayu is installed | `"theme": "auto",` |
 | rulers at columns 80, 100 and 120 | `"rulers": [],` |

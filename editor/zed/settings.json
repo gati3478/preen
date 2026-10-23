@@ -16,10 +16,10 @@
   "buffer_font_size": 16.0,
   "buffer_font_family": "Fira Code",
   "buffer_font_fallbacks": ["FiraCode Nerd Font Mono"],
-  // `calt` is the feature that actually drives Fira Code's ligatures; `dlig`
-  // only adds the discretionary extras. calt defaults to on, but it is stated
-  // here so a future default flip cannot silently kill every ligature.
-  "buffer_font_features": { "calt": true, "dlig": true },
+  // The features kitty sets. calt: the ligatures, stated though on by
+  // default, so a default flip cannot silently kill them. zero: a dotted
+  // zero. onum: oldstyle figures.
+  "buffer_font_features": { "calt": true, "zero": true, "onum": true },
   "buffer_line_height": "comfortable",
   "markdown_preview": {
     "font_family": "FiraCode Nerd Font",
@@ -173,11 +173,13 @@
   // ── keymap: JetBrains, so IDEA muscle memory transfers unchanged ──
   "base_keymap": "JetBrains",
 
-  // ── terminal: same face and caret as kitty ──
+  // ── terminal: same face, features and caret as kitty ──
   "terminal": {
     "copy_on_select": true,
     "cursor_shape": "underline",
     "font_family": "FiraCode Nerd Font Mono",
+    // Stated whole: unset, Zed's terminal turns calt off.
+    "font_features": { "calt": true, "zero": true, "onum": true },
     "font_size": 16,
     "line_height": "comfortable"
   },
