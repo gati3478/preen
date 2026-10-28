@@ -16,7 +16,7 @@ alone. tmux reads both files when both are there, ~/.tmux.conf first. Copies,
 never symlinks, and nothing here points back at this repo afterwards.
 
   from a clone:    ./terminal/tmux/install.sh [flags]
-  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.1/terminal/tmux/install.sh | bash
+  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.2/terminal/tmux/install.sh | bash
 
 There is nothing to ask, so nothing is asked.
 
@@ -70,7 +70,7 @@ done
 # otherwise fetched from the mirror exactly as the config is — same trust,
 # same mechanism — and checked for its marker line before it is sourced.
 PIECE="terminal/tmux"   # this piece's path under the mirror root
-PREEN_REF=v2.2.1   # this installer's release: the tag it fetches from, and the helper's marker
+PREEN_REF=v2.2.2   # this installer's release: the tag it fetches from, and the helper's marker
 # A slash ending an override would double the one joined after it, and leave
 # a root taken from it a level too deep.
 trim_slash() { printf '%s' "$1" | sed 's#/*$##'; }   # trim_slash <url> → it with any trailing slash dropped

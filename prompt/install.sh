@@ -11,7 +11,7 @@ alone. Copies, never symlinks, and nothing here points back at this repo
 afterwards.
 
   from a clone:    ./prompt/install.sh [flags]
-  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.1/prompt/install.sh | bash -s -- [flags]
+  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.2/prompt/install.sh | bash -s -- [flags]
 
 It asks two questions when it has a terminal to ask on and a cship it can
 use. The first two flag pairs below answer one each; with both answered it
@@ -90,7 +90,7 @@ done
 # otherwise fetched from the mirror exactly as the configs are — same trust,
 # same mechanism — and checked for its marker line before it is sourced.
 PIECE="prompt"   # this piece's path under the mirror root
-PREEN_REF=v2.2.1   # this installer's release: the tag it fetches from, and the helper's marker
+PREEN_REF=v2.2.2   # this installer's release: the tag it fetches from, and the helper's marker
 # A slash ending an override would double the one joined after it, and leave
 # a root taken from it a level too deep.
 trim_slash() { printf '%s' "$1" | sed 's#/*$##'; }   # trim_slash <url> → it with any trailing slash dropped

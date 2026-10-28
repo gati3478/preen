@@ -5,6 +5,12 @@ from it. A major release moves where or how a file lands, or drops a flag; a
 minor one adds a piece, a row, a flag or a check; a patch changes values,
 fixes and docs.
 
+## v2.2.2
+
+`gh/install.sh --help` no longer calls its list of refusals all of them: it
+left out one, a shared library from another release. It now says "among
+them", as the gh page does, and as v2.2.1's notes said every `--help` did.
+
 ## v2.2.1
 
 The piece pages' lists of refusals say "among them", as each installer's
