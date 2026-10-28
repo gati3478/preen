@@ -16,16 +16,15 @@
 # tty of an ancestor process, then $COLUMNS (Claude Code sets it; see
 # claude-code#22115), then `width` below, then 80. In a real terminal the
 # first two always answer, so `width` only matters where neither exists —
-# Windows, the web/desktop apps. Measured 02-09-2026: a 133-column window
-# rendered 130 cells with `width = 129` untouched.
+# Windows, the web/desktop apps.
 
 "$schema" = 'https://cship.dev/config-schema.json'
 
 [cship]
 width = 129
 # Columns Claude Code keeps around the statusline (gutter + right margin):
-# cship's default is 3, Claude Code 2.1.258 keeps 4, and with 3 every
-# right-aligned line loses its last cell to an ellipsis (screenshot, 02-09-2026).
+# cship's default is 3, Claude Code keeps 4, and with 3 every right-aligned
+# line loses its last cell to an ellipsis.
 # Re-measure after a Claude Code update: a trailing "…" on line 2 or 3 means
 # this is short again.
 width_offset = 4

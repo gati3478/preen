@@ -8,8 +8,8 @@ line holding nothing else, and at every tab; the caret's line is highlighted,
 and spelling is checked. [Terminus](https://github.com/randy3k/Terminus), the
 terminal inside Sublime, runs in Gruvbox Dark Hard and FiraCode Nerd Font
 Mono, the Nerd Font build, for a prompt's icons. Take it alone: the installer
-fetches the installer library the pieces share from this repository, the way
-it fetches the files, and nothing it installs points back here.
+fetches the installer library the pieces share from this repository, and
+nothing it installs points back here.
 
 ## What it takes over
 
@@ -27,13 +27,11 @@ you keep your own settings, is never read or written by the run — though
 Package Control copies this package's `theme` there when it upgrades ayu
 (Your overrides, below). It installs no package: the settings need two, ayu
 for the theme and Terminus for its two files, and the run names each, found
-or not. `Packages/preen` holds no Package Control
-list, because Package Control would take the names such a list holds off your
-own list in `Packages/User`, and delete those packages once the list was gone
-(read in Package Control 4.2.8: `update_installed_packages` in
-`package_manager.py`, `remove_orphaned_packages` in `package_cleanup.py`).
+or not. `Packages/preen` holds no Package Control list, because Package
+Control would take the names such a list holds off your own list in
+`Packages/User`, and delete those packages once the list was gone.
 
-How Sublime reads the package, measured on Sublime Text 4215:
+How Sublime reads the package:
 
 - **`Packages/User` wins.** Sublime reads a settings file from every package
   that has one — its own `Default` first, then the zipped packages in
@@ -54,9 +52,8 @@ How Sublime reads the package, measured on Sublime Text 4215:
 
 **Required**
 
-- **Sublime Text 4**, measured with build 4215 on macOS. On Linux the data
-  directory is `~/.config/sublime-text`, as Package Control's
-  `package_control/sys_path.py` documents it; no Linux Sublime was measured.
+- **Sublime Text 4**, measured with build 4215 on macOS; no Linux Sublime
+  was measured.
 
 **Optional**
 
@@ -75,22 +72,20 @@ and installs neither.
 
 ## Install
 
-No clone needed. To print the plan and stop, writing nothing — `bash -s --`
-hands the flag to the script:
+The plan, writing nothing:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.1.0/editor/sublime/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.0/editor/sublime/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.1.0/editor/sublime/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.0/editor/sublime/install.sh | bash
 ```
 
-Or from a clone of this repository, `./editor/sublime/install.sh`, with
-`--dry-run` for the plan alone. It asks nothing — there is nothing to ask. The
-plan on a Mac where Sublime Text has run, which on Linux names
+Or from a clone, `./editor/sublime/install.sh`. It asks nothing. The plan on
+a Mac where Sublime Text has run, which on Linux names
 `~/.config/sublime-text` instead:
 
 ```
@@ -112,33 +107,24 @@ It
    runs none of them, nor Sublime;
 2. creates `Packages/preen`, and each directory missing above it, saying each
    as it is made;
-3. copies the four files into it — copies, never symlinks — each backed up
-   beside itself as `<name>.unpreened.<timestamp>` if a different one was
-   there, left untouched if identical, and replaced with no backup if it is
-   an earlier copy this setup shipped. A symlink in the place of one is
-   moved aside, link and all, and never written through.
+3. copies the four files into it, a different file there, or a symlink,
+   first moved aside as `<name>.unpreened.<timestamp>`, an earlier copy this
+   setup shipped replaced without a backup.
 
-A re-run with nothing changed rewrites nothing and takes no backup: each file
-comes back `unchanged`.
+A re-run with nothing changed rewrites nothing and takes no backup.
 
-**Refusals**, all of them before the first write, so a stopped run has changed
-nothing: a symlink, dangling or not, at any directory between `~` and
-`Packages/preen` — `~/Library`, `Application Support`, `Sublime Text`,
-`Packages` or `preen` on macOS; `~/.config`, `sublime-text`, `Packages` or
-`preen` on Linux — since the files would land in whatever it points at, which
-something else manages; one of those that is not a directory, or that cannot
-be written into or created; on Linux, `XDG_CONFIG_HOME` naming a directory
-other than `~/.config`, since whether Sublime then keeps its data under it is
-not known; a system other than macOS or Linux; a source file that is missing,
-empty, or not the file it claims to be. A symlinked `Packages/User` is not
-refused: nothing is written there.
+Every refusal comes before the first write, and a dry run makes each one: a
+symlinked directory between `~` and `Packages/preen`, since the files would
+land wherever it points, or one the run cannot write or create; on Linux, an
+`XDG_CONFIG_HOME` other than `~/.config`; a system other than macOS or
+Linux. A symlinked `Packages/User` is not refused: nothing is written there.
 
 ## Updating
 
 Run the install line from this page again: it names the newest release.
-From a clone, `git pull`, then
-`./editor/sublime/install.sh`. An earlier copy this setup shipped comes back
-`updated`, with no backup; one you edited is backed up beside itself first.
+From a clone, `git pull`, then `./editor/sublime/install.sh`. An earlier copy
+this setup shipped comes back `updated`, with no backup; one you edited is
+backed up beside itself first.
 A key of yours belongs in `Packages/User`, which no run reads or writes
 (Your overrides).
 
@@ -152,41 +138,35 @@ yours beside it as a backup.
 
 **A File Icon**, if you use it, reads `file_icon_theme` from
 `Packages/User/Preferences.sublime-settings` alone, by that path, and opens
-its theme picker at every start until the key is there (A File Icon 4.0.0,
-`plugin.py` calling `setup_file_icon_theme` in `core/icon_theme.py`). A
-package under `Packages/User` cannot answer it, so this one does not set it:
-pick a theme once, and A File Icon writes the key there itself.
+its theme picker at every start until the key is there. A package under
+`Packages/User` cannot answer it, so this one does not set it: pick a theme
+once, and A File Icon writes the key there itself.
 
 **Package Control copies this package's theme into `Packages/User`.**
 Before it upgrades ayu — on its own, at a start, by default — while the
 theme in force is one of ayu's, Package Control 4.2.8 sets `theme` to
 Sublime's default, and after the upgrade sets back the value it read; both
-land in `Packages/User/Preferences.sublime-settings`
-(`backup_and_reset_settings` and `restore_settings` in
-`package_control/package_disabler.py`). So after
-your first ayu upgrade that file holds `"theme": "ayu-light.sublime-theme"`
-(measured, with ayu 6.2.1). It changes nothing while it matches this
-package's theme; it keeps that theme when a later copy of this package
-names another, and when this package is gone. An upgrade cut short by
-quitting Sublime leaves `"theme": "auto"` there instead, and so does
-disabling or removing ayu through Package Control.
+land in `Packages/User/Preferences.sublime-settings`. So after your first
+ayu upgrade that file holds `"theme": "ayu-light.sublime-theme"`. It changes
+nothing while it matches this package's theme; it keeps that theme when a
+later copy of this package names another, and when this package is gone. An
+upgrade cut short by quitting Sublime leaves `"theme": "auto"` there instead,
+and so does disabling or removing ayu through Package Control.
 
 **Terminus's palette** is Terminus's own output. With `"theme": "user"`,
 which this package sets, Terminus generates
 `Packages/User/Terminus/Terminus.hidden-color-scheme` from the
 `user_theme_colors` this package sets, and generates it again when either
-changes (Terminus 0.3.37, `terminus/theme.py`). That file in `Packages/User`
-is Terminus's write, not the installer's.
+changes. That file in `Packages/User` is Terminus's write, not the
+installer's.
 
 ## What changes
 
 The choices felt at once, each with the line that undoes it in your
 `Packages/User/Preferences.sublime-settings`, or in the file the row names.
-Each undo lands in `Packages/User`, which wins (measured, above), and is
-Sublime's or Terminus's own default for the key, read from its package —
-Sublime's Default package at build 4215, its macOS file for the macOS
-values — except in `Terminus View.sublime-settings`, where Terminus sets no
-default: there the undo names the editor's font.
+Each undo is the key's own default, Sublime's at build 4215 or Terminus's,
+except in `Terminus View.sublime-settings`, where Terminus sets no default:
+there the undo names the editor's font.
 
 | What you notice | Undo |
 | --- | --- |
@@ -211,8 +191,7 @@ your `Packages/User/Preferences.sublime-settings`.
 2. Delete `Packages/User/Terminus/Terminus.hidden-color-scheme`, which still
    holds this palette, and `Packages/User/Terminus.hidden-color-scheme`,
    generated from its background. A Terminus you keep generates them again
-   from its own settings when it next loads and finds them missing
-   (`terminus/theme.py`, `plugin_loaded`).
+   from its own settings when it next loads and finds them missing.
 3. Delete `"theme": "ayu-light.sublime-theme"` from
    `Packages/User/Preferences.sublime-settings`, unless you set it yourself:
    Package Control copied it there from this package (Your overrides,
@@ -224,12 +203,8 @@ your `Packages/User/Preferences.sublime-settings`.
    default.
 
 A backup the run took sits in `Packages/preen/` beside its copy, as
-`<name>.unpreened.<timestamp>`: the copy with your edits, as a later run
-found it. Keep it before you delete that directory, if you want those
-edits.
-
-Where the whole repository's setup linked these files into your clone, which
-already carries this config, the installer says so and writes nothing.
+`<name>.unpreened.<timestamp>`, your edits included: keep it before you
+delete that directory, if you want them.
 
 ## License
 

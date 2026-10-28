@@ -10,8 +10,7 @@ where each command ran and whether it worked, and zsh-syntax-highlighting
 and zsh-autosuggestions colour and complete the line as you type. Readline —
 bash, and the other programs built on it — gets the same quiet, case-blind
 completion. Take it alone: the installer fetches the installer library the
-pieces share from this repository, the way it fetches the configs, and
-nothing it installs points back here.
+pieces share from this repository, and nothing it installs points back here.
 
 ## What it takes over
 
@@ -27,11 +26,11 @@ where installers append: a `mise activate` added there puts back the prompt
 hook this zshrc removes.
 
 `EDITOR` and `VISUAL` are not among them: both come from the zshenv line,
-which zsh reads before any zshrc. To keep your own editor, set both in
-`~/.zshenv.local`, read at the end of the zshenv, so that every zsh sees
-them: `export EDITOR=… VISUAL=…`. Set in your zshrc, they reach interactive
-shells only, not `zsh -c` or a script. An `EDITOR` set alone leaves `VISUAL`
-ours, and ctrl+x ctrl+e, and git on a terminal, read `VISUAL` first.
+which zsh reads before any zshrc. To keep your own editor, set both,
+`export EDITOR=… VISUAL=…`, in `~/.zshenv.local`, read at the end of the
+zshenv: every zsh sees them there, where from a zshrc only an interactive
+one would. An `EDITOR` set alone leaves `VISUAL` ours, which ctrl+x ctrl+e,
+and git on a terminal, read first.
 
 - **oh-my-zsh** keeps working: nothing errors, `compinit` runs twice and
   leaves two dump files, a zsh-syntax-highlighting or zsh-autosuggestions
@@ -47,14 +46,10 @@ ours, and ctrl+x ctrl+e, and git on a terminal, read `VISUAL` first.
   says `already there`.
 - **`ZDOTDIR`**: zsh is asked where it reads its zshenv and its zshrc, and
   each line goes to the file it names; the run says which, and why when it is
-  not `~/.zshenv` or `~/.zshrc`. A `ZDOTDIR` your `~/.zshenv` sets moves the
-  zshrc: zsh then reads `$ZDOTDIR/.zshrc` and never `~/.zshrc`. One the
-  system zshenv sets — `/etc/zshenv`, or `/etc/zsh/zshenv` on Debian and
-  Ubuntu — moves both. zsh is asked as a non-login, non-interactive shell,
-  so it does not see a `ZDOTDIR` set only in a login file or only for an
-  interactive shell; and `ZDOTDIR` is unset for the question, so one
-  exported before zsh starts is not followed either. Where yours is one of
-  those, the lines belong in the files it names, by hand.
+  not `~/.zshenv` or `~/.zshrc`. zsh is asked as a non-login, non-interactive
+  shell with `ZDOTDIR` unset, so a `ZDOTDIR` exported before zsh starts, or
+  set only in a login file or for an interactive shell, is not followed:
+  there the lines belong in the files it names, by hand.
 
 `~/.zprofile` is not taken. The shipped one is the author's login PATH — the
 JetBrains Toolbox, SDKMAN, Playdate and Antigravity installer lines, JDK 21
@@ -94,21 +89,19 @@ The installer names each it did not find, and the release fzf and eza need.
 
 ## Install
 
-No clone needed. To print the plan and stop, writing nothing — `bash -s --`
-hands the flag to the script:
+The plan, writing nothing:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.1.0/shell/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.0/shell/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.1.0/shell/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.0/shell/install.sh | bash
 ```
 
-Or from a clone of this repository, `./shell/install.sh`, with `--dry-run`
-for the plan alone. It asks nothing — there is nothing to ask. The plan for an
+Or from a clone, `./shell/install.sh`. It asks nothing. The plan for an
 empty home, on a Mac:
 
 ```
@@ -149,64 +142,44 @@ it once `~/.inputrc` exists, so a new `~/.inputrc` includes it first:
 It
 
 1. asks zsh where it reads its zshenv and zshrc, and looks for the two
-   plugins and each tool above, saying what it did not find. None of them
+   plugins and each tool above, saying what it did not find; none of them
    stops it, and it runs none of them;
-2. copies `zshrc`, `zshenv` and `inputrc` into `~/.config/zsh/preen/` —
-   copies, never symlinks, each backed up beside itself as
-   `<file>.unpreened.<timestamp>` if a different one was there, left
-   untouched if identical, and replaced with no backup if it is an earlier
-   copy this setup shipped;
-3. copies, each only where nothing is there or an earlier copy this setup
-   shipped is, `~/.hushlogin`, which is empty
-   — its whole effect is to exist — and these configs: atuin's,
-   `~/.config/atuin/config.toml`; bat's, `~/.config/bat/config`, from
-   [`terminal/bat/`](../terminal/bat/), whose theme is the terminal's
-   palette; ncdu's, `~/.config/ncdu/config`, from
-   [`terminal/ncdu/`](../terminal/ncdu/); and ripgrep's,
-   `~/.config/ripgrep/config`, from [`ripgrep/`](../ripgrep/), which the
-   zshenv points rg at unless `RIPGREP_CONFIG_PATH` already names a file —
-   so not while it names another one, and the plan says so. The run
-   says `updated` of an earlier copy it replaced; any other file already at
-   one of them stays as it is: the run says `unchanged` when it holds this
-   config's bytes, and `left alone` when it is anything else, a symlink
-   included;
+2. copies `zshrc`, `zshenv` and `inputrc` into `~/.config/zsh/preen/`, a
+   different file there first backed up beside itself as
+   `<file>.unpreened.<timestamp>`, an earlier copy this setup shipped
+   replaced without one;
+3. copies `~/.hushlogin`, empty, and the configs of atuin, bat (from
+   [`terminal/bat/`](../terminal/bat/)), ncdu (from
+   [`terminal/ncdu/`](../terminal/ncdu/)) and ripgrep (from
+   [`ripgrep/`](../ripgrep/)), each only where nothing is there or an
+   earlier copy this setup shipped is; anything else stays, said `unchanged`
+   or `left alone`. The zshenv points rg at its config unless
+   `RIPGREP_CONFIG_PATH` already names another file, and the plan says so;
 4. appends `source ~/.config/zsh/preen/zshenv` to the zshenv zsh reads,
    `$include ~/.config/zsh/preen/inputrc` to `~/.inputrc` and
    `source ~/.config/zsh/preen/zshrc` to the zshrc zsh reads, each once.
    Nothing else in your files changes, but a last line with no newline gets
-   one, and a file you have not got becomes that line. The appends are last,
-   so a run that stops earlier never leaves a line pointing at files that are
-   not there.
+   one. The appends are last, so a run that stops earlier leaves no line
+   pointing at nothing.
 
-A re-run with nothing changed rewrites nothing and takes no backup: the
-copies come back `unchanged` and each line `already there`.
+A re-run with nothing changed rewrites nothing and takes no backup.
 
-**Refusals**, all of them before the first write, so a stopped run has changed
-nothing: `~/.config`, `~/.config/zsh` or `~/.config/zsh/preen` is a symlink,
-dangling or not, or `~/.config/atuin`, `~/.config/bat`, `~/.config/ripgrep`
-or `~/.config/ncdu` is one when its config would be copied into it, or a
-directory between `~` and the zshenv or zshrc zsh reads is — the files would
-land in whatever it points at, which something else manages; the zshrc, the
-zshenv or `~/.inputrc` is a symlink without its line —
-the append would land in its target, so the line belongs there instead; one
-of them lacks its line and cannot be read and appended to; `~/.config` is not a
-directory, is not writable, or cannot be created, or another directory the run
-writes into cannot be written; a zsh file would carry the appended line into
-its last command — its last line ends in a backslash, or the last line that
-is not blank or a comment ends in `&&`, `||` or a pipe — or ends inside a
-here-document, or zsh cannot parse it; zsh names a `ZDOTDIR` that is not an
-absolute path, or no answer at all; a source file that is missing, empty, or
-not the file it claims to be.
+Every refusal comes before the first write, and a dry run makes each one. A
+symlinked directory the files go in is refused, since they would land
+wherever it points, and so is a symlinked zshrc, zshenv or `~/.inputrc`
+without its line. So is a zsh file the appended line would join to its last
+command — a last line ending in a backslash, a last command ending in `&&`,
+`||` or a pipe, an open here-document — or one zsh cannot parse.
 
 ## Updating
 
 Run the install line from this page again: it names the newest release.
-From a clone, `git pull`, then
-`./shell/install.sh`. An earlier copy this setup shipped comes back
-`updated`, with no backup. One you edited is not: a copy in
-`~/.config/zsh/preen/` is backed up beside itself first, and `~/.hushlogin`
-or a tool's config is left alone. A line of yours belongs below an appended
-line, or in `~/.zshrc.local` or `~/.zshenv.local` (Your overrides).
+From a clone, `git pull`, then `./shell/install.sh`. An earlier copy this
+setup shipped comes back `updated`, with no backup. One you edited is not: a
+copy in `~/.config/zsh/preen/` is backed up beside itself first, and
+`~/.hushlogin` or a tool's config is left alone. A line of yours belongs
+below an appended line, or in `~/.zshrc.local` or `~/.zshenv.local` (Your
+overrides).
 
 ## Your overrides
 
@@ -254,19 +227,12 @@ place.
    file holds what this setup shipped, so it can go unless you had it before
    the first run: the shipped `~/.hushlogin` is empty, so an empty one of
    your own reads `unchanged` too. `left alone` means the run did not write
-   it. Run with `--dry-run`, the installer says why, as in
-   `left alone (yours)`; a file it calls `an earlier copy` is this setup's,
-   and its `copied` means nothing is there. Where the run said `created` of
-   a directory above one of them, that directory goes with its file. The
-   kitty piece copies bat's config too, so keep it while you keep that
-   piece.
+   it. A `--dry-run` says which is which now: `an earlier copy` is this
+   setup's. A directory the run `created` goes with its file; the kitty
+   piece copies bat's config too, so keep it while you keep that piece.
 4. `~/.zsh_history` holds what this config recorded, and
    `~/.zcompdump-<zsh version>` beside it is the completion cache this zshrc
    writes. A history file of yours by another name is where it was.
-
-Took the whole repository through `bin/bootstrap`? Then your `~/.zshrc`,
-`~/.zshenv` and `~/.inputrc` are links into your clone, which already carries
-this config: the installer says so and writes nothing.
 
 ## License
 

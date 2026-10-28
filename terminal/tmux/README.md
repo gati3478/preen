@@ -13,8 +13,8 @@ every ten minutes and restore them when tmux starts. The saves are files on
 disk, and they hold what every pane shows, its scrollback included;
 [Leaving](#leaving) says where. tmux-thumbs copies a URL, path or hash on
 screen by its hint letters, C-Space then Space. Take it alone: the installer
-fetches the installer library the pieces share from this repository, the way
-it fetches the config, and nothing it installs points back here.
+fetches the installer library the pieces share from this repository, and
+nothing it installs points back here.
 
 ## What it takes over
 
@@ -39,9 +39,8 @@ it and wins.
 
 - **tpm of your own.** A line of your files that starts a tpm is named by the
   run and left alone. This config points tpm at `~/.config/tmux/plugins` and
-  starts the one there. Measured with your tpm started from `~/.tmux/plugins`
-  above the line: C-Space I installed your plugins and this config's alike
-  into `~/.config/tmux/plugins`.
+  starts the one there: with yours started above the line, C-Space I
+  installs your plugins and this config's alike into that directory.
 - **A symlinked tmux config** — stow's layout, a dotfiles repository's — is
   refused, with the line to add in the file it points at; once that file
   holds it, a re-run says `already there`.
@@ -77,30 +76,26 @@ it and wins.
   selection to. Without it — over ssh to Linux, say — the selection still
   reaches tmux's paste buffer, which C-Space ] pastes, and tmux still sends it
   to the terminal as a clipboard write (`set-clipboard on`), which the
-  terminal may keep or ignore. Measured with no pbcopy and a client attached:
-  `y` left the selection in tmux's buffer and wrote an OSC 52 sequence
-  carrying it to the client, and said nothing.
+  terminal may keep or ignore.
 
 The installer names each it did not find.
 
 ## Install
 
-No clone needed. To print the plan and stop, writing nothing — `bash -s --`
-hands the flag to the script:
+The plan, writing nothing:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.1.0/terminal/tmux/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.0/terminal/tmux/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.1.0/terminal/tmux/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.0/terminal/tmux/install.sh | bash
 ```
 
-Or from a clone of this repository, `./terminal/tmux/install.sh`, with
-`--dry-run` for the plan alone. It asks nothing — there is nothing to ask. The
-plan for an empty home:
+Or from a clone, `./terminal/tmux/install.sh`. It asks nothing. The plan for
+an empty home:
 
 ```
 == will touch ==
@@ -119,45 +114,32 @@ It
 1. looks for tmux, tpm and pbcopy, and names any line of your tmux files that
    starts a tpm of its own. None of them stops it; it runs tmux only to ask
    its version and to parse files, never to start a session;
-2. copies `tmux.conf` into `~/.config/tmux/preen/` — a copy, never a symlink,
-   backed up beside itself as `tmux.conf.unpreened.<timestamp>` if a
-   different one was there, left untouched if identical, and replaced with
-   no backup if it is an earlier copy this setup shipped;
+2. copies `tmux.conf` into `~/.config/tmux/preen/`, a different file there
+   first backed up beside itself as `tmux.conf.unpreened.<timestamp>`, an
+   earlier copy this setup shipped replaced without one;
 3. appends `source-file -q ~/.config/tmux/preen/tmux.conf` to the file named
    above, once. Nothing else in your file changes, but a last line with no
-   newline gets one, and with neither file there it becomes that line. The
-   append is last, so a run that stops earlier never leaves the line pointing
-   at a file that is not there.
+   newline gets one. The append is last, so a run that stops earlier leaves
+   no line pointing at nothing.
 
-A re-run with nothing changed rewrites nothing and takes no backup: the copy
-comes back `unchanged` and the line `already there`.
+A re-run with nothing changed rewrites nothing and takes no backup.
 
-**Refusals**, all of them before the first write, so a stopped run has changed
-nothing: `~/.config`, `~/.config/tmux` or `~/.config/tmux/preen` is a symlink,
-dangling or not — the copy would land in whatever it points at, which
-something else manages; the file the line goes in is a symlink without the
-line — the append would land in its target, so the line belongs there
-instead; that file lacks the line and cannot be read and appended to;
-`~/.config` is not a directory, is not writable, or cannot be created, or
-`~/.config/tmux` or `preen/` cannot be written into; that file would not read
-the appended line as a command of its own — its last line ends in a
-backslash, comment or not, which carries the next line into it, or, where
-tmux is installed, tmux cannot parse the file, or reads the appended line as
-part of a command above it, as an open quote's text; `XDG_CONFIG_HOME` names
-a directory other than `~/.config`; a source file that is missing, empty, or
-not the file it claims to be.
-
-A parse error anywhere in a tmux file voids the whole file, so a file tmux
-cannot parse is refused as it stands: tmux reads none of it now. tmux's parse
-runs nothing in the file — `source-file -n`, on a server of the run's own,
-started with no config and stopped when the run ends.
+Every refusal comes before the first write, and a dry run makes each one. A
+symlinked `~/.config`, `~/.config/tmux` or `preen/` is refused, since the
+copy would land wherever it points, and so is a symlinked tmux config
+without the line. So is a file that would not read the appended line as a
+command of its own: one whose last line ends in a backslash, or, where tmux
+is installed, one tmux cannot parse, which it reads none of now, or would
+read the line into a command above, as an open quote's text. That parse
+runs nothing in the file: `source-file -n`, on a server of the run's own,
+stopped when the run ends.
 
 ## Updating
 
 Run the install line from this page again: it names the newest release.
-From a clone, `git pull`, then
-`./terminal/tmux/install.sh`. An earlier copy this setup shipped comes back
-`updated`, with no backup; one you edited is backed up beside itself first.
+From a clone, `git pull`, then `./terminal/tmux/install.sh`. An earlier copy
+this setup shipped comes back `updated`, with no backup; one you edited is
+backed up beside itself first.
 A line of yours belongs in `~/.config/tmux/local.conf`, or below the
 appended line (Your overrides).
 
@@ -173,13 +155,11 @@ plugins: a plugin reads its options when tpm starts it. Measured with
 the appended line, the option was set and thumbs had already taken C-Space
 Space. A `set -g @plugin` line goes in your own file instead, above or below
 the appended line: tpm reads the plugin list from that file and the files it
-sources, and `local.conf` is one file further down — measured, a `@plugin`
-line there was not in tpm's list.
+sources, and `local.conf` is one file further down.
 
-Never put the appended line itself in `local.conf`: the copy reads
-`local.conf`, so the two would read each other. Measured, tmux 3.7c stopped at
-`too many nested files`, while tmux 3.4's server spun at full CPU, its memory
-growing, and had not started fifteen seconds later.
+Never put the appended line itself in `local.conf`: the two would read each
+other, and tmux 3.7c stops at `too many nested files` while tmux 3.4's
+server spins at full CPU instead of starting.
 
 ## What changes
 
@@ -231,13 +211,8 @@ explicitly, so C-Space r — which reads `~/.tmux.conf` and
    whole directory if no tmux-resurrect of your own saves to it.
 
 A backup the run took sits in `~/.config/tmux/preen/` beside the copy, as
-`tmux.conf.unpreened.<timestamp>`: the copy as it was before a later run
-replaced it, your edits to it included. Keep it before you delete that
-directory, if you want those edits.
-
-Took the whole repository through `bin/bootstrap`? Then
-`~/.config/tmux/tmux.conf` is a link into your clone, which already carries
-this config: the installer says so and writes nothing.
+`tmux.conf.unpreened.<timestamp>`, your edits included: keep it before you
+delete that directory, if you want them.
 
 ## License
 

@@ -24,6 +24,8 @@ your email
 ([the statusline's page](../prompt/README.md#the-account-module-and-your-email)).
 System Settings are in no row: to take them, run
 `./macos/apply.sh` from the clone, as [its page](../macos/README.md) says.
+The kitty, shell, tmux, git, Zed and Sublime Text installers, run after
+bootstrap, find their files linked into the clone, say so and write nothing.
 
 ## What it finds in the way
 
@@ -63,10 +65,9 @@ when asked (python 3.11 or newer), because they are the author's:
 
 ## The model
 
-**One table drives install and verification.** `manifest.tsv` maps files in
-this repository to their live paths and says whether each row is a symlink
-or a copy. `preen apply` installs from it; `preen doctor` checks against it.
-There is no second list, so "installed" and "checked" read the same row.
+**One table drives install and verification.** `preen apply` installs from
+`manifest.tsv` and `preen doctor` checks against it, so "installed" and
+"checked" read the same row.
 
 **`link` or `copy`, decided by who writes the file.** Where an application only
 reads its config, the live file is a symlink and the repository's file _is_
@@ -127,16 +128,14 @@ file; `git -C ~/preen checkout -- <file>` then clears it, and the pull goes
 through.
 
 `preen apply` deletes nothing. A row the pull removes, or points at another
-path, leaves the file it deployed: right after a pull,
+path, leaves the file it deployed, which can outrank the new row, or, as a
+link, take a tool's writes into the clone. Right after a pull,
 `git -C ~/preen diff ORIG_HEAD HEAD -- manifest.tsv` shows each as a `-`
 line whose target no `+` line names, and
-`git -C ~/preen log -p -- manifest.tsv` shows every such change, commit by
-commit, earlier pulls' included. Where the tool still reads that file, it
-can outrank the new row; where the tool writes it, a link left there takes
-those writes into the clone. Delete a link into the clone. From a copied
-file, delete the setup's lines and keep yours; where none are yours, move its
-earliest backup back ([Leaving](#leaving)), or delete the file where it has
-none.
+`git -C ~/preen log -p -- manifest.tsv` every earlier one. Delete a link
+into the clone. From a copied file, delete the setup's lines and keep yours;
+where none are yours, move its earliest backup back ([Leaving](#leaving)),
+or delete the file where it has none.
 
 kitty's tab title does not follow the clone: bootstrap writes its line into
 `~/.config/kitty/tab-title.conf`, which wins over `kitty.conf`, so a change

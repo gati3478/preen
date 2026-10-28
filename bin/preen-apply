@@ -14,7 +14,8 @@ Deploys every manifest.tsv row: a link row as a symlink into this repo, a copy
 row as a copy; a differing plain file it replaces is backed up beside itself.
 Outside the source repo, a copy row's file holding an earlier copy this setup
 shipped is updated, and one holding anything else is yours and kept.
-Every refusal comes before the first write. Never runs as root.
+Every refusal comes before the first write. Never runs as root, or from a
+linked git worktree.
 
   --dry-run   refuse as a real run would, then print each line the real run
               would, worded "would …"; write nothing
@@ -72,6 +73,17 @@ yours() { # yours <src> <file> → true outside the source repo when <file> is a
 if [ "$(id -u)" -eq 0 ]; then
   echo "preen apply: refusing to run as root — this installs user files" >&2
   exit 1
+fi
+
+# Links made from a linked worktree point into it, and dangle once it goes.
+# Its .git is a file naming a git dir that holds commondir; a submodule's has none.
+if [ -f "$REPO/.git" ]; then
+  gitdir="$(sed -n 's/^gitdir: //p' "$REPO/.git")"
+  case "$gitdir" in /*) ;; *) gitdir="$REPO/$gitdir" ;; esac
+  if [ -f "$gitdir/commondir" ]; then
+    echo "preen apply: refusing — $REPO is a linked git worktree, and every link would point into it; run it from the main checkout" >&2
+    exit 1
+  fi
 fi
 
 # For printing, HOME as ~: bash 3.2 keeps the backslash in `${1/#$HOME/\~}`,

@@ -5,6 +5,30 @@ from it. A major release moves where or how a file lands, or drops a flag; a
 minor one adds a piece, a row, a flag or a check; a patch changes values,
 fixes and docs.
 
+## v2.2.0
+
+`taste/pref-check.py` fails a zsh `setopt` or `unsetopt` row matched with
+`want_contains`, `want_all_contain` or `want_any_contain`, saying why: a
+negated option holds its name, as `NO_GLOB_DOTS` holds `GLOB_DOTS`, so a
+row wanting `GLOB_DOTS` passed a file that says `setopt NO_GLOB_DOTS`. Match
+such a row with `want_any` or `want_absent` instead.
+
+`preen doctor`, `--taste` included, colours ok, FAIL and warn only on a
+terminal; piped or logged, it prints the bare words. `preen apply` refuses
+to run from a linked git worktree, whose links would dangle once the
+worktree went: run it from the main checkout.
+
+The tmux piece parses your file on a server whose socket sits under
+`TMPDIR`, not `/tmp` alone. It uses `/tmp` when `TMPDIR` is unset, when the
+socket's path under `TMPDIR` would pass 103 bytes, the longest that starts a
+server on macOS, or when no server starts under `TMPDIR`.
+
+The pieces' pages are shorter. Only the setup's page, `bin/README.md`, now
+says what the kitty, shell, tmux, git, Zed and Sublime Text installers do
+after `bin/bootstrap`: find their files linked into the clone, say so and
+write nothing. `prompt/cship.toml`'s comments drop the measurements behind
+its widths; no setting changed.
+
 ## v2.1.0
 
 Zed's editor text takes Fira Code's dotted zero and oldstyle figures, as

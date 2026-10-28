@@ -16,7 +16,7 @@ alone. tmux reads both files when both are there, ~/.tmux.conf first. Copies,
 never symlinks, and nothing here points back at this repo afterwards.
 
   from a clone:    ./terminal/tmux/install.sh [flags]
-  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.1.0/terminal/tmux/install.sh | bash
+  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.0/terminal/tmux/install.sh | bash
 
 There is nothing to ask, so nothing is asked.
 
@@ -70,7 +70,7 @@ done
 # otherwise fetched from the mirror exactly as the config is — same trust,
 # same mechanism — and checked for its marker line before it is sourced.
 PIECE="terminal/tmux"   # this piece's path under the mirror root
-PREEN_REF=v2.1.0   # this installer's release: the tag it fetches from, and the helper's marker
+PREEN_REF=v2.2.0   # this installer's release: the tag it fetches from, and the helper's marker
 # A slash ending an override would double the one joined after it, and leave
 # a root taken from it a level too deep.
 trim_slash() { printf '%s' "$1" | sed 's#/*$##'; }   # trim_slash <url> → it with any trailing slash dropped
@@ -150,8 +150,16 @@ fi
 # command parsed as `<file>:<line>: <command>`; a file tmux cannot parse is
 # rc 1 and tmux's message. It needs a server: one of its own, started with no
 # config on a socket in a directory made for it, so no other server is ever
-# asked — under /tmp, because tmux refuses a socket path past the sun_path
-# limit and a temp directory's path can get near it.
+# asked — under TMPDIR when the socket's path fits there and a server starts
+# there, else /tmp: tmux refuses a socket path past the sun_path limit, and on
+# macOS a 104-byte path would not start a server where a 103-byte one did; a
+# TMPDIR on a FAT or network mount holds a directory and no socket.
+SOCKET_PATH_MAX=103
+PROBE_NAME=preen-tmux.XXXXXX
+probe_root="${TMPDIR:-/tmp}"
+probe_root="${probe_root%/}"
+# Bytes, not characters: the limit is the kernel's.
+if [ "$(printf '%s' "$probe_root/$PROBE_NAME/s" | wc -c)" -gt "$SOCKET_PATH_MAX" ]; then probe_root=/tmp; fi
 probe=none
 probe_said=""
 tmux_parse() { # tmux_parse <file> → true when tmux parses it; what it printed in PARSED
@@ -163,17 +171,21 @@ tmux_says() { # tmux_says <file it parsed> → tmux's last word on it, the file'
   case "$last" in "$1:"*) last="line ${last#"$1:"}" ;; esac
   printf '%s' "$last"
 }
-if [ -n "$tmux_bin" ]; then
-  if ! PROBE_DIR="$(mktemp -d /tmp/preen-tmux.XXXXXX 2>/dev/null)"; then
-    PROBE_DIR=""
-    probe=failed; probe_said="no directory for its socket could be made in /tmp"
-  elif tmux_parse /dev/null; then
-    probe=ok
-  else
-    # A server that would not start, or a tmux whose source-file lacks -n:
-    # measured on 2.6, the flag is refused before any server starts.
-    probe=failed; probe_said="tmux says: $(head -n 1 <<< "$PARSED")"
+probe_in() { # probe_in <directory> → true when a server starts on a socket in a new directory there, PROBE_DIR; why not in probe_said
+  if ! PROBE_DIR="$(mktemp -d "$1/$PROBE_NAME" 2>/dev/null)"; then
+    PROBE_DIR=""; probe_said="no directory for its socket could be made in $1"
+    return 1
   fi
+  tmux_parse /dev/null && return 0
+  # A server that would not start, or a tmux whose source-file lacks -n:
+  # measured on 2.6, the flag is refused before any server starts.
+  probe_said="tmux says: $(head -n 1 <<< "$PARSED")"
+  "$tmux_bin" -S "$PROBE_DIR/s" kill-server >/dev/null 2>&1 || true
+  rm -rf "$PROBE_DIR"; PROBE_DIR=""
+  return 1
+}
+if [ -n "$tmux_bin" ]; then
+  if probe_in "$probe_root" || { [ "$probe_root" != /tmp ] && probe_in /tmp; }; then probe=ok; else probe=failed; fi
 fi
 
 # ── where the config comes from ──────────────────────────────────────────────

@@ -5,8 +5,7 @@ choices the git config made: gh's git operations use SSH, its paged
 output reads through [delta](https://github.com/dandavison/delta) like
 `git diff`, its colours are the terminal's own sixteen, and it sends no
 telemetry. Take it alone: the installer fetches the installer library the
-pieces share from this repository, the way it fetches the config, and nothing
-it installs points back here.
+pieces share from this repository, and nothing it installs points back here.
 
 ## What it takes over
 
@@ -46,22 +45,20 @@ The installer names each it did not find.
 
 ## Install
 
-No clone needed. To print the plan and stop, writing nothing — `bash -s --`
-hands the flag to the script:
+The plan, writing nothing:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.1.0/gh/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.0/gh/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.1.0/gh/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.0/gh/install.sh | bash
 ```
 
-Or from a clone of this repository, `./gh/install.sh`, with `--dry-run` for
-the plan alone. It asks nothing — there is nothing to ask. The plan for an
-empty home:
+Or from a clone, `./gh/install.sh`. It asks nothing. The plan for an empty
+home:
 
 ```
 == will touch ==
@@ -85,21 +82,18 @@ It
 A run that finds every key already set writes nothing and takes no backup.
 If gh fails part-way, the run stops with gh's words and names the backup.
 
-**Refusals**, all of them before the first write, so a stopped run has changed
-nothing: gh is not on PATH, on a real run; `GH_CONFIG_DIR` or
-`XDG_CONFIG_HOME` names another directory; `~/.config` or `~/.config/gh` is a
-symlink, dangling or not, or one the run can neither write into nor create;
-`config.yml` is a symlink or is not writable, where a key differs; gh cannot
-read `config.yml` or `hosts.yml` — bad YAML, say — in gh's own words; a
-source file that is missing, empty, or not the file it claims to be, or that
-gives a key a value other than plain words.
+Every refusal comes before the first write, and a dry run makes each one
+but a missing gh: those under What it takes over, a symlinked `~/.config` or
+`~/.config/gh`, a directory or `config.yml` the run cannot write, and a
+`config.yml` or `hosts.yml` gh cannot read — bad YAML, say — in gh's own
+words.
 
 ## Updating
 
 Run the install line from this page again: it names the newest release.
-From a clone, `git pull`, then `./gh/install.sh`.
-gh reads one file and has no overlay, so a re-run sets back each key that
-differs, an undo of yours included, after backing up `config.yml`.
+From a clone, `git pull`, then `./gh/install.sh`. gh reads one file and has
+no overlay, so a re-run sets back each key that differs, an undo of yours
+included, after backing up `config.yml`.
 
 ## Your overrides
 

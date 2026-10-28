@@ -10,8 +10,8 @@ inlay hints, inline diagnostics and sticky scroll; the project panel on the
 left, hiding gitignored files, while project search reaches them and the
 build directories are never scanned. alt-g opens lazygit in the centre pane,
 and the task picker holds Rust and Node tasks. Take it alone: the installer
-fetches the installer library the pieces share from this repository, the way
-it fetches the configs, and nothing it installs points back here.
+fetches the installer library the pieces share from this repository, and
+nothing it installs points back here.
 
 ## What it takes over
 
@@ -46,10 +46,6 @@ Zed's Settings editor (Your overrides, below) and the lists on its sandbox
 page; the settings sent to a remote server in remote development; the agent
 panel's layout; whether an edit-prediction provider was chosen explicitly;
 and the agent's fallback default model.
-
-The five layering cases above were measured on Zed 1.23.2 on macOS, each in
-a config directory of its own, and the rest read in Zed's source at tag
-v1.23.2.
 
 - **`keymap.json` and `tasks.json`** are read from `~/.config/zed` under
   those names alone, one file each, so they cannot be layered: each is copied
@@ -87,29 +83,26 @@ v1.23.2.
 - **Extensions.** This piece installs none. The settings' `languages` blocks
   for Kotlin, Gradle KTS, Java, XML and Svelte apply once an extension
   provides that language, and the `lsp` blocks shape rust-analyzer and vtsls
-  where Zed runs them. Gruvbox Light Hard needs none: it is among the themes
-  the Zed 1.23.2 binary carries.
+  where Zed runs them. Gruvbox Light Hard needs none: Zed ships it.
 
 The installer names Zed and lazygit, found or not, and runs neither.
 
 ## Install
 
-No clone needed. To print the plan and stop, writing nothing — `bash -s --`
-hands the flag to the script:
+The plan, writing nothing:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.1.0/editor/zed/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.0/editor/zed/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.1.0/editor/zed/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.0/editor/zed/install.sh | bash
 ```
 
-Or from a clone of this repository, `./editor/zed/install.sh`, with
-`--dry-run` for the plan alone. It asks nothing — there is nothing to ask. The
-plan for an empty home:
+Or from a clone, `./editor/zed/install.sh`. It asks nothing. The plan for an
+empty home:
 
 ```
 == will touch ==
@@ -127,49 +120,36 @@ Each line says what this run does to your home: a `keymap.json` or
 It
 
 1. looks for Zed and lazygit, and runs neither;
-2. copies `settings.json` to `~/.config/zed/global_settings.json` — a copy,
-   never a symlink. An earlier copy this setup shipped is replaced with no
-   backup; any other file there, or a symlink, is first moved aside beside
-   it as `global_settings.json.unpreened.<timestamp>`; an identical one is
-   left untouched;
-3. copies `keymap.json` and `tasks.json` into `~/.config/zed` where nothing
-   is there, and over an earlier copy this setup shipped, with no backup.
-   Anything else there stays, with no backup, because nothing is replaced:
-   the run says `unchanged` when it holds this config's bytes, and
-   `left alone` when it is anything else, a symlink included;
+2. copies `settings.json` to `~/.config/zed/global_settings.json`, a
+   different file there, or a symlink, first moved aside as
+   `global_settings.json.unpreened.<timestamp>`, an earlier copy this setup
+   shipped replaced without a backup;
+3. copies `keymap.json` and `tasks.json` into `~/.config/zed` only where
+   nothing is there or an earlier copy this setup shipped is; anything else
+   stays, said `unchanged` or `left alone`;
 4. says what Zed now reads, and what a `keymap.json` or `tasks.json` it left
    alone means for alt-g.
 
-A re-run with nothing changed rewrites nothing and takes no backup:
-`global_settings.json` comes back `unchanged`.
+A re-run with nothing changed rewrites nothing and takes no backup.
 
-**Refusals**, all of them before the first write, so a stopped run has changed
-nothing: `~/.config` or `~/.config/zed` is a symlink, dangling or not — the
-copies would land in whatever it points at, which something else manages;
-`~/.config` is not a directory, is not writable, or cannot be created, or
-`~/.config/zed` cannot be written into; on Linux and FreeBSD,
-`XDG_CONFIG_HOME` names a directory other than `~/.config`; a source file
-that is missing, empty, or not the file it claims to be.
+Every refusal — those under What it takes over, and a directory the run
+cannot write — comes before the first write, and a dry run makes each one.
 
 ## Updating
 
 Run the install line from this page again: it names the newest release.
-From a clone, `git pull`, then
-`./editor/zed/install.sh`. An earlier copy this setup shipped comes back
-`updated`, with no backup. One you edited is not: an edited
+From a clone, `git pull`, then `./editor/zed/install.sh`. An earlier copy
+this setup shipped comes back `updated`, with no backup. An edited
 `global_settings.json` is backed up beside itself first, and an edited
 `keymap.json` or `tasks.json` is left alone. A setting of yours belongs in
 your `settings.json`, which no run reads or writes.
 
 ## Your overrides
 
-Your `~/.config/zed/settings.json` is the place, and every key there wins
-over ours, except while a settings profile whose `base` is `"default"` is
-active: that sets the rest of your file aside and keeps ours. For an object,
-set only the keys you change: the rest of ours stays. For an array, yours is
-the whole list. A key of ours that yours leaves out stays ours: to put one
-back to Zed's own value, set that value — `zed: open default settings` in
-the command palette shows them.
+Your `~/.config/zed/settings.json` is the place, layered over ours as
+[What it takes over](#what-it-takes-over) says. A key of ours that yours
+leaves out stays ours: to put one back to Zed's own value, set that value —
+`zed: open default settings` in the command palette shows them.
 
 Zed's Settings editor reads your `settings.json` over Zed's defaults, and
 never ours: for a key only ours sets, it shows Zed's default while Zed runs
@@ -185,20 +165,18 @@ page into yours.
 On Linux, Zed's own keymap begins three chords with alt-g — `alt-g b`,
 `alt-g m` and `alt-g r`, for git blame, the modified files and a review diff.
 Zed drops a chord still being typed when a binding that matches outright was
-loaded after it, whatever their contexts (its keymap resolver, read at the
-tag), and your keymap loads after Zed's. So alt-g opens lazygit at once, and
-those three chords are out of reach while this binding is in your keymap;
-remove it to have them back.
+loaded after it, whatever their contexts, and your keymap loads after Zed's.
+So alt-g opens lazygit at once, and those three chords are out of reach while
+this binding is in your keymap; remove it to have them back.
 
 ## What changes
 
 The choices felt at once, each with the lines that set it back, for your
-`~/.config/zed/settings.json`. Each undo value is Zed 1.23.2's own default,
-read from the default settings its binary carries; none was run in Zed here.
-The exceptions are the font features: Zed's defaults name none, and yours
-merge with ours key by key, so an undo turns a feature off rather than
-removing it. `zero` and `onum` are off unless asked for; `calt` is on in the
-editor unless turned off, and off in the terminal while
+`~/.config/zed/settings.json`. Each undo value is Zed 1.23.2's own default —
+none was run in Zed here — except for the font features: Zed's defaults name
+none, and yours merge with ours key by key, so an undo turns a feature off
+rather than removing it. `zero` and `onum` are off unless asked for; `calt`
+is on in the editor unless turned off, and off in the terminal while
 `terminal.font_features` is unset.
 
 | What you notice | Undo |
@@ -234,7 +212,7 @@ blocks — and each is set back the same way, by its key in your
 
 1. Delete `~/.config/zed/global_settings.json`. Without it Zed reads your
    `settings.json` over its own defaults, and logs nothing for the missing
-   file (measured).
+   file.
 2. A backup the run took sits beside it as
    `global_settings.json.unpreened.<timestamp>`: what was there before — a
    file or a symlink of yours, or the copy with your edits, as a later run
@@ -243,14 +221,9 @@ blocks — and each is set back the same way, by its key in your
 3. For `keymap.json` and `tasks.json`, read what the run said: `copied`,
    `updated` or `unchanged` means the file holds what this setup shipped, so
    it can go unless you had it before the first run; `left alone` means the
-   run did not write it. Run with `--dry-run`, the installer says why, as in
-   `left alone (yours)`; a file it calls `an earlier copy` is this setup's,
-   and its `copied` means nothing is there.
+   run did not write it. A `--dry-run` says which is which now: `an earlier
+   copy` is this setup's.
 4. Your `settings.json` was never read or written.
-
-Took the whole repository through `bin/bootstrap`? Then
-`~/.config/zed/global_settings.json` is a link into your clone, which
-already carries this config: the installer says so and writes nothing.
 
 ## License
 

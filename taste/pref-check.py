@@ -31,6 +31,7 @@ count drifts between the checker and the checked and nobody notices.
 """
 
 import atexit
+import concurrent.futures
 import copy
 import glob
 import json
@@ -43,6 +44,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import xml.etree.ElementTree as ET
 import zipfile
@@ -2083,8 +2085,9 @@ def read_zshcap(path, key, accumulate=False, host=None, **_opts):
 
     `key` is a capture section: bindkey | widgets | aliases | functions |
     params | setopt | zstyle. Pair with accumulate + want_any_contain, the
-    same shape as kitty's map — or accumulate + want_absent for an alias
-    that must be GONE (run-help's, which would shadow the function).
+    same shape as kitty's map — setopt with want_any, since a negated option
+    holds its name — or accumulate + want_absent for an alias that must be
+    GONE (run-help's, which would shadow the function).
     ZSHCAP_FIXTURE substitutes a recorded capture (tests; CI validates the
     spec without ever reading live config).
     """
@@ -3287,6 +3290,7 @@ def resolve_target(name, entry, targets, where="the spec"):
 # for it.
 _REMOTE = {}          # host -> {remote_path: local_path | None}  or  ReadSkip
 _REMOTE_DIR = ""
+_REMOTE_DIR_LOCK = threading.Lock()   # prefetch_hosts asks every host at once
 _SSH_OPTS = ["-o", "BatchMode=yes", "-o", "ConnectTimeout=8"]
 # A `host`, a target's or a version command's: an ssh alias only — a leading
 # `-` would reach ssh as an option.
@@ -3325,10 +3329,11 @@ def _remote_fetch(host, targets):
             _REMOTE[host] = ReadSkip(f"{host}: the read failed there ({reason})")
         return _REMOTE[host]
     import base64, tempfile
-    if not _REMOTE_DIR:
-        _REMOTE_DIR = tempfile.mkdtemp(prefix="pref-check-remote.")
-        # It holds copies of another machine's config.
-        atexit.register(shutil.rmtree, _REMOTE_DIR, ignore_errors=True)
+    with _REMOTE_DIR_LOCK:
+        if not _REMOTE_DIR:
+            _REMOTE_DIR = tempfile.mkdtemp(prefix="pref-check-remote.")
+            # It holds copies of another machine's config.
+            atexit.register(shutil.rmtree, _REMOTE_DIR, ignore_errors=True)
     files, cur, buf = {}, None, []
     def flush():
         if cur is not None:
@@ -3352,6 +3357,59 @@ def _remote_fetch(host, targets):
             buf.append(line)
     _REMOTE[host] = files
     return files
+
+
+def prefetch_hosts(spec, targets):
+    """Ask every governed host a row reads at once, before any row reads one.
+
+    Each ask is a network wait, and the rows would otherwise make them one
+    after another. What a host answers, or why it could not be asked, lands in
+    the caches the rows read, so each row reports exactly as it would have;
+    an ask that fails in a way the caches do not hold is simply made again by
+    the row, as before. A target is asked for only through resolve_target, as
+    a row asks for it: a host it refuses is never handed to ssh, and a live
+    zsh probe gets the options its target names. The local live zsh probe
+    joins them, for its PTY wait.
+    """
+    # In the rows' own order, and only the entries they resolve: an n_a or
+    # unreachable one reads no file, and a host's live zsh probe takes the
+    # options of the first entry that reads it, as the rows' cache keeps them.
+    file_hosts, zsh_hosts, local_zsh = set(), set(), False
+    for _, pref in sorted(spec.get("pref", {}).items()):
+        entries = pref.get("targets") if isinstance(pref, dict) else None
+        for name, entry in (sorted(entries.items()) if isinstance(entries, dict) else ()):
+            if not isinstance(entry, dict) or entry.get("state") in ("n_a", "unreachable"):
+                continue
+            t = targets.get(entry.get("target", name))
+            if isinstance(t, dict) and t.get("format") == "zshcap" and isinstance(t.get("host"), str) and t["host"] in zsh_hosts:
+                continue
+            t, _, err = resolve_target(name, entry, targets)
+            if err:
+                continue   # the row reports it, and asks no host
+            if t["format"] == "zshcap":
+                if t.get("host"):
+                    zsh_hosts.add(t["host"])
+                else:
+                    local_zsh = True
+            elif t.get("host"):
+                file_hosts.add(t["host"])
+
+    def zsh(host=None):
+        try:
+            _zshcap_capture(host)
+        except (ReadSkip, ReadError):
+            pass   # cached: the row that reads it says so
+
+    asks = len(file_hosts) + len(zsh_hosts) + local_zsh
+    if not asks:
+        return
+    with concurrent.futures.ThreadPoolExecutor(max_workers=asks) as pool:
+        for host in sorted(file_hosts):
+            pool.submit(_remote_fetch, host, targets)
+        for host in sorted(zsh_hosts):
+            pool.submit(zsh, host)
+        if local_zsh:
+            pool.submit(zsh)
 
 
 def remote_path(t, targets):
@@ -3417,8 +3475,12 @@ def entry_problems(name, entry, targets, where="the spec"):
     if empty:
         problems.append(f"{', '.join(empty)} is empty and would match anything")
     t, _, err = resolve_target(name, entry, targets, where)
+    substring = [m for m in present if m in ("want_contains", "want_all_contain", "want_any_contain")]
     if err:
         problems.append(err)
+    elif t["format"] in ("zsh", "zshcap") and entry.get("key") in ("setopt", "unsetopt") and substring:
+        problems.append(f"{', '.join(substring)} on {entry['key']}: a negated option contains its name "
+                        "(NO_GLOB_DOTS holds GLOB_DOTS; `unsetopt NO_NOMATCH` sets NOMATCH) — use want_any or want_absent")
     elif entry.get("unset_reads_default") and t["format"] not in DEFAULT_ORACLES and t["format"] not in RESOLVER_FORMATS:
         problems.append(f"unset_reads_default on format '{t['format']}', which ships no defaults oracle")
     elif entry.get("unset_reads_default") and entry.get("accumulate"):
@@ -4291,6 +4353,7 @@ def main():
         failed = 1
     # PREEN_QUIET is preen doctor's --quiet; its full run passes no.
     quiet = os.environ.get("PREEN_QUIET") == "yes"
+    prefetch_hosts(spec, targets)
     failed |= emit_assertions(spec, targets, came_from, read, quiet)
     failed |= emit_surface_events(spec)
     return failed

@@ -14,21 +14,19 @@ these are one user's settings.
 
 ## Install
 
-No clone needed. To list each setting that differs and stop, writing
-nothing — `bash -s --` hands the flag to the script:
+The list of settings that differ, writing nothing:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.1.0/macos/apply.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.0/macos/apply.sh | bash -s -- --dry-run
 ```
 
 To apply:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.1.0/macos/apply.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.0/macos/apply.sh | bash
 ```
 
-Or from a clone of this repository, `./macos/apply.sh`, with `--dry-run` for
-the list alone. It asks nothing.
+Or from a clone, `./macos/apply.sh`. It asks nothing.
 
 It
 
@@ -53,10 +51,9 @@ restore script that puts back what changed.
 ## Updating
 
 Run the apply line from this page again: it names the newest release.
-From a clone, `git pull`, then `./macos/apply.sh`.
-System Settings have no overlay, so a re-run sets back each setting that
-differs, one you changed since included, saving what it replaces first:
-`--dry-run` lists them.
+From a clone, `git pull`, then `./macos/apply.sh`. System Settings have no
+overlay, so a re-run sets back each setting that differs, one you changed
+since included, saving what it replaces first: `--dry-run` lists them.
 
 ## Putting it back
 

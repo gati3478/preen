@@ -11,10 +11,9 @@
 # outlives zsh can hold it (closed early, the `^D` comes back), and every
 # byte sent is a keystroke to zle.
 #
-# col -b strips that artifact but discards every other escape sequence just
-# as silently (`printf 'a\x1b[31mred\x1b[0m text\n' | col -b` gives
-# `a31mred0m text`), so the RAW output is checked for an ESC byte first and
-# refused if it has one.
+# col -b strips that artifact, but mangles every other escape sequence just
+# as silently (`a\x1b[31mred` gives `a31mred`), so the RAW output is refused
+# if it holds an ESC byte.
 #
 # ⚠️ The PTY this makes is 0x0 WIDE: `script` copies its own stdout's window
 # size, and the caller's stdout is a pipe. `isatty()` is still true, and zsh
@@ -37,19 +36,12 @@
 #                  end/arrow keys) resolve via $terminfo, keyed on TERM.
 #                  Pinned to xterm-kitty — what a real kitty tab actually
 #                  sets — so those bindings key the way they do in a kitty
-#                  tab whatever terminal the caller runs in.
-#                  This does NOT make it a shell with kitty's shell
-#                  integration loaded — that is injected by kitty's own
-#                  ZDOTDIR trampoline at spawn (not by TERM) and armed by a
-#                  precmd, which `-c` never fires. So the integration's
-#                  additions — OSC 133/7/2 prompt-mark, cwd and title
-#                  reporting, the _kitty completion, the sudo terminfo
-#                  wrapper, and the alt-arrow fallback binding — are absent
-#                  here, and that is the correct scope: the preference spec
-#                  asserts what the MANAGED CONFIG resolves, and the
-#                  integration only ADDS features that never override a
-#                  managed preference (the alt-arrow fallback no-ops because
-#                  .zshrc binds those keys first).
+#                  tab whatever terminal the caller runs in. It does not
+#                  load kitty's shell integration, which kitty injects at
+#                  spawn, not by TERM. That is the correct scope: the spec
+#                  asserts what the managed config resolves, and the
+#                  integration only adds, never overriding a managed
+#                  preference.
 #   TERMINFO     - required for TERM=xterm-kitty to resolve at all:
 #                  kitty's terminfo entry ships inside kitty.app, not in
 #                  any system terminfo search path.

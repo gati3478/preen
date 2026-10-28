@@ -47,9 +47,11 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MANIFEST="$REPO/manifest.tsv"
 FAILED=0
 
-ok()   { [ "$QUIET" = yes ] || printf '  \033[32mok\033[0m    %s\n' "$1"; }
-bad()  { printf '  \033[31mFAIL\033[0m  %s\n' "$1"; FAILED=1; }
-warn() { printf '  \033[33mwarn\033[0m  %s\n' "$1"; }
+# Colour only on a terminal: a pipe or a log gets the bare words.
+if [ -t 1 ]; then GREEN=$'\033[32m' RED=$'\033[31m' YELLOW=$'\033[33m' PLAIN=$'\033[0m'; else GREEN='' RED='' YELLOW='' PLAIN=''; fi
+ok()   { [ "$QUIET" = yes ] || printf '  %sok%s    %s\n' "$GREEN" "$PLAIN" "$1"; }
+bad()  { printf '  %sFAIL%s  %s\n' "$RED" "$PLAIN" "$1"; FAILED=1; }
+warn() { printf '  %swarn%s  %s\n' "$YELLOW" "$PLAIN" "$1"; }
 
 # A Mac without the Command Line Tools still has /usr/bin/git and
 # /usr/bin/python3: stubs that raise an install dialog when run. So the tool
@@ -660,7 +662,7 @@ else
   fi
 fi
 
-# The pre-commit hook (glyph integrity, TOML parse) is opt-in PER CLONE via
+# The pre-commit hook (glyphs, TOML, pointers) is opt-in PER CLONE via
 # `git config core.hooksPath .githooks`; this warns on a clone that has not
 # opted in. The mirror ships none.
 if [ "$SOURCE_REPO" = no ]; then
@@ -684,10 +686,49 @@ fi
 # An adopter's clone runs none, whatever hosts/ it grows.
 # Each module prints its own heading for the same reason run_pref_checks does:
 # a heading printed here would leave a bare section with nothing under it.
+#
+# The modules and the preference rows wait on the network, each governed host
+# over ssh, so each runs at once in a subshell of its own, its output kept and
+# printed in the order written here: the run takes as long as its slowest. One
+# that ends before saying whether it failed counts as failed. Each is a process
+# group of its own, which job control (set -m) gives it, so a Ctrl-C or a TERM
+# stops all a section has started — started with &, it ignores a Ctrl-C — and
+# every group one of its processes leads, as timeout(1) leads its own, then
+# ends the doctor by that signal. Where no scratch directory holds the
+# output, they run in turn, as one script.
+SECTIONS="$(fixture sections)" || SECTIONS=""
+SECTION_COUNT=0
+SECTION_NAMES=()
+section() { # section <name> <command…> — run the command as the next section
+  SECTION_COUNT=$((SECTION_COUNT + 1))
+  SECTION_NAMES[SECTION_COUNT]="$1"
+  shift
+  if [ -z "$SECTIONS" ]; then "$@" </dev/null; return 0; fi
+  set -m
+  ( FAILED=0; "$@"; echo "$FAILED" > "$SECTIONS/$SECTION_COUNT.failed" ) </dev/null \
+    > "$SECTIONS/$SECTION_COUNT.out" 2> "$SECTIONS/$SECTION_COUNT.err" &
+  set +m
+}
+stop_sections() { # every group below this shell: each section leads one, and timeout(1) leads its own
+  local g
+  for g in $(ps -A -o pid= -o ppid= -o pgid= 2>/dev/null | awk -v top=$$ '
+      { kids[$2] = kids[$2] " " $1; group[$1] = $3 }
+      END { for (q = kids[top]; q != ""; q = below) { below = ""; n = split(q, p, " ")
+              for (i = 1; i <= n; i++) { g = group[p[i]]; if (g != group[top] && !(g in seen)) { seen[g]; print g }; below = below kids[p[i]] } } }'); do
+    kill -TERM -- "-$g" 2>/dev/null
+  done
+  wait 2>/dev/null
+}
+if [ -n "$SECTIONS" ]; then
+  for _sig in HUP INT QUIT TERM; do
+    # shellcheck disable=SC2064  # the signal is fixed now
+    trap "trap - $_sig; stop_sections; kill -$_sig \$\$" "$_sig"
+  done
+fi
 if [ "$SOURCE_REPO" = yes ]; then
   _found=no
   for _mod in "$REPO"/hosts/*/doctor.d/*.sh; do
-    if [ -f "$_mod" ]; then _found=yes; source "$_mod"; fi
+    if [ -f "$_mod" ]; then _found=yes; section "${_mod#"$REPO"/}" source "$_mod"; fi
   done
   [ "$_found" = yes ] || warn "no hosts/*/doctor.d/*.sh — the machine-specific checks did not run"
   unset _mod _found
@@ -706,10 +747,27 @@ fi
 # Only the checker can tell a manual ceiling or a row its host skipped from any
 # other warn, so --quiet's cut is made there. Passed both ways: a PREEN_QUIET
 # inherited from the caller never quiets a full run.
-if declare -f run_pref_checks >/dev/null 2>&1 && { [ "$SOURCE_REPO" = yes ] || [ "$TASTE" = yes ]; }; then
-  PREEN_QUIET="$QUIET" run_pref_checks "$TASTE_DIR" || FAILED=1
-elif [ "$SOURCE_REPO" = yes ] || [ "$TASTE" = yes ]; then
-  warn "preference checks skipped — ${TASTE_DIR#"$REPO"/}/pref-check.sh is missing"
+pref_checks() {
+  if declare -f run_pref_checks >/dev/null 2>&1 && { [ "$SOURCE_REPO" = yes ] || [ "$TASTE" = yes ]; }; then
+    PREEN_QUIET="$QUIET" run_pref_checks "$TASTE_DIR" || FAILED=1
+  elif [ "$SOURCE_REPO" = yes ] || [ "$TASTE" = yes ]; then
+    warn "preference checks skipped — ${TASTE_DIR#"$REPO"/}/pref-check.sh is missing"
+  fi
+}
+section "the preference checks" pref_checks
+
+wait
+trap - HUP INT QUIT TERM
+if [ -n "$SECTIONS" ]; then
+  for ((_i = 1; _i <= SECTION_COUNT; _i++)); do
+    cat "$SECTIONS/$_i.out"
+    cat "$SECTIONS/$_i.err" >&2
+    case "$(cat "$SECTIONS/$_i.failed" 2>/dev/null)" in
+      0) ;;
+      1) FAILED=1 ;;
+      *) bad "${SECTION_NAMES[_i]} stopped before its end" ;;
+    esac
+  done
 fi
 
 echo "--"
