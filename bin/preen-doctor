@@ -704,9 +704,11 @@ section() { # section <name> <command…> — run the command as the next sectio
   SECTION_NAMES[SECTION_COUNT]="$1"
   shift
   if [ -z "$SECTIONS" ]; then "$@" </dev/null; return 0; fi
+  # The group's stderr takes bash 3.2's "child setpgid … not permitted", said
+  # now and then after the parent's setpgid has made the group.
   set -m
-  ( FAILED=0; "$@"; echo "$FAILED" > "$SECTIONS/$SECTION_COUNT.failed" ) </dev/null \
-    > "$SECTIONS/$SECTION_COUNT.out" 2> "$SECTIONS/$SECTION_COUNT.err" &
+  { ( FAILED=0; "$@"; echo "$FAILED" > "$SECTIONS/$SECTION_COUNT.failed" ) </dev/null \
+    > "$SECTIONS/$SECTION_COUNT.out" 2> "$SECTIONS/$SECTION_COUNT.err" & } 2>/dev/null
   set +m
 }
 stop_sections() { # every group below this shell: each section leads one, and timeout(1) leads its own

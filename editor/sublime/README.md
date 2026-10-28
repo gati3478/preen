@@ -75,13 +75,13 @@ and installs neither.
 The plan, writing nothing:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.0/editor/sublime/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.1/editor/sublime/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.0/editor/sublime/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.1/editor/sublime/install.sh | bash
 ```
 
 Or from a clone, `./editor/sublime/install.sh`. It asks nothing. The plan on
@@ -113,11 +113,12 @@ It
 
 A re-run with nothing changed rewrites nothing and takes no backup.
 
-Every refusal comes before the first write, and a dry run makes each one: a
-symlinked directory between `~` and `Packages/preen`, since the files would
-land wherever it points, or one the run cannot write or create; on Linux, an
-`XDG_CONFIG_HOME` other than `~/.config`; a system other than macOS or
-Linux. A symlinked `Packages/User` is not refused: nothing is written there.
+Every refusal comes before the first write, and a dry run makes each one;
+among them a symlinked directory between `~` and `Packages/preen`, since the
+files would land wherever it points, and an unwritable `Packages/preen` or
+directory it would be made in; on Linux, an `XDG_CONFIG_HOME` other than
+`~/.config`; a system other than macOS or Linux. A symlinked `Packages/User`
+is not refused: nothing is written there.
 
 ## Updating
 

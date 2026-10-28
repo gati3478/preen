@@ -20,7 +20,7 @@
 # so nothing may join it.
 #
 # shellcheck disable=SC2034  # PREEN_INSTALL_LIB, INTERACTIVE and ORIGIN are read by the caller that sources this, which shellcheck cannot see from here
-PREEN_INSTALL_LIB=v2.2.0
+PREEN_INSTALL_LIB=v2.2.1
 
 STAMP="$(date +%Y%m%d-%H%M%S)"   # one per run, so a run's backups sort together
 SHIPPED=""   # lib/shipped's path, once locate_sources has set it: in the clone, or where ours() fetches it to

@@ -18,7 +18,7 @@ never symlinks, and nothing here points back at this repo afterwards.
 there, or an earlier copy this setup shipped is.
 
   from a clone:    ./git/install.sh [flags]
-  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.0/git/install.sh | bash
+  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.1/git/install.sh | bash
 
 There is nothing to ask, so nothing is asked.
 
@@ -74,7 +74,7 @@ done
 # otherwise fetched from the mirror exactly as the config is — same trust,
 # same mechanism — and checked for its marker line before it is sourced.
 PIECE="git"   # this piece's path under the mirror root
-PREEN_REF=v2.2.0   # this installer's release: the tag it fetches from, and the helper's marker
+PREEN_REF=v2.2.1   # this installer's release: the tag it fetches from, and the helper's marker
 # A slash ending an override would double the one joined after it, and leave
 # a root taken from it a level too deep.
 trim_slash() { printf '%s' "$1" | sed 's#/*$##'; }   # trim_slash <url> → it with any trailing slash dropped
@@ -89,10 +89,9 @@ if [ -n "${BASH_SOURCE[0]:-}" ]; then SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
-# Beside this script in either tree — `lib/` in the mirror, `public/lib/` in the
-# private one — else fetched from the root the config comes from. Never the
-# directory the shell happens to be standing in. Its marker line names its
-# release, and one of another release may not do what this installer asks.
+# The shared library comes from this script's own tree, else from the root
+# the config comes from, never the shell's directory. Its marker names its
+# release; another release's may not do what this installer asks.
 helper_ok() { # helper_ok <file> <where it is from> → true when it is this release's helper, false when it is no helper; stops the run on another release's
   grep -qxF "PREEN_INSTALL_LIB=$PREEN_REF" "$1" && return 0
   grep -q '^PREEN_INSTALL_LIB=' "$1" || return 1

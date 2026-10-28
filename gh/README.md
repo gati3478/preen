@@ -48,13 +48,13 @@ The installer names each it did not find.
 The plan, writing nothing:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.0/gh/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.1/gh/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.0/gh/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.1/gh/install.sh | bash
 ```
 
 Or from a clone, `./gh/install.sh`. It asks nothing. The plan for an empty
@@ -82,11 +82,11 @@ It
 A run that finds every key already set writes nothing and takes no backup.
 If gh fails part-way, the run stops with gh's words and names the backup.
 
-Every refusal comes before the first write, and a dry run makes each one
-but a missing gh: those under What it takes over, a symlinked `~/.config` or
-`~/.config/gh`, a directory or `config.yml` the run cannot write, and a
-`config.yml` or `hosts.yml` gh cannot read — bad YAML, say — in gh's own
-words.
+Every refusal comes before the first write, and a dry run makes each one but
+a missing gh; among them those under What it takes over, a symlinked
+`~/.config` or `~/.config/gh`, a directory the run cannot write, a
+`config.yml` it cannot write where a key differs, and a `config.yml` or
+`hosts.yml` gh cannot read — bad YAML, say — in gh's own words.
 
 ## Updating
 

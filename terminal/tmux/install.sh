@@ -16,7 +16,7 @@ alone. tmux reads both files when both are there, ~/.tmux.conf first. Copies,
 never symlinks, and nothing here points back at this repo afterwards.
 
   from a clone:    ./terminal/tmux/install.sh [flags]
-  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.0/terminal/tmux/install.sh | bash
+  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.1/terminal/tmux/install.sh | bash
 
 There is nothing to ask, so nothing is asked.
 
@@ -70,7 +70,7 @@ done
 # otherwise fetched from the mirror exactly as the config is — same trust,
 # same mechanism — and checked for its marker line before it is sourced.
 PIECE="terminal/tmux"   # this piece's path under the mirror root
-PREEN_REF=v2.2.0   # this installer's release: the tag it fetches from, and the helper's marker
+PREEN_REF=v2.2.1   # this installer's release: the tag it fetches from, and the helper's marker
 # A slash ending an override would double the one joined after it, and leave
 # a root taken from it a level too deep.
 trim_slash() { printf '%s' "$1" | sed 's#/*$##'; }   # trim_slash <url> → it with any trailing slash dropped
@@ -88,10 +88,9 @@ PROBE_DIR=""   # the parse check's own socket directory, once it is made
 tmux_bin="$(command -v tmux 2>/dev/null || true)"
 trap 'rm -rf "$WORK"; if [ -n "$PROBE_DIR" ]; then "$tmux_bin" -S "$PROBE_DIR/s" kill-server >/dev/null 2>&1 || true; rm -rf "$PROBE_DIR"; fi' EXIT
 
-# Beside this script in either tree — `lib/` in the mirror, `public/lib/` in the
-# private one — else fetched from the root the config comes from. Never the
-# directory the shell happens to be standing in. Its marker line names its
-# release, and one of another release may not do what this installer asks.
+# The shared library comes from this script's own tree, else from the root
+# the config comes from, never the shell's directory. Its marker names its
+# release; another release's may not do what this installer asks.
 helper_ok() { # helper_ok <file> <where it is from> → true when it is this release's helper, false when it is no helper; stops the run on another release's
   grep -qxF "PREEN_INSTALL_LIB=$PREEN_REF" "$1" && return 0
   grep -q '^PREEN_INSTALL_LIB=' "$1" || return 1
@@ -150,16 +149,12 @@ fi
 # command parsed as `<file>:<line>: <command>`; a file tmux cannot parse is
 # rc 1 and tmux's message. It needs a server: one of its own, started with no
 # config on a socket in a directory made for it, so no other server is ever
-# asked — under TMPDIR when the socket's path fits there and a server starts
-# there, else /tmp: tmux refuses a socket path past the sun_path limit, and on
-# macOS a 104-byte path would not start a server where a 103-byte one did; a
-# TMPDIR on a FAT or network mount holds a directory and no socket.
-SOCKET_PATH_MAX=103
+# asked — under TMPDIR when a server starts there, else /tmp: tmux refuses a
+# socket path past the sun_path limit, and a TMPDIR on a FAT or network mount
+# holds a directory and no socket.
 PROBE_NAME=preen-tmux.XXXXXX
 probe_root="${TMPDIR:-/tmp}"
 probe_root="${probe_root%/}"
-# Bytes, not characters: the limit is the kernel's.
-if [ "$(printf '%s' "$probe_root/$PROBE_NAME/s" | wc -c)" -gt "$SOCKET_PATH_MAX" ]; then probe_root=/tmp; fi
 probe=none
 probe_said=""
 tmux_parse() { # tmux_parse <file> → true when tmux parses it; what it printed in PARSED

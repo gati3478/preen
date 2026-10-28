@@ -5,6 +5,13 @@ from it. A major release moves where or how a file lands, or drops a flag; a
 minor one adds a piece, a row, a flag or a check; a patch changes values,
 fixes and docs.
 
+## v2.2.1
+
+The piece pages' lists of refusals say "among them", as each installer's
+`--help` does, since none was complete, and sentences their installers
+contradicted are corrected. `preen doctor` no longer prints bash 3.2's
+occasional `child setpgid … Operation not permitted`.
+
 ## v2.2.0
 
 `taste/pref-check.py` fails a zsh `setopt` or `unsetopt` row matched with

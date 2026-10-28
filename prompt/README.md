@@ -45,13 +45,13 @@ prints without cship too, or with one below the floor, beside the two ways
 to install it.
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.0/prompt/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.1/prompt/install.sh | bash -s -- --dry-run
 ```
 
 Then the install, one line, no clone:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.0/prompt/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.1/prompt/install.sh | bash
 ```
 
 Or from a clone, `./prompt/install.sh`; `--help` is its manual. It
@@ -67,11 +67,12 @@ Or from a clone, `./prompt/install.sh`; `--help` is its manual. It
    is replaced without a backup. A link into a clone of the whole setup is
    left as it is (below);
 4. wires `statusLine` in `~/.claude/settings.json` (or under
-   `CLAUDE_CONFIG_DIR`, if you set it): added when absent; taken over, after
-   a backup, when it runs a lone cship, bare as cship's installer leaves it
-   or with the label this installer puts before it; left alone, and said so,
-   when it runs anything else. Every other key is kept; the file comes back
-   re-serialised with two-space indentation. A symlinked one is written
+   `CLAUDE_CONFIG_DIR`, if you set it): added when absent; unchanged when it
+   runs this already; else taken over, after a backup, when it runs a lone
+   cship, bare as cship's installer leaves it or with the label this
+   installer puts before it; left alone, and said so, when it runs anything
+   else. Every other key is kept; the file comes back re-serialised with
+   two-space indentation. A symlinked one, or `~/.claude`, is written
    through, as Claude Code does, and the plan names the file the entry lands
    in. When the entry is not written — no `~/.claude`, no working python3
    (on a Mac, `xcode-select --install`), another tool's entry — the exact
@@ -87,7 +88,7 @@ answers one; with both answered nothing is asked, and with no terminal the
 defaults are taken — `starship.toml` left alone, the account module hidden:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.0/prompt/install.sh | bash -s -- --with-starship --account-label personal
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.1/prompt/install.sh | bash -s -- --with-starship --account-label personal
 ./prompt/install.sh --no-starship --no-account
 ```
 

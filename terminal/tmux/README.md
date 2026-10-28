@@ -85,13 +85,13 @@ The installer names each it did not find.
 The plan, writing nothing:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.0/terminal/tmux/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.1/terminal/tmux/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.0/terminal/tmux/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.1/terminal/tmux/install.sh | bash
 ```
 
 Or from a clone, `./terminal/tmux/install.sh`. It asks nothing. The plan for
@@ -124,13 +124,13 @@ It
 
 A re-run with nothing changed rewrites nothing and takes no backup.
 
-Every refusal comes before the first write, and a dry run makes each one. A
-symlinked `~/.config`, `~/.config/tmux` or `preen/` is refused, since the
-copy would land wherever it points, and so is a symlinked tmux config
-without the line. So is a file that would not read the appended line as a
-command of its own: one whose last line ends in a backslash, or, where tmux
-is installed, one tmux cannot parse, which it reads none of now, or would
-read the line into a command above, as an open quote's text. That parse
+Every refusal comes before the first write, and a dry run makes each one.
+Among them, a symlinked `~/.config`, `~/.config/tmux` or `preen/` is
+refused, since the copy would land wherever it points, and so is a symlinked
+tmux config without the line. So is a file that would not read the appended
+line as a command of its own: one whose last line ends in a backslash, or,
+where tmux is installed, one tmux cannot parse, which it reads none of now,
+or one whose open quote would take the line into a command above. That parse
 runs nothing in the file: `source-file -n`, on a server of the run's own,
 stopped when the run ends.
 

@@ -69,13 +69,13 @@ There is no light variant.
 The plan, writing nothing:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.0/terminal/kitty/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.1/terminal/kitty/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.0/terminal/kitty/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.1/terminal/kitty/install.sh | bash
 ```
 
 Or from a clone, `./terminal/kitty/install.sh`. It asks nothing. The plan
@@ -115,7 +115,7 @@ It
    shipped replaced without one;
 3. writes `preen/tab-title.conf`, the tab title for your home: kitty expands
    no variable in that option, so the shipped title names the author's home.
-   The file is **the installer's**: one holding a title line is replaced with
+   The file is **the installer's**: a file of that one line is replaced with
    no backup, anything else there is backed up first, and on the author's
    machine it is not written at all;
 4. copies `open-actions.conf`, `mime.types` and `choose-files.conf` into
@@ -131,12 +131,12 @@ It
 
 A re-run with nothing changed rewrites nothing and takes no backup.
 
-Every refusal comes before the first write, and a dry run makes each one. A
-symlinked `~/.config`, `~/.config/kitty` or `preen/` is refused, and
-`~/.config/bat` where bat's config would go in it, since the files would land
-wherever it points; so is a symlinked `kitty.conf` whose target lacks the
-line, which belongs in the target, and a directory or `kitty.conf` the run
-cannot write.
+Every refusal comes before the first write, and a dry run makes each one.
+Among them, a symlinked `~/.config`, `~/.config/kitty` or `preen/` is
+refused, and `~/.config/bat` where bat's config would go in it, since the
+files would land wherever it points; so is a symlinked `kitty.conf` whose
+target lacks the line, which belongs in the target, and a directory or
+`kitty.conf` the run cannot write.
 
 ## Updating
 

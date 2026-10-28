@@ -92,13 +92,13 @@ The installer names each it did not find, and the release fzf and eza need.
 The plan, writing nothing:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.0/shell/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.1/shell/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.0/shell/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.1/shell/install.sh | bash
 ```
 
 Or from a clone, `./shell/install.sh`. It asks nothing. The plan for an
@@ -153,8 +153,8 @@ It
    [`terminal/ncdu/`](../terminal/ncdu/)) and ripgrep (from
    [`ripgrep/`](../ripgrep/)), each only where nothing is there or an
    earlier copy this setup shipped is; anything else stays, said `unchanged`
-   or `left alone`. The zshenv points rg at its config unless
-   `RIPGREP_CONFIG_PATH` already names another file, and the plan says so;
+   or `left alone`. ripgrep's is not copied while `RIPGREP_CONFIG_PATH`
+   names another file, and the plan says so;
 4. appends `source ~/.config/zsh/preen/zshenv` to the zshenv zsh reads,
    `$include ~/.config/zsh/preen/inputrc` to `~/.inputrc` and
    `source ~/.config/zsh/preen/zshrc` to the zshrc zsh reads, each once.
@@ -164,12 +164,13 @@ It
 
 A re-run with nothing changed rewrites nothing and takes no backup.
 
-Every refusal comes before the first write, and a dry run makes each one. A
-symlinked directory the files go in is refused, since they would land
-wherever it points, and so is a symlinked zshrc, zshenv or `~/.inputrc`
-without its line. So is a zsh file the appended line would join to its last
-command — a last line ending in a backslash, a last command ending in `&&`,
-`||` or a pipe, an open here-document — or one zsh cannot parse.
+Every refusal comes before the first write, and a dry run makes each one.
+Among them, a symlinked directory the files go in is refused, since they
+would land wherever it points, and so is a symlinked zshrc, zshenv or
+`~/.inputrc` without its line. So is a zsh file the appended line would join
+to its last command — a last line ending in a backslash, a last command
+ending in `&&`, `||` or a pipe, an open here-document — or one zsh cannot
+parse.
 
 ## Updating
 

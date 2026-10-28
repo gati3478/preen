@@ -2578,8 +2578,7 @@ def read_lshandler(path, key, **_opts):
     with no entry, or one set for a single role only, reads None: its default is
     then whatever LaunchServices ranks first, which nothing on disk states.
     Parsed as a plist, not as `defaults read` text, which prints a nested
-    LSHandlerPreferredVersions `-` beside the value (docs/traps.md
-    § "Files, links, and vendored content"). One export per process.
+    LSHandlerPreferredVersions `-` beside the value. One export per process.
     """
     if path not in _LSHANDLERS:
         # A domain that does not exist exports as an empty dict, exit 0.

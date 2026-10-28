@@ -48,8 +48,8 @@ for, and nothing here writes them: the copy sets neither.
 - **git**, measured with 2.43.0 on Ubuntu 24.04, and 2.54.0 (Apple's) and
   2.56.0 on macOS. Not found — or found as macOS's `/usr/bin/git` stub,
   which asks to install the developer tools when run — the installer says so
-  and installs anyway. Without a git that can read your file, the run checks
-  only that its last line does not end in a backslash.
+  and installs anyway. Without git, or with one whose read cannot run, the
+  run checks only that your file's last line does not end in a backslash.
 
 **Optional**
 
@@ -70,13 +70,13 @@ The installer names each it did not find.
 The plan, writing nothing:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.0/git/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.1/git/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.0/git/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.1/git/install.sh | bash
 ```
 
 Or from a clone, `./git/install.sh`. It asks nothing. The plan for an empty
@@ -99,7 +99,7 @@ of yours without the line `one line appended: <line>`.
 It
 
 1. looks for git, delta, less and git-lfs. None of them stops it; it runs git
-   only to ask its version and to read config files, each read deaf to every
+   to ask its version and to read config files, each read deaf to every
    other config, never to write one;
 2. copies `gitconfig` into `~/.config/git/preen/`, a different file there
    first backed up beside itself as `gitconfig.unpreened.<timestamp>`, an
@@ -115,15 +115,16 @@ It
 A re-run with nothing changed rewrites nothing and takes no backup.
 
 Every refusal comes before the first write, and a dry run makes each one.
-Beside those under What it takes over, a symlinked `~/.config`,
-`~/.config/git` or `preen/` is refused, since the copy would land wherever it
-points, as is a directory or file the run cannot write; so is a file the
-line goes in while git rewrites it, its `.lock` there, or one git would not
-read the appended line from as a line of its own, after a value ending in a
-backslash, say; and a `~/.gitconfig.local` that is or links to that file or
-the copy, or, where git can be asked, includes one.
-git's read runs nothing in the file: `git config -f <file> --no-includes
---list`, with no system or global config.
+Among them, beside those under What it takes over, a symlinked `~/.config`,
+`~/.config/git` or `preen/` is refused, since the copy would land wherever
+it points, as is one the run cannot write into or create; so is a file the
+line goes in that the run cannot read and append to, one git is rewriting,
+its `.lock` there, or one git would not read the appended line from as a
+line of its own, after a value ending in a backslash, say; and a
+`~/.gitconfig.local` that is or links to that file or the copy, or, where
+git can be asked, includes one. git's read runs nothing in the file:
+`git config -f <file> --no-includes --list`, with no system or global
+config.
 
 ## Updating
 

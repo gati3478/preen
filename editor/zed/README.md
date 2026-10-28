@@ -92,13 +92,13 @@ The installer names Zed and lazygit, found or not, and runs neither.
 The plan, writing nothing:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.0/editor/zed/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.1/editor/zed/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.0/editor/zed/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.1/editor/zed/install.sh | bash
 ```
 
 Or from a clone, `./editor/zed/install.sh`. It asks nothing. The plan for an
@@ -132,8 +132,8 @@ It
 
 A re-run with nothing changed rewrites nothing and takes no backup.
 
-Every refusal — those under What it takes over, and a directory the run
-cannot write — comes before the first write, and a dry run makes each one.
+Every refusal comes before the first write, and a dry run makes each one;
+among them those under What it takes over, and an unwritable directory.
 
 ## Updating
 
