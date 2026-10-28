@@ -17,13 +17,13 @@ these are one user's settings.
 The list of settings that differ, writing nothing:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.2/macos/apply.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.3/macos/apply.sh | bash -s -- --dry-run
 ```
 
 To apply:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.2/macos/apply.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.3/macos/apply.sh | bash
 ```
 
 Or from a clone, `./macos/apply.sh`. It asks nothing.

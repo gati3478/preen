@@ -5,11 +5,14 @@ from it. A major release moves where or how a file lands, or drops a flag; a
 minor one adds a piece, a row, a flag or a check; a patch changes values,
 fixes and docs.
 
+## v2.2.3
+
+v2.2.2's notes are corrected: gh's `--help` left out four refusals, not one.
+
 ## v2.2.2
 
-`gh/install.sh --help` no longer calls its list of refusals all of them: it
-left out one, a shared library from another release. It now says "among
-them", as the gh page does, and as v2.2.1's notes said every `--help` did.
+`gh/install.sh --help` says "among them" of its refusals, as its page does,
+not "all of them": it left out four, on the shared library it loads.
 
 ## v2.2.1
 
