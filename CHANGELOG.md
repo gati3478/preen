@@ -5,13 +5,21 @@ from it. A major release moves where or how a file lands, or drops a flag; a
 minor one adds a piece, a row, a flag or a check; a patch changes values,
 fixes and docs.
 
+## v2.2.7
+
+v2.2.6's notes are corrected: before it, `macos/apply.sh` under a `HOME`
+ending in `/` missed a symlinked directory only when `XDG_STATE_HOME` did
+not start with `HOME` as spelled and then `/`, not always.
+
 ## v2.2.6
 
 `macos/apply.sh` refuses a symlinked directory between `~` and its restore
 script also when `HOME` ends in `/` and `XDG_STATE_HOME` names a directory
-under it; it checked none there. `gh/install.sh --help` pairs
-`GH_CONFIG_DIR` and `XDG_CONFIG_HOME` each with its directory, as its page
-does. v2.2.2's notes name the four refusals they count.
+under it that does not start with `HOME` as spelled and then `/`, as
+`/Users/me/.local/state` beside a `HOME` of `/Users/me/`.
+`gh/install.sh --help` pairs `GH_CONFIG_DIR` and `XDG_CONFIG_HOME` each with
+its directory, as its page does. v2.2.2's notes name the four refusals they
+count.
 
 ## v2.2.5
 

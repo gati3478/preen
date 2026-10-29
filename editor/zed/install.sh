@@ -14,7 +14,7 @@ whole. Copies, never symlinks, and nothing here points back at this repo
 afterwards: a setting of yours belongs in your settings.json.
 
   from a clone:    ./editor/zed/install.sh [flags]
-  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.6/editor/zed/install.sh | bash
+  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.7/editor/zed/install.sh | bash
 
 There is nothing to ask, so nothing is asked.
 
@@ -63,7 +63,7 @@ done
 # otherwise fetched from the mirror exactly as the configs are — same trust,
 # same mechanism — and checked for its marker line before it is sourced.
 PIECE="editor/zed"   # this piece's path under the mirror root
-PREEN_REF=v2.2.6   # this installer's release: the tag it fetches from, and the helper's marker
+PREEN_REF=v2.2.7   # this installer's release: the tag it fetches from, and the helper's marker
 # A slash ending an override would double the one joined after it, and leave
 # a root taken from it a level too deep.
 trim_slash() { printf '%s' "$1" | sed 's#/*$##'; }   # trim_slash <url> → it with any trailing slash dropped

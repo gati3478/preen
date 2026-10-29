@@ -92,13 +92,13 @@ The installer names Zed and lazygit, found or not, and runs neither.
 The plan, writing nothing:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.6/editor/zed/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.7/editor/zed/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.6/editor/zed/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.7/editor/zed/install.sh | bash
 ```
 
 Or from a clone, `./editor/zed/install.sh`. It asks nothing. The plan for an
