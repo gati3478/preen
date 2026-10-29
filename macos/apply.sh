@@ -18,7 +18,7 @@ that is set). `sh` it to put them back.
   -h, --help  print this and exit
 
 Refuses, before the first write, --dry-run included: anywhere but macOS;
-root; a symlinked directory on the way to that script; a script it cannot
+root; a symlinked directory between ~ and that script; a script it cannot
 save there.
 EOF
 }

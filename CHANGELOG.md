@@ -5,6 +5,13 @@ from it. A major release moves where or how a file lands, or drops a flag; a
 minor one adds a piece, a row, a flag or a check; a patch changes values,
 fixes and docs.
 
+## v2.2.5
+
+`macos/apply.sh --help` says it refuses a symlinked directory between `~` and
+its restore script, as its page does, not anywhere on the way there. The gh
+page's refusal of `GH_CONFIG_DIR` and `XDG_CONFIG_HOME` says which directory
+goes with which.
+
 ## v2.2.4
 
 gh's installer no longer refuses `GH_CONFIG_DIR=~/.config/gh`

@@ -25,9 +25,10 @@ stays; `version` and `aliases` are not set either.
   refused where a key differs, with the keys to set in the file it points at:
   gh would write through the link. Once that file holds them, a re-run says
   each is `already` set.
-- **`GH_CONFIG_DIR`**, or with it unset **`XDG_CONFIG_HOME`**, naming a
-  directory other than `~/.config/gh` or `~/.config` is refused: gh then
-  reads its config there, and the run knows only `~/.config/gh`.
+- **`GH_CONFIG_DIR`** naming a directory other than `~/.config/gh`, or with
+  it unset **`XDG_CONFIG_HOME`** naming one other than `~/.config`, is
+  refused: gh then reads its config there, and the run knows only
+  `~/.config/gh`.
 
 ## What you need
 
@@ -48,13 +49,13 @@ The installer names each it did not find.
 The plan, writing nothing:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.4/gh/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.5/gh/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.4/gh/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.5/gh/install.sh | bash
 ```
 
 Or from a clone, `./gh/install.sh`. It asks nothing. The plan for an empty

@@ -75,13 +75,13 @@ and installs neither.
 The plan, writing nothing:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.4/editor/sublime/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.5/editor/sublime/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.4/editor/sublime/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.5/editor/sublime/install.sh | bash
 ```
 
 Or from a clone, `./editor/sublime/install.sh`. It asks nothing. The plan on
