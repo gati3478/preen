@@ -225,10 +225,11 @@ short() { # short <path> → the path with $HOME written as ~
 # The checks below only read, so a dry run runs them too and refuses as the
 # run would. A symlinked directory between $HOME and the restore script would
 # put it wherever the link points, so the run stops instead. $HOME itself is
-# not tested.
+# not tested. Below $HOME is as short() reads it, a HOME ending in / too.
 link=""
 p="$STATE_DIR"
-while [ "${p#"$HOME"/}" != "$p" ]; do
+# shellcheck disable=SC2088  # the ~ short() prints, not a path to expand
+while case "$(short "$p")" in "~/"*) true ;; *) false ;; esac; do
   if [ -L "$p" ]; then link="$p"; fi
   p="${p%/*}"
 done

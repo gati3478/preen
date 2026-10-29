@@ -12,7 +12,7 @@ config.yml, gh first writes its own commented defaults. A key left blank here
 is not set, and hosts.yml is never written.
 
   from a clone:    ./gh/install.sh [flags]
-  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.5/gh/install.sh | bash
+  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.6/gh/install.sh | bash
 
 There is nothing to ask, so nothing is asked.
 
@@ -20,12 +20,13 @@ Your config.yml is copied to a timestamped backup beside it before the first
 key is set, and a run that finds every key already set writes nothing. If gh
 fails part-way, the run stops with gh's words and names the backup. Every
 refusal comes before the first write; among them: gh not on PATH, on a real
-run; a GH_CONFIG_DIR or XDG_CONFIG_HOME under which gh reads a config.yml
-other than ~/.config/gh/config.yml; a symlink at ~/.config or ~/.config/gh,
-dangling or not, or at config.yml where a key differs; any of them the run
-cannot write where it must; a config.yml or hosts.yml gh itself cannot read,
-in gh's words; a source file that is missing, empty, or not this config; and
-a value in it that is not plain words.
+run; a GH_CONFIG_DIR naming a directory other than ~/.config/gh, or with it
+unset an XDG_CONFIG_HOME naming one other than ~/.config; a symlink at
+~/.config or ~/.config/gh, dangling or not, or at config.yml where a key
+differs; any of them the run cannot write where it must; a config.yml or
+hosts.yml gh itself cannot read, in gh's words; a source file that is
+missing, empty, or not this config; and a value in it that is not plain
+words.
 
   --dry-run   print what the run would touch and stop, having written nothing
               — gh need not be installed yet
@@ -58,7 +59,7 @@ done
 # the mirror exactly as the config is — same trust, same mechanism — and
 # checked for its marker line before it is sourced.
 PIECE="gh"   # this piece's path under the mirror root
-PREEN_REF=v2.2.5   # this installer's release: the tag it fetches from, and the helper's marker
+PREEN_REF=v2.2.6   # this installer's release: the tag it fetches from, and the helper's marker
 # A slash ending an override would double the one joined after it, and leave
 # a root taken from it a level too deep.
 trim_slash() { printf '%s' "$1" | sed 's#/*$##'; }   # trim_slash <url> → it with any trailing slash dropped

@@ -69,13 +69,13 @@ There is no light variant.
 The plan, writing nothing:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.5/terminal/kitty/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.6/terminal/kitty/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.5/terminal/kitty/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.6/terminal/kitty/install.sh | bash
 ```
 
 Or from a clone, `./terminal/kitty/install.sh`. It asks nothing. The plan

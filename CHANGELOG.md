@@ -5,6 +5,14 @@ from it. A major release moves where or how a file lands, or drops a flag; a
 minor one adds a piece, a row, a flag or a check; a patch changes values,
 fixes and docs.
 
+## v2.2.6
+
+`macos/apply.sh` refuses a symlinked directory between `~` and its restore
+script also when `HOME` ends in `/` and `XDG_STATE_HOME` names a directory
+under it; it checked none there. `gh/install.sh --help` pairs
+`GH_CONFIG_DIR` and `XDG_CONFIG_HOME` each with its directory, as its page
+does. v2.2.2's notes name the four refusals they count.
+
 ## v2.2.5
 
 `macos/apply.sh --help` says it refuses a symlinked directory between `~` and
@@ -26,7 +34,9 @@ v2.2.2's notes are corrected: gh's `--help` left out four refusals, not one.
 ## v2.2.2
 
 `gh/install.sh --help` says "among them" of its refusals, as its page does,
-not "all of them": it left out four, on the shared library it loads.
+not "all of them". It left out four about the shared library it loads: one
+it cannot fetch, one that is not that library, one cut off, and another
+release's.
 
 ## v2.2.1
 

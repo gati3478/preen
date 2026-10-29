@@ -49,13 +49,13 @@ The installer names each it did not find.
 The plan, writing nothing:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.5/gh/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.6/gh/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.5/gh/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.6/gh/install.sh | bash
 ```
 
 Or from a clone, `./gh/install.sh`. It asks nothing. The plan for an empty
