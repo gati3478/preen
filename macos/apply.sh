@@ -12,13 +12,14 @@ one of theirs changed. Trackpad changes take effect at the next login.
 
 Before the first write, the values it replaces are saved as a script,
 ~/.local/state/preen/macos.unpreened.<time>.sh ($XDG_STATE_HOME/preen when
-that is set). `sh` it to put them back. A symlinked directory on the way
-there stops the run before it writes anything.
+that is set). `sh` it to put them back.
 
   --dry-run   list each setting that differs, from → to, and stop, having written nothing
   -h, --help  print this and exit
 
-Refuses to run as root, and anywhere but macOS.
+Refuses, before the first write, --dry-run included: anywhere but macOS;
+root; a symlinked directory on the way to that script; a script it cannot
+save there.
 EOF
 }
 set -euo pipefail

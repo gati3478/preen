@@ -92,13 +92,13 @@ The installer names each it did not find, and the release fzf and eza need.
 The plan, writing nothing:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.3/shell/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.4/shell/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.3/shell/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.4/shell/install.sh | bash
 ```
 
 Or from a clone, `./shell/install.sh`. It asks nothing. The plan for an

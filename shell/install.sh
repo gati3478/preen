@@ -29,7 +29,7 @@ copied zshenv sets it, naming ~/.config/ripgrep/config, only where it is
 unset and that file is there. ~/.zprofile is never touched.
 
   from a clone:    ./shell/install.sh [flags]
-  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.3/shell/install.sh | bash
+  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.4/shell/install.sh | bash
 
 There is nothing to ask, so nothing is asked.
 
@@ -90,7 +90,7 @@ done
 # otherwise fetched from the mirror exactly as the configs are — same trust,
 # same mechanism — and checked for its marker line before it is sourced.
 PIECE="shell"   # this piece's path under the mirror root
-PREEN_REF=v2.2.3   # this installer's release: the tag it fetches from, and the helper's marker
+PREEN_REF=v2.2.4   # this installer's release: the tag it fetches from, and the helper's marker
 # A slash ending an override would double the one joined after it, and leave
 # a root taken from it a level too deep.
 trim_slash() { printf '%s' "$1" | sed 's#/*$##'; }   # trim_slash <url> → it with any trailing slash dropped

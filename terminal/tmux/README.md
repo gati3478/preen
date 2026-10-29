@@ -85,13 +85,13 @@ The installer names each it did not find.
 The plan, writing nothing:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.3/terminal/tmux/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.4/terminal/tmux/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.3/terminal/tmux/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.4/terminal/tmux/install.sh | bash
 ```
 
 Or from a clone, `./terminal/tmux/install.sh`. It asks nothing. The plan for

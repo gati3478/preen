@@ -5,6 +5,13 @@ from it. A major release moves where or how a file lands, or drops a flag; a
 minor one adds a piece, a row, a flag or a check; a patch changes values,
 fixes and docs.
 
+## v2.2.4
+
+gh's installer no longer refuses `GH_CONFIG_DIR=~/.config/gh`
+beside an `XDG_CONFIG_HOME` naming another directory, since gh
+then reads `~/.config/gh`. `macos/apply.sh --help` names each of
+its refusals, as its page does.
+
 ## v2.2.3
 
 v2.2.2's notes are corrected: gh's `--help` left out four refusals, not one.
