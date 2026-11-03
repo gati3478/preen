@@ -2221,6 +2221,242 @@ def read_literalkv(path, key, accumulate=False, **_opts):
     return found if accumulate else found[-1]
 
 
+# Foundation's CharacterSet.whitespaces and .newlines, which rootshell trims and
+# splits by, measured on macOS 27.2: `.whitespaces` holds U+200B, which its
+# documentation ("Zs and tab") leaves out. str.strip() differs both ways — it
+# keeps U+200B and drops U+001C–U+001F — and str.splitlines() also breaks at
+# U+001C–U+001E.
+_ROOTSHELL_BLANKS = "".join(map(chr, [0x09, 0x20, 0xA0, 0x1680, *range(0x2000, 0x200C), 0x202F, 0x205F, 0x3000]))
+_ROOTSHELL_NEWLINE = re.compile("[\n\v\f\r\x85\N{LINE SEPARATOR}\N{PARAGRAPH SEPARATOR}]")
+
+
+def read_rootshellconf(path, key, accumulate=False, **_opts):
+    """rootshell's `rootshell.conf`, Ghostty-style `key = value` lines, read as
+    its config overlay reads them (tag 1.0.15-172: GhosttyConfigParser.parse,
+    then ConfigOverlayCodec.decode).
+
+    Two leading BOMs go — Foundation's UTF-8 decode drops one (measured, macOS
+    27.2), the parser another — and the text is split at every newline
+    character, so CRLF is a break plus an empty line. Each line is trimmed; an
+    empty one, one opening with `#` and one with no `=` are skipped. The key is
+    the text before the first `=`, trimmed and lowercased; the value is the
+    rest, trimmed, losing one pair of enclosing double quotes when it is two
+    characters or more. A later `#` is text. The last line for a key wins, and
+    an empty last value resets the setting, so it reads unset. With
+    `accumulate`, a list key's values in file order, empties dropped — one
+    mid-list clears nothing, unlike Ghostty — and [] when the last is empty,
+    which clears the list.
+
+    Refused: a `config-file` line, whose file the loader appends after this
+    one's lines and this reader does not follow (plumage's file has none); and
+    the `keybind` key, whose lines the overlay drops for Keyboard Shortcuts.
+    Not modelled: two legacy spellings the registry maps onto current keys
+    (`tmux-new-tab-action`, `tmux-tab-close-action`), so a file that uses only
+    the legacy one reads unset here; and grapheme clusters, which Swift
+    compares where this compares code points. They differ only where a joining
+    character on either side fuses the `=`, `#` or `"` a rule looks at into one
+    cluster, or in a non-ASCII key, and every registry key is `[a-z0-9-]`.
+    """
+    if key == "keybind":
+        raise ReadError("rootshell's config overlay drops keybind lines — Keyboard Shortcuts owns them")
+    with open(path, encoding="utf-8-sig", newline="") as fh:
+        text = fh.read().removeprefix("\N{BYTE ORDER MARK}")
+    found = []
+    for raw in _ROOTSHELL_NEWLINE.split(text):
+        line = raw.strip(_ROOTSHELL_BLANKS)
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        name, _, value = line.partition("=")
+        name = name.strip(_ROOTSHELL_BLANKS).lower()
+        if name == "config-file":
+            raise ReadError(f"config-file include — rootshell reads the included file's lines after these, and this reader follows none: {line[:60]!r}")
+        if name != key:
+            continue
+        value = value.strip(_ROOTSHELL_BLANKS)
+        if len(value) >= 2 and value[0] == value[-1] == '"':
+            value = value[1:-1]
+        found.append(value)
+    if not found:
+        return None
+    if accumulate:
+        return [v for v in found if v] if found[-1] else []
+    return found[-1] or None
+
+
+# Each key rootshell's prompt reads (PromptConfig.parse, tag 1.0.15-172), by
+# table, with the type it reads it as; "" is the top level.
+_PROMPTRC_KEYS = {
+    "": {"format": str, "right_format": str, "add_newline": bool, "palette": str},
+    "transient_prompt": {"enabled": bool, "format": str},
+    "character": {"success_symbol": str, "error_symbol": str, "disabled": bool},
+    "directory": {"format": str, "truncation_length": int, "truncation_symbol": str, "disabled": bool},
+    "git_branch": {"format": str, "symbol": str, "truncation_length": int, "disabled": bool},
+    "git_status": {"format": str, "staged": str, "disabled": bool},
+    "username": {"format": str, "show_always": bool, "disabled": bool},
+    "time": {"format": str, "time_format": str, "disabled": bool},
+    "battery": {"format": str, "full_symbol": str, "charging_symbol": str, "discharging_symbol": str,
+                "display_threshold": int, "disabled": bool},
+    "line_break": {"disabled": bool},
+    "wifi": {"format": str, "band_icon_2_4": str, "band_icon_5": str, "band_icon_6": str, "disabled": bool},
+    "network": {"format": str, "show_ip": bool, "disabled": bool},
+    "connection_type": {"format": str, "wifi_symbol": str, "cellular_symbol": str, "wired_symbol": str,
+                        "disabled": bool},
+}
+_PROMPTRC_ESCAPES = {"n": "\n", "r": "\r", "t": "\t", "\\": "\\", '"': '"'}
+# Swift's Int(String) and, for a token holding a `.`, Double(String).
+_SWIFT_INT = re.compile(r"[+-]?[0-9]+")
+_SWIFT_DOUBLE = re.compile(r"[+-]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][+-]?[0-9]+)?")
+_SWIFT_HEX_DOUBLE = re.compile(r"[+-]?0[xX](?:[0-9a-fA-F]+\.?[0-9a-fA-F]*|\.[0-9a-fA-F]+)(?:[pP][+-]?[0-9]+)?")
+
+
+def _promptrc_unquoted(text):
+    """(index, char) of each character outside quotes, as TOMLParser's
+    findEqualsSign and stripInlineComment scan: a quote runs to the next one of
+    its kind, and a backslash escapes nothing."""
+    quote = None
+    for i, ch in enumerate(text):
+        if quote:
+            if ch == quote:
+                quote = None
+        elif ch in "\"'":
+            quote = ch
+        else:
+            yield i, ch
+
+
+def _promptrc_multiline(lines, start, delim, n):
+    first = lines[start]
+    after = first[first.index(delim) + 3:]
+    if delim in after:
+        return after[:after.index(delim)], 1
+    text = after if after.strip(_ROOTSHELL_BLANKS) else ""
+    for j in range(start + 1, len(lines)):
+        end = lines[j].find(delim)
+        if text:
+            text += "\n"
+        if end >= 0:
+            return text + lines[j][:end], j - start + 1
+        text += lines[j]
+    raise ReadError(f"rootshell refuses the file: an unterminated string on line {n}")
+
+
+def _promptrc_value(raw, lines, start, n):
+    value = raw
+    for i, ch in _promptrc_unquoted(raw):
+        if ch == "#":
+            value = raw[:i].strip(_ROOTSHELL_BLANKS)
+            break
+    if value.startswith('"""') or value.startswith("'''"):
+        return _promptrc_multiline(lines, start, value[:3], n)
+    if value.startswith('"'):
+        out, escaped = [], False
+        for ch in value[1:]:
+            if escaped:
+                if ch not in _PROMPTRC_ESCAPES:
+                    raise ReadError(f"rootshell refuses the file: the escape \\{ch} on line {n}, "
+                                    "where its TOML takes only \\n \\r \\t \\\\ \\\"")
+                out.append(_PROMPTRC_ESCAPES[ch])
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == '"':
+                return "".join(out), 1
+            else:
+                out.append(ch)
+        raise ReadError(f"rootshell refuses the file: an unterminated string on line {n}")
+    if value.startswith("'"):
+        end = value.find("'", 1)
+        if end < 0:
+            raise ReadError(f"rootshell refuses the file: an unterminated string on line {n}")
+        return value[1:end], 1
+    if value in ("true", "false"):
+        return value == "true", 1
+    if _SWIFT_INT.fullmatch(value) and -2**63 <= int(value) < 2**63:
+        return int(value), 1
+    if "." in value and _SWIFT_DOUBLE.fullmatch(value):
+        return float(value), 1
+    if "." in value and _SWIFT_HEX_DOUBLE.fullmatch(value):
+        return float.fromhex(value), 1
+    return value, 1
+
+
+def _promptrc_table(root, path):
+    table = root
+    for part in path:
+        if not isinstance(table.get(part), dict):
+            table[part] = {}
+        table = table[part]
+    return table
+
+
+def read_promptrc(path, key, **_opts):
+    """rootshell's `~/.promptrc.toml`, read as its own TOML subset reads it
+    (tag 1.0.15-172: TOMLParser.parse, then PromptConfig.parse). The `toml`
+    reader does not fit: the subset refuses files TOML takes and takes files
+    TOML refuses, and a refused file drops the whole prompt for the built-in
+    theme, so a TOML read would go green over a prompt the phone never shows.
+
+    One BOM goes, as Foundation's UTF-8 decode drops one, and the text splits
+    at every newline character. A trimmed line that is empty or opens with `#`
+    is skipped. `[a.b]` names a table, its parts split at `.` with empty ones
+    dropped; a line with no `=` outside quotes, or a `#` before one, is
+    skipped, a `[[` line with no `=` among them. The key is the raw text before that `=`, so a quoted or
+    dotted key is literal, and PromptConfig reads neither. The value loses a
+    trailing `#` comment outside quotes, then is a triple-quoted string of
+    either kind (no escapes), a basic string (escapes `\\n \\r \\t \\\\ \\"`, anything after
+    the closing quote dropped), a literal string, `true`/`false`, an integer,
+    a decimal with a `.`, or else the bare text as a string. The last value
+    for a key wins.
+
+    Refused, as rootshell refuses the whole file: any other escape — `\\u`
+    among them — an unterminated string, and a malformed table header. Also
+    refused: a key PromptConfig never reads, and a value of another type than
+    it reads there, which it drops for its default. Not modelled: the format
+    grammar, which rejects the file for a `format`, a `right_format` or an
+    enabled transient format that fails to parse; the fallback at render
+    time for a prompt with no visible text or no input line; and grapheme
+    clusters, as in read_rootshellconf.
+    """
+    with open(path, encoding="utf-8-sig", newline="") as fh:
+        lines = _ROOTSHELL_NEWLINE.split(fh.read())
+    root, table, i = {}, [], 0
+    while i < len(lines):
+        n = i + 1
+        line = lines[i].strip(_ROOTSHELL_BLANKS)
+        i += 1
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("[") and not line.startswith("[["):
+            close = line.find("]")
+            content = line[1:close].strip(_ROOTSHELL_BLANKS) if close >= 0 else ""
+            parts = [p.strip(_ROOTSHELL_BLANKS) for p in content.split(".") if p]
+            if not content or not all(parts):
+                raise ReadError(f"rootshell refuses the file: a malformed table header on line {n}")
+            _promptrc_table(root, parts)
+            table = parts
+            continue
+        eq = next((j for j, ch in _promptrc_unquoted(line) if ch in "=#"), None)
+        if eq is None or line[eq] == "#" or not line[:eq].strip(_ROOTSHELL_BLANKS):
+            continue
+        value, used = _promptrc_value(line[eq + 1:].strip(_ROOTSHELL_BLANKS), lines, n - 1, n)
+        _promptrc_table(root, table)[line[:eq].strip(_ROOTSHELL_BLANKS)] = value
+        i += used - 1
+
+    *tables, name = key.split(".")
+    wanted = str if len(tables) == 2 and tables[0] == "palettes" else _PROMPTRC_KEYS.get(".".join(tables), {}).get(name)
+    if wanted is None:
+        raise ReadError(f"rootshell's prompt reads no key {key!r}")
+    value = _dotted(root, key)
+    if value is None:
+        return None
+    if type(value) is not wanted:
+        raise ReadError(f"{key} is {type(value).__name__} here, and rootshell reads a {wanted.__name__} there, "
+                        "so it keeps its default")
+    if wanted is bool:
+        return "true" if value else "false"
+    return str(value)
+
+
 def read_androidprefs(path, key, accumulate=False, **_opts):
     """An Android app's SharedPreferences file: a <map> of
     `<string name="K">V</string>` and `<int|long|float|boolean name="K"
@@ -2670,6 +2906,8 @@ READERS = {
     "nanorc": read_nanorc,
     "javaprops": read_javaprops,
     "literalkv": read_literalkv,
+    "rootshellconf": read_rootshellconf,
+    "promptrc": read_promptrc,
     "androidprefs": read_androidprefs,
 }
 

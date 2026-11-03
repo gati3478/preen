@@ -7,12 +7,14 @@ to the clipboard through `pbcopy`; windows and panes count from 1, and the
 windows renumber when one closes; the history holds 200,000 lines; tmux is
 told the terminal has true colour and undercurl, and lets kitty's graphics
 through. The status bar is Gruvbox Dark Hard, its colours written into
-`tmux.conf` literally. Where [tpm](https://github.com/tmux-plugins/tpm) is
+`tmux.conf` literally, and a client under 60 columns wide — a phone — sees
+only the windows on it. Where [tpm](https://github.com/tmux-plugins/tpm) is
 installed, tmux-resurrect and tmux-continuum are set to save the sessions
 every ten minutes and restore them when tmux starts. The saves are files on
 disk, and they hold what every pane shows, its scrollback included;
 [Leaving](#leaving) says where. tmux-thumbs copies a URL, path or hash on
-screen by its hint letters, C-Space then Space. Take it alone: the installer
+screen by its hint letters, C-Space then Space, through `pbcopy` and to the
+terminal tmux runs in, as a clipboard write. Take it alone: the installer
 fetches the installer library the pieces share from this repository, and
 nothing it installs points back here.
 
@@ -72,6 +74,9 @@ it and wins.
   git clone https://github.com/tmux-plugins/tpm ~/.config/tmux/plugins/tpm
   ```
 
+  tmux-thumbs builds its binary with cargo the first time C-Space Space
+  runs, after asking.
+
 - **pbcopy**, macOS's, which `y` in copy mode and a mouse drag pipe the
   selection to. Without it — over ssh to Linux, say — the selection still
   reaches tmux's paste buffer, which C-Space ] pastes, and tmux still sends it
@@ -85,13 +90,13 @@ The installer names each it did not find.
 The plan, writing nothing:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.7/terminal/tmux/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.3.0/terminal/tmux/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.2.7/terminal/tmux/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.3.0/terminal/tmux/install.sh | bash
 ```
 
 Or from a clone, `./terminal/tmux/install.sh`. It asks nothing. The plan for

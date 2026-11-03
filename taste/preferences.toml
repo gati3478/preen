@@ -501,6 +501,15 @@ target = "tmux_copy"
 key = "stream"
 want = "stripped"
 
+# The copy reaches a phone too: mosh-server keeps OSC 52 only with the `c`
+# selection, which tmux leaves empty. Watched 03-11-2026 on the iPhone Duo's
+# rootshell: the empty form never arrived, the `c` form did.
+[pref.copy_on_select.targets.tmux_osc52_mosh]
+target = "tmux"
+key = "terminal-overrides"
+accumulate = true
+want_any = ",xterm-256color:Ms=\\E]52;c%p1%.0s;%p2%s\\a"
+
 # `smart`'s exception stops at the tmux border: a rectangle's rows lose their
 # trailing spaces too. Rebuilding the rectangle from capture-pane -N by its
 # coordinates would be a contraption, not a setting.
@@ -1158,6 +1167,20 @@ unset_reads_default = true
 [pref.horizontal_tab_bar.targets.tmux]
 key = "status-position"
 want = "bottom"
+
+[pref.narrow_status_bar]
+value = "under 60 columns a client's bar drops what tells a phone nothing new, for the windows"
+why = "A folded phone shows ~45 columns. The session is always `remote`, the Mac's save mark is a constant, and its clock repeats the phone's. `#{client_width}` is read per client, so a wide client on the same session keeps the whole bar."
+
+# Pinned whole, both sides: the wide branch is the full bar, byte for byte.
+[pref.narrow_status_bar.targets.tmux]
+key = "status-left"
+want = "#[bg=#fabd2f,fg=#1d2021,bold]#{?#{e|<:#{client_width},60},, #S }"
+
+[pref.narrow_status_bar.targets.tmux_right]
+target = "tmux"
+key = "status-right"
+want = "#{?#{e|<:#{client_width},60},,#[fg=#b8bb26]#{continuum_status} #[fg=#928374]%-I:%M %p }"
 
 # The look of the bar itself — one look, both halves pinned.
 [pref.tab_bar_shape]
@@ -2198,6 +2221,14 @@ want_any_contain = "tmux-thumbs"
 target = "tmux"
 key = "@thumbs-key"
 want = "Space"
+
+# The pick reaches the attached terminal too: set-buffer -w writes it over
+# OSC 52, which a phone over mosh receives; thumbs' own @thumbs-osc52 does
+# not.
+[pref.quick_copy_hints.targets.tmux_clipboard]
+target = "tmux"
+key = "@thumbs-command"
+want_contains = "tmux set-buffer -w"
 
 # The one surface where vi idiom was CHOSEN against both the shipped
 # default (emacs) and the non-modal criterion — a documented exception,

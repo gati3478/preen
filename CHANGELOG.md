@@ -5,6 +5,20 @@ from it. A major release moves where or how a file lands, or drops a flag; a
 minor one adds a piece, a row, a flag or a check; a patch changes values,
 fixes and docs.
 
+## v2.3.0
+
+tmux's status bar shows only the windows to a client under 60 columns wide,
+a phone's: the session name, the save mark and the clock drop out there,
+while a wide client on the same session keeps them. A copy in tmux reaches a
+terminal over mosh: mosh-server drops a clipboard write without the `c`
+selection, which tmux leaves empty, so an `Ms` override supplies it. A
+tmux-thumbs pick goes to the attached terminal as a clipboard write as well
+as to `pbcopy`. `taste/preferences.toml` pins all three.
+
+`taste/pref-check.py` reads two more formats: `rootshellconf`, the iOS
+terminal rootshell's settings file, and `promptrc`, its prompt's subset of
+Starship's TOML.
+
 ## v2.2.7
 
 v2.2.6's notes are corrected: before it, `macos/apply.sh` under a `HOME`
