@@ -69,13 +69,13 @@ There is no light variant.
 The plan, writing nothing:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.3.0/terminal/kitty/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.4.0/terminal/kitty/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.3.0/terminal/kitty/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.4.0/terminal/kitty/install.sh | bash
 ```
 
 Or from a clone, `./terminal/kitty/install.sh`. It asks nothing. The plan
@@ -174,13 +174,14 @@ the same `--config-file-name local.conf`.
 ## What changes
 
 The choices felt at once, each with the lines that undo it in
-`~/.config/kitty/preen/local.conf`. Each undo is kitty 0.49.2's own default.
+`~/.config/kitty/preen/local.conf`. Each undo is kitty 0.50.0's own default.
 
 | What you notice | Undo |
 | --- | --- |
 | the left Option key is Alt, so characters typed with Option take the right one (`macos_option_as_alt`) | `macos_option_as_alt no` |
 | selecting text copies it, replacing the clipboard (`copy_on_select`) | `copy_on_select no` |
-| cmd+q saves the open windows and tabs to `~/.config/kitty/last-session.kitty`, and the next launch restores them (`startup_session`); before the first save, kitty logs that it cannot read the file and opens its usual window | `startup_session none`<br>`map cmd+q quit` |
+| cmd+q saves the open windows and tabs, each window's size and position with them, to `~/.config/kitty/last-session.kitty`, and the next launch restores them (`startup_session`); before the first save, kitty logs that it cannot read the file and opens its usual window | `startup_session none`<br>`map cmd+q quit` |
+| logging out, restarting or shutting down saves every kitty window with its scrollback, and the next launch restores it once and deletes it (`restore_session_after_logout`). On macOS it is encrypted with a key in your login keychain, but kitty's own docs say any process running as you can read it until then; on Linux it is not encrypted, and is saved only where the desktop's Inhibit portal reports the session ending | `restore_session_after_logout no` |
 
 Of the session's two lines, the first stops the session opening at launch,
 the second makes cmd+q quit without saving.
@@ -189,10 +190,11 @@ the second makes cmd+q quit without saving.
 
 `open-actions.conf` and `mime.types` are the kitty half of one behaviour: a
 file path printed in the terminal is a link, and clicking it opens the file in
-Sublime Text — at the matching line when the link carries one, in a new tab
-when it is a directory. Another editor is one find-and-replace away: each
-`action launch` line that opens a file names `subl`. `mime.types` adds the
-file types kitty's lookup lacks or mislabels, Kotlin and `.rs` among them.
+Sublime Text — at the matching line when the link carries one; a directory
+goes to the tab already there, or opens a new tab there. Another editor is
+one find-and-replace away: each `action launch` line that opens a file names
+`subl`. `mime.types` adds the file types kitty's lookup lacks or mislabels,
+Kotlin and `.rs` among them.
 
 The other half is the shell writing those links — `rg --hyperlink-format=kitty`
 and `eza --hyperlink` — and the [shell piece](../../shell/README.md) installs

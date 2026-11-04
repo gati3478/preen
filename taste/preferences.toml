@@ -287,6 +287,12 @@ target = "kitty"
 key = "cursor_underline_thickness"
 want = "4"
 
+# In an OS window without focus too: kitty's default there is a hollow block.
+[pref.caret.targets.kitty_unfocused]
+target = "kitty"
+key = "cursor_shape_unfocused"
+want = "unchanged"
+
 [pref.caret.targets.zed]
 key = "cursor_shape"
 want = "underline"
@@ -949,6 +955,15 @@ target = "kitty"
 key = "scrollback_pager"
 want_contains = "bat"
 
+# The pager opens at the line that was on screen. kitty substitutes
+# INPUT_LINE_NUMBER wherever it appears in an argument, and bat hands its
+# --pager command to less unchanged; without one, bat starts less at the
+# oldest of the lines.
+[pref.scrollback.targets.kitty_pager_in_place]
+target = "kitty"
+key = "scrollback_pager"
+want_contains = "+INPUT_LINE_NUMBER"
+
 # The pager's own deep-history buffer, in MB — kitty's reference puts plain
 # ASCII at roughly 10k lines/MB, so this reaches far past the 50k interactive
 # lines.
@@ -988,8 +1003,8 @@ key = "pane-scrollbars"
 want = "modal"
 
 [pref.session_persistence]
-value = "tabs and layouts survive a quit"
-why = "kitty restores tabs and layouts locally; tmux-resurrect does the same over SSH. Local persistence is save-on-quit plus restore-on-launch — both halves, or neither is real."
+value = "tabs, layouts and window geometry survive a quit; a logout or restart brings back the scrollback too"
+why = "kitty restores tabs and layouts locally; tmux-resurrect does the same over SSH. Local persistence is save-on-quit plus restore-on-launch — both halves, or neither is real. cmd+q's map never runs at a logout, restart or shutdown, so without kitty's own save there a restart restores the last cmd+q save, however old."
 
 [pref.session_persistence.targets.kitty]
 key = "startup_session"
@@ -998,12 +1013,24 @@ want_contains = "last-session.kitty"
 # `map` accumulates and the preference lives on ONE line of many. want_any is
 # exact per entry: a substring test here would go green over a cmd+q that had
 # lost the `: quit` half, or gained a third action, and still contained the
-# save. The whole chain is the preference — save AND quit, in that order.
+# save. The whole chain is the preference — save AND quit, in that order, the
+# save carrying each OS window's size, position and state, and the binding
+# holding under a non-Latin layout (`ascii`).
 [pref.session_persistence.targets.kitty_save_on_quit]
 target = "kitty"
 key = "map"
 accumulate = true
-want_any = "cmd+q combine : save_as_session --save-only ~/.config/kitty/last-session.kitty : quit"
+want_any = "--allow-fallback=shifted,ascii cmd+q combine : save_as_session --save-only --os-window-geometry ~/.config/kitty/last-session.kitty : quit"
+
+# The save cmd+q never makes: kitty's own, at logout, restart and shutdown,
+# restored once in place of startup_session. It writes every window's
+# scrollback, encrypted on macOS, and by kitty's own docs readable by any
+# process running as you until the next launch deletes it: a trade, taken
+# knowingly.
+[pref.session_persistence.targets.kitty_logout_restore]
+target = "kitty"
+key = "restore_session_after_logout"
+want = "yes"
 
 # The SSH half the why names — resurrect is the save/restore mechanism, and
 # continuum is what makes it automatic (10-minute autosave, restore on
@@ -1036,9 +1063,12 @@ want = "2"
 # ── Window chrome ──────────────────────────────────────────────────────────────
 
 [pref.deterministic_geometry]
-value = "a window opens at the declared size, every time"
-why = "Remembered geometry drifts — so size is declared, never inherited from the last session. The statusline does not depend on it: cship follows the live width."
+value = "a window returns where it was quit; one with nothing to restore opens at the declared size"
+why = "Geometry belongs to the window it restores. kitty's remembered size is one cached value applied to every new window a session does not size, cmd+n included, from whichever window closed last — that is what drifts. The session file holds each window's own geometry and touches nothing else, so a fresh window still opens at a declared size. The statusline does not depend on it: cship follows the live width."
 
+# Off: the cache is the drift path the why names. A session's own size
+# overrides it anyway, so it would reach exactly the windows with nothing to
+# restore.
 [pref.deterministic_geometry.targets.kitty]
 key = "remember_window_size"
 want = "no"
@@ -1091,11 +1121,14 @@ want = "on"
 
 [pref.tab_identity]
 value = "a tab is named by where it is, not what it runs"
-why = "Index plus working directory: the index is what cmd+N jumps to, and the directory is the question actually asked when scanning a tab bar."
+why = "Index plus working directory: the index is what cmd+N jumps to, and the directory is the question actually asked when scanning a tab bar. The directory is that of the command you started, which kitty takes as the lowest pid in the active window's foreground group (until pids wrap): the highest is usually the last-started child, and an agent's helper processes can sit anywhere."
 
+# active_oldest_wd, not active_wd: active_wd takes the highest pid in the
+# active window's foreground group, so a tab running a program with helpers
+# can be named by wherever a helper sits.
 [pref.tab_identity.targets.kitty]
 key = "tab_title_template"
-want_contains = "active_wd"
+want_contains = "active_oldest_wd"
 
 # The template carries BOTH halves of the stated taste; the row above reads
 # only the directory half. `{index}` is the number cmd+N jumps to, so a
@@ -1117,16 +1150,17 @@ want_any_contain = "goto_tab 1"
 
 # A new tab starts where the current one is. kitty's default new_tab starts at
 # kitty's own launch directory — home, from the Dock — so the directory the bar
-# names for the new tab is not the one being worked in. new_tab_with_cwd is
-# launch --type=tab --cwd=current: at a prompt that is the shell integration's
-# OSC 7 report (gates / kitty_shell_integration keeps `no-cwd` out),
-# mid-command the foreground process's directory by syscall — kitty 0.48.2's
-# window.py, not its page.
+# names for the new tab is not the one being worked in. At a prompt
+# --cwd=oldest takes the shell integration's OSC 7 report
+# (gates / kitty_shell_integration keeps `no-cwd` out); mid-command, the
+# oldest foreground process's directory by syscall, as the title above —
+# kitty 0.50.0's window.py, not its page. `ascii`: under a non-Latin layout a
+# map without it loses to kitty's default new_tab, which carries it.
 [pref.tab_identity.targets.kitty_new_tab_cwd]
 target = "kitty"
 key = "map"
 accumulate = true
-want_any = "cmd+t new_tab_with_cwd"
+want_any = "--allow-fallback=shifted,ascii cmd+t launch --type=tab --cwd=oldest"
 
 # The tmux twin: windows are named by their directory basename and numbered
 # from 1 with no gaps — index plus working directory, the same identity rule.
@@ -1149,6 +1183,14 @@ want = "on"
 target = "tmux"
 key = "set-titles-string"
 want_contains = "pane_current_path"
+
+[pref.program_status]
+value = "a tab shows when a program in it is working, waiting on you, done or failed"
+why = "Proactive: a tab steering a long job says it needs you without being looked at. A signal beside the bell's symbol, not part of the name, inside the title cap. kitty draws it from OSC 7501 reports (0.50), which Claude Code sends once kitty answers its probe; tmux drops a bare report (3.8 measured, 3.6a read), so from inside tmux it does not show."
+
+[pref.program_status.targets.kitty]
+key = "tab_title_template"
+want_contains = "{tab.program_status}"
 
 [pref.horizontal_tab_bar]
 value = "bottom"
@@ -1288,6 +1330,23 @@ want_absent = "grabbed"
 target = "kitty"
 key = "allow_hyperlinks"
 want = "yes"
+unset_reads_default = true
+
+# `always` stops kitty drawing ligatures, and `cursor` stops it under the
+# caret, while every font_features row still reads +calt.
+[pref.gates.targets.kitty_ligatures]
+target = "kitty"
+key = "disable_ligatures"
+want = "never"
+unset_reads_default = true
+
+# The asserted hexes are sRGB values, and the contrast measured on them holds
+# only while kitty renders in sRGB: `displayp3` oversaturates and shifts every
+# one. macOS-only; Linux reads no such option.
+[pref.gates.targets.kitty_colorspace]
+target = "kitty"
+key = "macos_colorspace"
+want = "srgb"
 unset_reads_default = true
 
 # The history-file assertions below (pref.shell_history) ride on where
@@ -2910,6 +2969,13 @@ target = "kitty"
 key = "show_hyperlink_targets"
 want = "cmd"
 
+# Where the address shows: beside the pointer, where the eye already is,
+# rather than along the window's top edge (kitty 0.50's default).
+[pref.hyperlink_actions.targets.kitty_hover_position]
+target = "kitty"
+key = "hyperlink_target_position"
+want = "tooltip"
+
 # Each open-actions entry that opens a file launches `subl` by name, without
 # a shell. This puts Homebrew's bin, where `subl` lives, on kitty's own
 # search, so a click's editor does not wait on a login shell's startup files.
@@ -2928,11 +2994,15 @@ want = "protocol file; fragment_matches ^[0-9]+$; action launch --type=backgroun
 
 # Ahead of the text entry deliberately: a directory has no mime type Python
 # would call text, but it does match nothing else, and an entry that shadowed
-# it would open directories in the editor.
+# it would open directories in the editor. --focus-existing goes to a tab
+# already at that directory: the match is anchored, so a sibling such as
+# /a/proj-old is not taken for /a/proj, and double-quoted for a path with a
+# space, the single quotes carrying those through the line's word splitting
+# (both measured through kitty's own parser and open-actions loader, 0.50.0).
 [pref.hyperlink_actions.targets.kitty_directory_tab]
 target = "kitty_open_action_blocks"
 key = "block2"
-want = "protocol file; mime inode/directory; action launch --type=tab --cwd=${FILE_PATH}"
+want = "protocol file; mime inode/directory; action launch --type=tab --cwd=${FILE_PATH} '--focus-existing=cwd:\"^${FILE_PATH}$\"'"
 
 # The repo's own bin/ scripts: extensionless, so Python's table gives them no
 # type at all and the text entry below cannot reach them. kitty types them
@@ -2968,6 +3038,16 @@ want = 'url ^[\w./-]+\.[A-Za-z]\w*:\d+(:\d+)?$; action launch --type=background 
 target = "kitty_open_action_blocks"
 key = "block5"
 want = "protocol file; mime text/*; action launch --type=background subl -- ${FILE_PATH}"
+
+# The why's "stays with the platform default": a link no open-actions entry
+# claims goes to open_url_with, and `default` hands it to the system's
+# opener, `open` here. A program named there would take each such link, web
+# pages included.
+[pref.hyperlink_actions.targets.kitty_open_url_with]
+target = "kitty"
+key = "open_url_with"
+want = "default"
+unset_reads_default = true
 
 # The stack's extensions that Python's mimetypes table lacks (Kotlin, Gradle,
 # Svelte, .tsx, .properties, .zsh) or, through macOS's /etc/apache2/mime.types

@@ -5,6 +5,29 @@ from it. A major release moves where or how a file lands, or drops a flag; a
 minor one adds a piece, a row, a flag or a check; a patch changes values,
 fixes and docs.
 
+## v2.4.0
+
+kitty, at 0.50: cmd+q's session save keeps each window's size and position,
+so a window returns where it was quit, and a logout, restart or shutdown
+saves every window with its scrollback, restored once at the next launch
+(`restore_session_after_logout`; on Linux only where the desktop's Inhibit
+portal reports the session ending; kitty's docs say any process running as
+you can read that saved state until then). The tab title shows a glyph
+while a program reports it is working, waiting on you, done or failed
+(OSC 7501), and names the directory of the command a tab runs rather than
+of its newest child process; cmd+t opens a tab there. cmd+q and cmd+t hold
+under a non-Latin keyboard layout. The scrollback pager opens on the screen
+it was called from, a click on a directory goes to a tab already there, a
+cmd-hover shows the link's address beside the pointer, and a window
+without focus keeps the underline caret. `taste/preferences.toml` pins
+each, with two new gates, `disable_ligatures` and `macos_colorspace`, and
+a row holding `open_url_with` at `default`, which sends a link no
+open-action claims to the system's opener.
+
+`terminal/kitty/install.sh` names a map of yours above the include that
+carries `--allow-fallback` as losing to this config's, as it does one
+without.
+
 ## v2.3.0
 
 tmux's status bar shows only the windows to a client under 60 columns wide,

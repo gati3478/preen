@@ -17,8 +17,9 @@
 #   LC_ALL=C awk -v want=local -f tab-title.awk local.conf
 #
 # prints, of local.conf's tab_title_template lines, the last with a value: its
-# line number and, when it is `active_wd.replace('<path>', '~')` for a path
-# other than HOME, that path. local.conf is read after tab-title.conf, so that
+# line number and, when it is `active_wd.replace('<path>', '~')` or
+# `active_oldest_wd.replace('<path>', '~')` for a path other than HOME, that
+# path. local.conf is read after tab-title.conf, so that
 # line is the title kitty shows. A line has a value when kitty's whitespace
 # follows the key — spaces, tabs, \v, \f, \x1c-\x1f; it ends a line at a lone
 # \r — and then a byte that is not whitespace. kitty also counts multibyte
@@ -55,9 +56,9 @@ want == "local" && /^[[:space:]\034-\037]*tab_title_template[ \t\v\f\034-\037]+[
 
 END {
   if (want != "local" || !n) exit
-  p = ""; i = index(t, "active_wd.replace(")
-  if (i) {
-    s = substr(t, i + 18); q = substr(s, 1, 1); s = substr(s, 2); j = index(s, q)
+  p = ""
+  if (match(t, /active_(oldest_)?wd\.replace\(/)) {
+    s = substr(t, RSTART + RLENGTH); q = substr(s, 1, 1); s = substr(s, 2); j = index(s, q)
     if ((q == "\"" || q == "'") && j && substr(s, 1, j - 1) != home && substr(s, j + 1) ~ /^, *.~.\)/) p = substr(s, 1, j - 1)
   }
   print n, p

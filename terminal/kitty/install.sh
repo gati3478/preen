@@ -15,7 +15,7 @@ and if you have no kitty.conf yet it becomes that line alone. Copies, never
 symlinks, and nothing here points back at this repo afterwards.
 
   from a clone:    ./terminal/kitty/install.sh [flags]
-  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.3.0/terminal/kitty/install.sh | bash
+  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.4.0/terminal/kitty/install.sh | bash
 
 There is nothing to ask, so nothing is asked.
 
@@ -75,7 +75,7 @@ done
 # otherwise fetched from the mirror exactly as the configs are — same trust,
 # same mechanism — and checked for its marker line before it is sourced.
 PIECE="terminal/kitty"   # this piece's path under the mirror root
-PREEN_REF=v2.3.0   # this installer's release: the tag it fetches from, and the helper's marker
+PREEN_REF=v2.4.0   # this installer's release: the tag it fetches from, and the helper's marker
 # A slash ending an override would double the one joined after it, and leave
 # a root taken from it a level too deep.
 trim_slash() { printf '%s' "$1" | sed 's#/*$##'; }   # trim_slash <url> → it with any trailing slash dropped
@@ -340,8 +340,10 @@ holds_line() { [ -n "$include_at" ]; }
 # kitten_alias by their first argument. A line is split on kitty's
 # whitespace, and one with no value is no setting. The include family,
 # exe_search_path, watcher, filter_notification and detect_url_regex add to
-# what is there rather than replace it, so they never lose. Not compared: a
-# map with an option (--when-focus-on, --mode); remote_control_password and
+# what is there rather than replace it, so they never lose. A map's
+# --allow-fallback changes how its key is matched, not which binding it is,
+# so it is read past. Not compared: a map with any other option
+# (--when-focus-on, --mode); remote_control_password and
 # menu_map, each kept per entry; and an env of this config's whose value
 # holds a `$`, which kitty expands against the variables set before it,
 # yours among them. Files your kitty.conf includes are not read.
@@ -373,19 +375,25 @@ overridden() { # overridden <your kitty.conf> <the include's line number, 0 when
       for (i = 1; i <= n; i++) out = out (i > 1 ? ">" : "") shortcut(s[i])
       return out
     }
-    function key(line,   w, n, k) {
+    function mapkey(w, n,   i) { # the index of the key word of a map line, past any --allow-fallback
+      i = 2
+      while (i <= n && w[i] ~ /^--allow[-_]fallback(=|$)/) i += (w[i] ~ /=/) ? 1 : 2
+      return i
+    }
+    function key(line,   w, n, k, i) {
       n = split(trim(line), w, /[ \t\v\f\r\034-\037]+/); k = w[1]
       if (n < 2 || k ~ /^[#\\]/) return ""
       if (k ~ /^(include|globinclude|envinclude|geninclude|exe_search_path|watcher|filter_notification|detect_url_regex|remote_control_password|menu_map)$/) return ""
-      if (k == "map") return (w[2] !~ /^--/) ? "map " keys(w[2]) : ""
+      if (k == "map") { i = mapkey(w, n); return (i <= n && w[i] !~ /^--/) ? "map " keys(w[i]) : "" }
       if (k == "mouse_map") return (n >= 4) ? k " " w[2] " " w[3] " " w[4] : ""
       if (k == "env") { sub(/=.*/, "", w[2]); return k " " w[2] }
       if (k == "modify_font" && w[2] == "size") return k " size " w[3]
       if (k ~ /^(font_features|symbol_map|narrow_symbols|modify_font|action_alias|kitten_alias)$/) return k " " w[2]
       return k
     }
-    function shown(line,   w) {
-      split(trim(line), w, /[ \t\v\f\r\034-\037]+/)
+    function shown(line,   w, n) {
+      n = split(trim(line), w, /[ \t\v\f\r\034-\037]+/)
+      if (w[1] == "map") return "map " w[mapkey(w, n)]
       if (w[1] == "env") { sub(/=.*/, "", w[2]); return "env " w[2] }
       if (w[1] == "modify_font" && w[2] == "size") return w[1] " size " w[3]
       if (w[1] ~ /^(map|font_features|symbol_map|narrow_symbols|modify_font|action_alias|kitten_alias)$/) return w[1] " " w[2]

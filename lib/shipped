@@ -38,6 +38,7 @@ fb71439b155b940de97acb95292d561baf9e5801 editor/sublime/Preferences.sublime-sett
 7b9b66da75a0a800947a86141021c9e354592f3f editor/sublime/README.md
 8c0e70ed8fdfaee6368ed021da03c3a49139d43b editor/sublime/README.md
 9b16d9efbbcb7e8a48881794c6d45f46138d7ca6 editor/sublime/README.md
+a09cbe53ab33c62aafd909b9c9e0ea26638720d7 editor/sublime/README.md
 a0bc1123cd549271ad9bf14258676f365acf3ee4 editor/sublime/README.md
 ac7aac48190a331eba8adf7a86e0d4b01b806bdb editor/sublime/README.md
 b4762b93ff28ce26f9e063094096af65f57cf941 editor/sublime/README.md
@@ -69,6 +70,7 @@ bd391bc5240323f74f428a8c44a0240c3c064558 editor/sublime/gruvbox-light-hard.subli
 5035a0a1cb380c66678b11b55b7655e0681d138b editor/sublime/install.sh
 52f0378f1be91f8b87ba69d889e8c7da1336b39a editor/sublime/install.sh
 665ecfac3b4de7c1a53b2da2bda2e2b12b5f8bd3 editor/sublime/install.sh
+6733b80e1b8cb96991d8f7e3683b59a678808482 editor/sublime/install.sh
 695fd78b44165335fc97a074a97822ebb4021723 editor/sublime/install.sh
 69bfe18049a39e1d4b03798814f7774d4b7387f2 editor/sublime/install.sh
 6c7c58a946bb946823c8e890f35698106a46bc0e editor/sublime/install.sh
@@ -80,6 +82,7 @@ d0064f40753a7ef4f1d39337cbba91c5334e284b editor/sublime/install.sh
 d24dc25d7a4956cad8a994c9e32c5613d894f9fc editor/sublime/install.sh
 e95fe5aa6d24db6ef82aad32f6426d1d691304f0 editor/sublime/install.sh
 f990bdbfe71b0d80766b4c22a5c39decf9fe18e2 editor/sublime/install.sh
+03ae138a7b34a30c72ffba02b28c2d1133db77c6 editor/zed/README.md
 165f7739325c63b87ab0f03772ca1aeb8c48e8f3 editor/zed/README.md
 16a4493c09f76f671595752424c6ed3146f91086 editor/zed/README.md
 1b87aabfb43678a8dd2c8b478faa782d0835daee editor/zed/README.md
@@ -111,6 +114,7 @@ f118d814b88be794ede3d0a52ea030baf43df816 editor/zed/README.md
 22d5e4325aaf716fb45a5f6a3501a4b4de050de6 editor/zed/install.sh
 250cf4d7a538362429153b02a3f760c7843225df editor/zed/install.sh
 278a79d83983bb4d55340a4112b2fac2d7d3d409 editor/zed/install.sh
+2f349763b58ee799f8fcb82082053c2b26487476 editor/zed/install.sh
 35df2902c40a0a0e46a5310742df0ef3970f72c3 editor/zed/install.sh
 3b1942bd24167adb42511a2c4a3ddfc0f033c380 editor/zed/install.sh
 3d78ea155589ac1333dc3a259e6e270a2cacb002 editor/zed/install.sh
@@ -174,6 +178,7 @@ f991b5c717dd32e2e6bf0e5c48134c2767cb96ac editor/zed/tasks.json
 b198aca13b31209ed7af319886d46c54d68e7062 gh/README.md
 bad46c11ec2954382d261edf7050a3dcca8a50d5 gh/README.md
 ceb1226807ca54534463081f6f1cba23e22c3b40 gh/README.md
+d25005c16e04e289e3ed459e105ee862d5b49439 gh/README.md
 d5740eabe821a507849e8032f3dae8f0bd0833d1 gh/README.md
 d61e7baa5c5b63a5389196e10f7c62792cc0c0d1 gh/README.md
 de25f506e9a3ab38ae376f6409395971fcc70bf6 gh/README.md
@@ -184,6 +189,7 @@ f9686f0f8fb1ef7c5bcf344f9aacda0ad3eaed78 gh/README.md
 c238ca1f1d56e37d3b15d8d5f59876c5420b79db gh/config.yml
 0b67bbccd438e57d4b353d4da75a7cf36046ac43 gh/install.sh
 0fff583f95ff4bb7206465e709867dcda8f994a9 gh/install.sh
+1abbbc0a777a9053a73bb262dbf628fd19adcaac gh/install.sh
 1b0aa1c661fb5858da30d8776ba39506e09794e8 gh/install.sh
 2f75dd42ec3ecfd03c8c31e2af1f806f1abc334b gh/install.sh
 4edd886c023a1b613ad0b8bfef4e42b31707c694 gh/install.sh
@@ -218,6 +224,7 @@ ff0bef36673bd1eeac3da51c1613cc6860d84f7a gh/install.sh
 71cd96d96cc8ed028f3f71bf30343e04e33e27e6 git/README.md
 767fe3fe5c5b80b903380c9b6cd7a54c1b254f08 git/README.md
 7c736bd62d7494a7a46f2ae724658e0026359850 git/README.md
+7e46d8256b6fa944afb1ffde979dfdfe46dec31e git/README.md
 822893d13a61d115f517fe68e7af039003fe52a3 git/README.md
 8e818a278268b8dec824378b7cfe83072d914dd2 git/README.md
 8f7a881c4ff7b6bb0a5c1f2b24a25ac9816bdd84 git/README.md
@@ -258,9 +265,11 @@ dd00672f434cd909aa8b29e3b7ffd2e251f0285f git/install.sh
 e95b26909438ff971ec23668fbe67ca2426e1652 git/install.sh
 ebabb316e0a69c2ea7b95242bd62d73dbe2509c7 git/install.sh
 f3cdc8937e03e421167bb9fbd34113d82d30f6df git/install.sh
+fe83bef5eb42ba3dad7c0a4606dc5eebe98e6e15 git/install.sh
 ff644d7de5af4706030ab1d3d1c54ee0feab8bdc git/install.sh
 ffb5c891f02420e91262683af851ce2f41f112c1 git/install.sh
 008011a208407514492c73da755d8a38db3e70b9 lib/install.sh
+04882104fcfb92c1b73104a2847b78a92b85c3ff lib/install.sh
 1690b6a151ba3007e442897c33c0ce1b8534bbe3 lib/install.sh
 27f236690a626f0d1fb04816106a4178114cc261 lib/install.sh
 34540fe913809298189c211b53cf68955acd0870 lib/install.sh
@@ -298,6 +307,7 @@ fd7d6a1e87b060645ff02837190db230cb1e20c9 lib/install.sh
 4cf854490049a3e9cc0d8fd322289466841d0b9d macos/README.md
 548233c8a0ec5a1af7934000bbe8f051fd799ce1 macos/README.md
 5babc8cb3448b94f4c7d2651514305eacb4e68c9 macos/README.md
+7f660212de6d6538a05a49e245176c34b09503e4 macos/README.md
 87960ceaedd3973532d4d018bdceb01ff23d52c3 macos/README.md
 8cfc884863afecb54dd4b66fd00218573ecb4d52 macos/README.md
 9e7a46324b408f5716eea1c2fddaa08293a6b463 macos/README.md
@@ -352,6 +362,7 @@ ecd9f86ff6a7c513e51644fcaf56e4c9b076d383 macos/apply.sh
 9c8a697c625c5519dcba36a8b830f05da20a2efb prompt/README.md
 a5c1dac0a8fb66063c8aa357969e1a49e1f607e2 prompt/README.md
 ab58d21976b43f8967b2f3740c723cb80cd6d2e6 prompt/README.md
+ac28ae0b514cfc998e59f2444f5784a6ab60abd9 prompt/README.md
 acc708bac12ac15fe262073c1d2a0a610e6afee1 prompt/README.md
 acf6f45e98e6007de2e9e9942886475e772f5d3b prompt/README.md
 af400409c9f0b6b04b3681ac3c91ba7a0da767a9 prompt/README.md
@@ -389,6 +400,7 @@ a77a67a2fb1e6099f7995eb802bf785ed08fab07 prompt/cship.toml
 ddc7a89c81416d2edb5409752c1943e541ea8a42 prompt/cship.toml
 ea13aefe5feb134d3695c4acf838884952e0e364 prompt/cship.toml
 0fd42e10bbedb27040626411af35ebadef7e23e7 prompt/install.sh
+10bf3ecad3f27314963083a736365b6392e53de9 prompt/install.sh
 1b2368b7eb2bcce36b83e55225d51e1f75af5e76 prompt/install.sh
 284245cf7c0da996f1e3d455410f28f8811c7c5f prompt/install.sh
 2ff4e3e895656af5bbdf6ea2a8fbac99ca6014f7 prompt/install.sh
@@ -459,6 +471,7 @@ dc2158bcb8a4035f6d0fa6ee59cd0e5917247612 prompt/starship.toml
 918dc9ee273a520ab88c9e3507a460ddddf7fece shell/README.md
 959c99181af51802db41041a582fd33701f3464e shell/README.md
 99cf9def4df9298dd747e099069c2728cf6dd769 shell/README.md
+9e49eec97b1512b74425612785510989d0f64263 shell/README.md
 a87204a71eda67ffe8e5b641bb969cd9df369d39 shell/README.md
 a9be66b1226ac822814db84c3b06664ce29947cd shell/README.md
 b66673652fe8714d247fd154bc70ef16c9c2d46d shell/README.md
@@ -492,6 +505,7 @@ a4d4c65dede962d5ca342ef17c8462f74acde8d3 shell/inputrc
 96b9b510da7a13b02fe5084f46726c7c76c583cb shell/install.sh
 9bab1a99497d691f16a05f4c6fd629317268a47a shell/install.sh
 a3667d936d5d61e91c7b9dfed14852b3ffadf063 shell/install.sh
+a539dd182c4c9a585692b1e09dce647f4d0ae86e shell/install.sh
 a7698479cddb527c675ea7757c517e253a0a1034 shell/install.sh
 b2ddcec0d39411ced2018c0f6ba5ce3313c50523 shell/install.sh
 b350cbc6bacc48b1d40c2bdcf0abaa01aefd97f4 shell/install.sh
@@ -590,6 +604,7 @@ aad865b697e228bc7a2f99cb94adf3c5f91a1734 ssh/config.example
 6c9aa6fcf4320ff4aa0f9a436163c59ee742a487 taste/preferences.toml
 6e0dfaf5df038e382a93d2abd428bfff313115ed taste/preferences.toml
 855e2aa318114613610bb23df862555e152573e3 taste/preferences.toml
+87d21a5a366aaddb9534019216b82e6046042541 taste/preferences.toml
 894255fc9e36ed04bc9ad312a4e13e4caeaec42f taste/preferences.toml
 b007ff1197d0dca454f686948b9b78b6f66d2228 taste/preferences.toml
 b10cbd1ee3212449dce0417f48624cc76d0d6ca8 taste/preferences.toml
@@ -598,6 +613,7 @@ bd9c85e9f7bbb794220cf82cabbdfc165795384b taste/preferences.toml
 bffb499466f6ce19caae38de0cec60ccb5e81a6f taste/preferences.toml
 c3581df9af72fdb3fbef548f8c3cec33df6b91a8 taste/preferences.toml
 cb59ec42001f54f9520d32f4412bb968a0b807d3 taste/preferences.toml
+da41ef5199af0cc2a00031fe7cde71057aed4c11 taste/preferences.toml
 dc007901bc2561b59ec5b114158dcfbc18a46ac8 taste/preferences.toml
 e53ac23fb8247301918b0278009ccbfde586678e taste/preferences.toml
 e864ba19c51057175b787d3516dae3e1219b9020 taste/preferences.toml
@@ -607,8 +623,10 @@ ed7f73ebb120b8ee0ee6e102f5c5f78dc6414298 taste/preferences.toml
 052710d6320021a1e84fb7f5010285a09b91ca0d terminal/kitty/README.md
 0d80edf90c52df118bc06d90204f3cdebf562ca3 terminal/kitty/README.md
 10360aa4d2a704353f71970b988a29e0e4aa24d8 terminal/kitty/README.md
+1b5db779984de2a7767865c33b5c606cde7f1a0c terminal/kitty/README.md
 227e9194344c7e0274e8c82f36662dda585370fe terminal/kitty/README.md
 30144e8c595e5c0ef10d177856acf48d9b0afe75 terminal/kitty/README.md
+30ac4ddcda1b9992822486a7c3796e0eec23d0b1 terminal/kitty/README.md
 3464bc6492fa94719cf23e9c0b6fb662da4c3ed5 terminal/kitty/README.md
 352bdaaabf0cd139e5e2262cd57413496d8d5403 terminal/kitty/README.md
 4354413eb85f8dc5887d62a3f837230921731ebd terminal/kitty/README.md
@@ -619,6 +637,7 @@ ed7f73ebb120b8ee0ee6e102f5c5f78dc6414298 taste/preferences.toml
 71e7d40b8295d8932c0a85be476c205284d86df9 terminal/kitty/README.md
 767f33e4a93f35bdf089c07bf0fae9b7794fbf1a terminal/kitty/README.md
 788855a4fc174ca15e3a6b66c1db809af0020239 terminal/kitty/README.md
+803342c98e0795ef0c0192946b49cab39d1ebb65 terminal/kitty/README.md
 8043e2339001508e36c471c6fd66b41fb470cd81 terminal/kitty/README.md
 8541d3e162adeeb99137326cc3df25787f7facad terminal/kitty/README.md
 8df45d48e5e3a1c4a75d161b1c79c2ea68026898 terminal/kitty/README.md
@@ -667,6 +686,7 @@ b0e39f426f2b86d91e641278371d032b972e877b terminal/kitty/choose-files.conf
 809bdb4c3a44ebc9bae0cfedeabdc406c935419e terminal/kitty/install.sh
 85d3e85b941afa4d58b8162d8099d4835cbdeb73 terminal/kitty/install.sh
 8bbbc8a13e4f218c1b8e035a1d5eeea4a8895483 terminal/kitty/install.sh
+8d4ac31c5975afb9dde3210c174762791c72c2d1 terminal/kitty/install.sh
 ad71741f1a4891100c401a2f5afd7d7f6d523c0b terminal/kitty/install.sh
 af1ab48c3dcd1efe9e29950e0e6176c010debf14 terminal/kitty/install.sh
 af8d338b04e598becdbead5f750d870f96486161 terminal/kitty/install.sh
@@ -674,11 +694,14 @@ be6c4ab8a38c84803b1006fdcc9d74a3691e356d terminal/kitty/install.sh
 d7977a1aad2c78106ad7406f27e66e4a06d8550e terminal/kitty/install.sh
 dc5c8f3db34c76be3ce26b07f9d6a2e6b50caa79 terminal/kitty/install.sh
 de16f134fb38b780c21d7bcb284612172bb57d3e terminal/kitty/install.sh
+deecce75b6bdb17295754e81cb26d71dbbebb596 terminal/kitty/install.sh
 dffe426a21c6605968a4d573059486f92d0ffa2c terminal/kitty/install.sh
 f7f415c5cfb1933de2a8fc04fb62297c905f2928 terminal/kitty/install.sh
+fbfdc6c316e43a47f06ecb977ddbc88e4b5b352d terminal/kitty/install.sh
 fc506d655e404caa72ace76f17dda57f8bb4ee8f terminal/kitty/install.sh
 099e9650f838c3063fd795a842fe26fcb713eac1 terminal/kitty/kitty.conf
 09ba771c45c66a72b4b076dbaf7d5fa16abe8552 terminal/kitty/kitty.conf
+186014bfa1e271b3512bedc2f730d585a815d123 terminal/kitty/kitty.conf
 251424f63e093621b3db9bc747fca9315dc2f3fa terminal/kitty/kitty.conf
 264e273dbcd79fef0cd6615231c25baf8bca27d1 terminal/kitty/kitty.conf
 30d4c739b221fb03a5693de1c1ced766e821b288 terminal/kitty/kitty.conf
@@ -696,6 +719,7 @@ fc506d655e404caa72ace76f17dda57f8bb4ee8f terminal/kitty/install.sh
 7e2df0b3adcd84f6036bb1fe900a32c311541ace terminal/kitty/kitty.conf
 8debbb6f8637bf34064968eff91c6d0fb7b4a7bb terminal/kitty/kitty.conf
 9f051ff335bc4c06975246ee3dbd7e0c5f7b61ce terminal/kitty/kitty.conf
+a6c61cd70ad109c82173033f6ccce92fc848dd50 terminal/kitty/kitty.conf
 aa391bd681c9cb5bac21b0c3ea754b43c5a83ea7 terminal/kitty/kitty.conf
 adf32a2ff8b330e19e42cba4a51addf5282f4f1f terminal/kitty/kitty.conf
 b480ea18e9192006354bdf9e1841fc49aaea62e3 terminal/kitty/kitty.conf
@@ -714,7 +738,9 @@ f60fde02dbb6b40d3384c3aecbb06ec7d393ad12 terminal/kitty/kitty.conf
 7552bffdf5c6d3cc6043cedf88cb2b65c4dbe2c2 terminal/kitty/open-actions.conf
 930f4fed54abf2f18885572c771419eefd41297a terminal/kitty/open-actions.conf
 c70546b5b257ff2516f5a0fbcb3170cc03824b6c terminal/kitty/open-actions.conf
+ec3b0a157a6e139b271725d52dda0ddd4c7b0c1a terminal/kitty/open-actions.conf
 42b6e3c2877ed0ab77f7669daa99502a17e9c5a2 terminal/kitty/tab-title.awk
+ef63a4cc35c57c85367c109b6a1c525176a36958 terminal/kitty/tab-title.awk
 fcdd749e235c6538970927251e2cac78b9fdf2dc terminal/kitty/tab-title.awk
 09f5907fd7f55ab6fb8083ca38700ce7e9a9cb38 terminal/ncdu/config
 74f112c973b9e22ef509ea44450cb368eec9a5ff terminal/ncdu/config
@@ -741,6 +767,7 @@ e0fea00d4f1f2be2d1331123fddd79a9c9a7dda2 terminal/tmux/README.md
 e3878bfa5d2dc9a45f9590fc14ad0692d1778dad terminal/tmux/README.md
 e43493283c0e4bae0a41f5ae1f96c2166c9bc040 terminal/tmux/README.md
 ea1b1799d1b4da65bd2bc17b8ba9f54032ec17aa terminal/tmux/README.md
+ebb2700f06f4b9c8d29522082a2acf4402fe8ba1 terminal/tmux/README.md
 ecda8fbac252b2f01e0fcfdf783e73690d8f8fd2 terminal/tmux/README.md
 f03a161bc8c21dd8426b0a29d880c86fa1f00ffc terminal/tmux/README.md
 f548a2fb2b0306ede69117ea988a0de4d2d8c1d6 terminal/tmux/README.md
@@ -758,6 +785,7 @@ fce0b9c4c36bfeae88f63a34cc4b28d02442ebe6 terminal/tmux/README.md
 68ebb5ede2d7a35571ebe771137cceb83ffc54cb terminal/tmux/install.sh
 6a8d5a77feacc841631e45681a7677f47eec8fb2 terminal/tmux/install.sh
 6ef4dba093f0e44ee3d7545c3cb8c165451896ac terminal/tmux/install.sh
+73417b812d29fb35808b2c7f6433826759ee72f6 terminal/tmux/install.sh
 7b8a5a650a7e0f0bde4bac6ec2badeda23503495 terminal/tmux/install.sh
 7ceaab31b455286f3f09dd692a1380ff8385c581 terminal/tmux/install.sh
 7eaa4f10d485e434aef389dc2084162d6c4bc1fb terminal/tmux/install.sh
