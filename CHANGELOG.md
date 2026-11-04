@@ -5,6 +5,11 @@ from it. A major release moves where or how a file lands, or drops a flag; a
 minor one adds a piece, a row, a flag or a check; a patch changes values,
 fixes and docs.
 
+## v2.4.1
+
+`taste/preferences.toml`'s program-status row names the tmux releases that
+drop a bare OSC 7501 report, 3.8 and 3.6a, where it named all of tmux.
+
 ## v2.4.0
 
 kitty, at 0.50: cmd+q's session save keeps each window's size and position,

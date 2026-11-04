@@ -1186,7 +1186,7 @@ want_contains = "pane_current_path"
 
 [pref.program_status]
 value = "a tab shows when a program in it is working, waiting on you, done or failed"
-why = "Proactive: a tab steering a long job says it needs you without being looked at. A signal beside the bell's symbol, not part of the name, inside the title cap. kitty draws it from OSC 7501 reports (0.50), which Claude Code sends once kitty answers its probe; tmux drops a bare report (3.8 measured, 3.6a read), so from inside tmux it does not show."
+why = "Proactive: a tab steering a long job says it needs you without being looked at. A signal beside the bell's symbol, not part of the name, inside the title cap. kitty draws it from OSC 7501 reports (0.50), which Claude Code sends once kitty answers its probe; tmux 3.8 and 3.6a drop a bare report (3.8 measured, both read), so from inside either it does not show."
 
 [pref.program_status.targets.kitty]
 key = "tab_title_template"
