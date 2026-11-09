@@ -5,6 +5,14 @@ from it. A major release moves where or how a file lands, or drops a flag; a
 minor one adds a piece, a row, a flag or a check; a patch changes values,
 fixes and docs.
 
+## v2.5.1
+
+`taste/zcap.sh` starts its zsh in HOME, where login(1) starts a shell, not
+in the directory it was run from, and refuses a HOME that is not a
+directory. Run in or under a directory whose mise config awaited trust, it
+captured mise's warning, and every live zsh row of `taste/pref-check.py`
+failed.
+
 ## v2.5.0
 
 `taste/pref-check.py` reads an IntelliJ IDEA option that holds a set or

@@ -21,7 +21,12 @@
 # width-derived value through zcap, or you measure the fabrication.
 #
 # `env -i` isolates it from the caller: without it the probe measures whoever
-# ran it — their PATH, FPATH and variables — not the shell config.
+# ran it — their PATH, FPATH and variables — not the shell config. It starts
+# in HOME, where login(1) starts a shell, for the same reason: what the shell
+# starts reads the directory it starts in, as mise does every config file
+# above it, so the caller's directory would decide the capture. A HOME that
+# is not a directory is refused by name: an empty one would leave the shell
+# where the caller stands, since `cd ""` succeeds and stays put.
 #
 # env -i starts genuinely empty; each seeded name below was verified
 # necessary, not assumed:
@@ -58,11 +63,15 @@
 # no caller has to know.
 zcap() {
   local tmp
+  if [ -z "${HOME:-}" ] || [ ! -d "$HOME" ]; then
+    echo "zcap: ERROR: HOME ('${HOME:-}') is not a directory to start the shell in." >&2
+    return 1
+  fi
   tmp="$(mktemp)"
-  script -q /dev/null env -i \
+  (cd "$HOME" && script -q /dev/null env -i \
     HOME="$HOME" USER="$(id -un)" LOGNAME="$(id -un)" PATH="$(getconf PATH)" \
     TERM=xterm-kitty TERMINFO=/Applications/kitty.app/Contents/Resources/kitty/terminfo \
-    zsh -l -i -c "$1" </dev/null 2>/dev/null | tr -d '\r' >| "$tmp"
+    zsh -l -i -c "$1" </dev/null 2>/dev/null) | tr -d '\r' >| "$tmp"
   if LC_ALL=C grep -q $'\x1b' "$tmp"; then
     echo "zcap: ERROR: raw output of \`$1\` contains an ESC byte (0x1B)." >&2
     echo "zcap: col -b discards escape sequences silently instead of" >&2
