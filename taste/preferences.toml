@@ -846,7 +846,7 @@ want = "fg=#8ec07c"
 
 [pref.editor_theme]
 value = "Gruvbox Light Hard"
-why = "Light where code is read, hard for contrast. IDEA is the deliberate exception: its theme is an executable plugin, where upstream maintenance IS load-bearing, so it runs a Gruvbox Material Light Island variant instead."
+why = "Light where code is read, hard for contrast."
 
 [pref.editor_theme.targets.zed]
 key = "theme.light"

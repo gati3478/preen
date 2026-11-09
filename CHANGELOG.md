@@ -5,6 +5,15 @@ from it. A major release moves where or how a file lands, or drops a flag; a
 minor one adds a piece, a row, a flag or a check; a patch changes values,
 fixes and docs.
 
+## v2.5.0
+
+`taste/pref-check.py` reads an IntelliJ IDEA option that holds a set or
+list, as a font's OpenType features do, as its entries, with
+`accumulate`. Such an option read without it, or an option holding
+anything else, is an error, where it read as unset.
+`taste/preferences.toml`'s `editor_theme` row no longer carves out IDEA,
+whose theme is now Gruvbox Light Hard like the other editors'.
+
 ## v2.4.1
 
 `taste/preferences.toml`'s program-status row names the tmux releases that

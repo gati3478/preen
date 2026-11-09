@@ -752,8 +752,36 @@ def read_kitty_blocks(path, key, **_opts):
     return blocks[index - 1] if index <= len(blocks) else None
 
 
-def read_idea(path, key, **_opts):
+def _idea_option(opt, key, accumulate):
+    """An <option>'s value, or with `accumulate` the entries of its collection.
+
+    IDEA's serializer writes a collection field as a child <set> or <list> of
+    `<option value="…"/>` entries, the option itself carrying no value — the
+    editor font's OpenType features, `DefaultFont/CHARACTER_VARIANTS`, are
+    one. Read without `accumulate`, such an option would be None, which
+    reads as unset; it is an error instead, as is an option holding anything
+    else (a <map>, a bean, a <set> or <list> with a bean among its entries),
+    which this reader does not read.
+    """
+    child = next(iter(opt), None)
+    if child is None or opt.get("value") is not None:
+        return opt.get("value")
+    if child.tag not in ("set", "list"):
+        raise ReadError(f"'{key}' holds a <{child.tag}>, which this reader does not read")
+    if not accumulate:
+        raise ReadError(f"'{key}' holds a <{child.tag}> — read it with accumulate")
+    entries = list(child)
+    for e in entries:
+        if e.tag != "option" or e.get("value") is None:
+            raise ReadError(f"'{key}' holds a <{child.tag}> with a <{e.tag}>, which this reader does not read")
+    return [e.get("value") for e in entries]
+
+
+def read_idea(path, key, accumulate=False, **_opts):
     """`COMPONENT/OPTION`, `COMPONENT/ELEMENT@ATTR`, or a bare `OPTION`.
+
+    In both option forms, an option holding a <set> or <list> reads as its
+    entries, with `accumulate` (`_idea_option`).
 
     The bare form exists because codestyles/*.xml puts options directly under
     <code_scheme> with no <component> wrapper, unlike options/*.xml. A bare key
@@ -792,12 +820,12 @@ def read_idea(path, key, **_opts):
                     return hits[0] if hits else None
                 for opt in comp.iter("option"):
                     if opt.get("name") == opt_name:
-                        return opt.get("value")
+                        return _idea_option(opt, key, accumulate)
         return None
-    hits = [o.get("value") for o in root.iter("option") if o.get("name") == key]
+    hits = [o for o in root.iter("option") if o.get("name") == key]
     if len(hits) > 1:
         raise ReadError(f"bare key '{key}' matches {len(hits)} options — scope it as COMPONENT/{key}")
-    return hits[0] if hits else None
+    return _idea_option(hits[0], key, accumulate) if hits else None
 
 
 TMUX_SET = ("set", "set-option", "setw", "set-window-option")
