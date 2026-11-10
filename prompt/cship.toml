@@ -128,10 +128,12 @@ style  = "fg:#ebdbb2"
 
 [cship.usage_limits]
 # ttl governs only the OAuth refetch; 5h/7d arrive on stdin every render.
-# Past a session's first seconds only the account module, with CSHIP_ACCOUNT
-# unset, renders anything from OAuth, so refetch hourly instead of every 2
-# minutes — each failure costs one render a 2 s stall (02-09-2026).
-ttl                = 3600
+# Nothing here renders from OAuth — per-model is off and the account label
+# comes from CSHIP_ACCOUNT — yet cship fetches on every cache miss, in a work
+# tab with the personal token (cship#194). Once a day bounds that waste; each
+# failure costs one render a 2 s stall. A stdin-only switch is asked for in
+# cship#210.
+ttl                = 86400
 # Two per-window tokens on line 3 (cship ≥ 1.8.2), each coloured by its own
 # utilisation; the composite $cship.usage_limits paints both with max(5h, 7d),
 # so a calm window would wear the hot one's colour. The gap between them is

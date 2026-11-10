@@ -5,6 +5,12 @@ from it. A major release moves where or how a file lands, or drops a flag; a
 minor one adds a piece, a row, a flag or a check; a patch changes values,
 fixes and docs.
 
+## v2.5.2
+
+`prompt/cship.toml` refetches the usage limits over OAuth once a day, where
+it refetched hourly. Nothing on the statusline renders from that fetch, and
+each failed one stalls a render for two seconds.
+
 ## v2.5.1
 
 `taste/zcap.sh` starts its zsh in HOME, where login(1) starts a shell, not
