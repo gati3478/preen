@@ -5,6 +5,13 @@ from it. A major release moves where or how a file lands, or drops a flag; a
 minor one adds a piece, a row, a flag or a check; a patch changes values,
 fixes and docs.
 
+## v2.5.3
+
+The comment in `prompt/cship.toml` on the usage-limits fetch says what the
+day-long ttl bounds: one fetch per new session and one a day in a session
+that outlives it, since the cache is one file per session id. No setting
+changes.
+
 ## v2.5.2
 
 `prompt/cship.toml` refetches the usage limits over OAuth once a day, where
