@@ -1349,6 +1349,13 @@ key = "macos_colorspace"
 want = "srgb"
 unset_reads_default = true
 
+# Zed paints the same sRGB hexes, and its Display P3 switch (1.26) shifts
+# them as kitty's does. Off is Zed's default.
+[pref.gates.targets.zed_colorspace]
+target = "zed"
+key = "use_display_p3"
+want_absent = "true"
+
 # The history-file assertions below (pref.shell_history) ride on where
 # HISTFILE points (atuin's sqlite store and the in-memory HISTSIZE do not).
 # macOS /etc/zshrc supplies the same ${ZDOTDIR:-$HOME}/.zsh_history fallback,

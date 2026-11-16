@@ -2658,7 +2658,7 @@ OBSIDIAN_CONFIG_KEYS = (
     "vimMode", "showLineNumber", "showIndentGuide", "readableLineLength",
     "foldHeading", "foldIndent", "livePreview", "spellcheck",
     "promptDelete", "trashOption", "alwaysUpdateLinks", "useMarkdownLinks",
-    "attachmentFolderPath", "uriCallbacks",
+    "attachmentFolderPath",
 )
 
 _OBSCAP_PROBE = (
@@ -2693,7 +2693,11 @@ _OBSCAP_PROBE = (
     # default the file cannot vouch for.
     "plugins:{dataview:(function(d){return d?{js:d.settings.enableDataviewJs,inlineJs:d.settings.enableInlineDataviewJs,inline:d.settings.enableInlineDataview}:null})(app.plugins.plugins.dataview)},"
     # The plugins' startup update check is a localStorage flag, live-only.
-    "updates:{pluginsAuto:app.plugins.autoCheckForUpdates}"
+    "updates:{pluginsAuto:app.plugins.autoCheckForUpdates},"
+    # URI callbacks are per device since 1.15: a localStorage flag the app
+    # reads through this method, while the vault's uriCallbacks key stays in
+    # the defaults object and decides nothing. Null when the method is gone.
+    "uri:{callbacks:(function(h){return h&&typeof h.isCallbacksEnabled==='function'?h.isCallbacksEnabled():null})(app.workspace.protocolHandler)}"
     "})})()"
 )
 _OBSCAP_DATA = None
@@ -2760,6 +2764,7 @@ def read_obsidiancap(path, key, accumulate=False, **_opts):
     community.orphans the enabled ids with no plugin on disk (`none` when
     there are none), plugins.dataview.js / .inlineJs Dataview's own JS
     switches and .inline its inline-query switch, updates.pluginsAuto the plugins' startup update check,
+    uri.callbacks the per-device URI-callbacks switch,
     hotkeys.<command id>.0.key a custom binding.
     OBSCAP_FIXTURE substitutes a recorded document (tests; CI never reaches
     a running app).

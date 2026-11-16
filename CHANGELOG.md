@@ -5,6 +5,19 @@ from it. A major release moves where or how a file lands, or drops a flag; a
 minor one adds a piece, a row, a flag or a check; a patch changes values,
 fixes and docs.
 
+## v2.6.0
+
+`taste/preferences.toml` gates Zed's Display P3 switch (`use_display_p3`,
+new in Zed 1.26) off, beside kitty's colourspace: the palette's hexes are
+sRGB, and P3 shifts every one.
+
+`taste/pref-check.py`'s live Obsidian read gains `uri.callbacks`, the app's
+own answer for URI callbacks. Obsidian 1.15 keeps that switch per device,
+so the vault's `uriCallbacks` key no longer decides it.
+
+`shell/atuin/config.toml` takes the comments of atuin 18.24.8's config
+template. No setting changes.
+
 ## v2.5.3
 
 The comment in `prompt/cship.toml` on the usage-limits fetch says what the
