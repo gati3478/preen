@@ -5,6 +5,13 @@ from it. A major release moves where or how a file lands, or drops a flag; a
 minor one adds a piece, a row, a flag or a check; a patch changes values,
 fixes and docs.
 
+## v2.6.1
+
+`taste/preferences.toml`'s note on mise's per-prompt hook carries mise
+2026.11.9's figures: 8.5 ms for `mise hook-env`, against 16.0 and 16.5 ms
+under its `hook_env.chpwd_only` and `hook_env.cache_ttl` settings, so
+removing the hook stays the cheaper way. No setting changes.
+
 ## v2.6.0
 
 `taste/preferences.toml` gates Zed's Display P3 switch (`use_display_p3`,

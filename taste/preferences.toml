@@ -2319,9 +2319,9 @@ want_any_contain = "mise activate zsh"
 
 # mise's activate script hooks precmd AND chpwd, and the precmd hook spawns
 # `mise hook-env` on every prompt but the first and the one after a cd:
-# 7.3 ms at mise 2026.10.4 (hyperfine, 08-10-2026). Its own
-# hook_env.chpwd_only and cache_ttl settings cost more (13.5 and 13.6 ms,
-# same runs), so the hook is removed by hand and the chpwd hook kept — a
+# 8.5 ms at mise 2026.11.9 (hyperfine inside an activated zsh -i,
+# 17-11-2026). Its own hook_env.chpwd_only and cache_ttl settings cost more
+# (16.0 and 16.5 ms, same runs, net of the env that sets them), so the hook is removed by hand and the chpwd hook kept — a
 # directory's tool set still switches on cd. Text asserts the removal line;
 # live asserts the hook list it leaves behind, both halves: precmd without
 # mise, chpwd still with it.
