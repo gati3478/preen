@@ -97,6 +97,14 @@
 format = "kitty"
 path = "~/.config/kitty/kitty.conf"
 
+# The tab bar's drawer, which kitty loads from its config directory under this
+# name alone. It is code, so its rows read what it DRAWS: `kittytabs` renders
+# it on a fixed set of tabs (bin/lib/kitty-tabs-probe.py names them) and a key
+# is one form's rows of text.
+[targets.kitty_tabs]
+format = "kittytabs"
+path = "~/.config/kitty/tab_bar.py"
+
 # Two more files kitty reads beside kitty.conf, both link rows. Same
 # `key value` grammar, no includes. kitty stats open-actions.conf on every
 # click, so an edit is live at once; mime.types is read once per process and
@@ -311,6 +319,21 @@ probe = "sublime_caret_styles"
 [pref.caret_motion]
 value = "the caret glides to where it moves"
 why = "A jump — a search hit, go-to-definition, a page move — slides the caret to where it landed instead of teleporting it, so the eye follows it rather than hunting for it."
+
+# The trail, its dwell, threshold and decay: preferences.md § Cursor.
+[pref.caret_motion.targets.kitty]
+key = "cursor_trail"
+want = "200"
+
+[pref.caret_motion.targets.kitty_threshold]
+target = "kitty"
+key = "cursor_trail_start_threshold"
+want = "4"
+
+[pref.caret_motion.targets.kitty_decay]
+target = "kitty"
+key = "cursor_trail_decay"
+want = "0.08 0.25"
 
 [pref.caret_motion.targets.zed]
 state = "unreachable"
@@ -716,7 +739,7 @@ want = "#3c3836"
 # is off and this does not replace it — bell_border_color tints the border of
 # INACTIVE windows, which kitty draws only when more than one is visible, so it
 # never renders in a one-window-per-tab layout. The bell's live signal is the
-# tab title's {bell_symbol}.
+# tab's bell symbol.
 [pref.terminal_palette.targets.kitty_bell_border]
 target = "kitty"
 key = "bell_border_color"
@@ -1121,23 +1144,36 @@ want = "on"
 
 [pref.tab_identity]
 value = "a tab is named by where it is, not what it runs"
-why = "Index plus working directory: the index is what cmd+N jumps to, and the directory is the question actually asked when scanning a tab bar. The directory is that of the command you started, which kitty takes as the lowest pid in the active window's foreground group (until pids wrap): the highest is usually the last-started child, and an agent's helper processes can sit anywhere."
+why = "Index plus working directory: the index is what cmd+N jumps to, and the directory is the question actually asked when scanning a tab bar. The directory is the one the tab's shell last reported, where the command you started was started: a foreground process's directory, read by pid, can be a helper's."
 
-# active_oldest_wd, not active_wd: active_wd takes the highest pid in the
-# active window's foreground group, so a tab running a program with helpers
-# can be named by wherever a helper sits.
+# kitty's half of the name is drawn, so it is read off a rendered bar: the
+# index and the directory's last component on a card's top edge, and the home
+# directory as `~`. The probe's first tab runs a helper elsewhere, so `alpha`
+# is the shell's report winning; its third is behind ssh and its fourth has
+# reported nothing, so each is named by its oldest process.
 [pref.tab_identity.targets.kitty]
-key = "tab_title_template"
-want_contains = "active_oldest_wd"
+target = "kitty_tabs"
+key = "cards"
+accumulate = true
+want_any_contain = " 1  alpha "
 
-# The template carries BOTH halves of the stated taste; the row above reads
-# only the directory half. `{index}` is the number cmd+N jumps to, so a
-# template that dropped it would leave the tab bar naming places with no way to
-# see which key reaches them — with the row below still green on the binding.
-[pref.tab_identity.targets.kitty_index_in_title]
-target = "kitty"
-key = "tab_title_template"
-want_contains = "{index}"
+[pref.tab_identity.targets.kitty_remote]
+target = "kitty_tabs"
+key = "cards"
+accumulate = true
+want_any_contain = " 3  gamma "
+
+[pref.tab_identity.targets.kitty_no_report]
+target = "kitty_tabs"
+key = "panel"
+accumulate = true
+want_any_contain = " 4  delta "
+
+[pref.tab_identity.targets.kitty_home]
+target = "kitty_tabs"
+key = "cards"
+accumulate = true
+want_any_contain = " 2  ~ "
 
 # The other half of the stated taste — "the index is what cmd+N jumps to".
 # One representative binding of the nine: if a remap wipes them, goto_tab 1
@@ -1150,17 +1186,18 @@ want_any_contain = "goto_tab 1"
 
 # A new tab starts where the current one is. kitty's default new_tab starts at
 # kitty's own launch directory — home, from the Dock — so the directory the bar
-# names for the new tab is not the one being worked in. At a prompt
-# --cwd=oldest takes the shell integration's OSC 7 report
-# (gates / kitty_shell_integration keeps `no-cwd` out); mid-command, the
-# oldest foreground process's directory by syscall, as the title above —
-# kitty 0.50.0's window.py, not its page. `ascii`: under a non-Latin layout a
-# map without it loses to kitty's default new_tab, which carries it.
+# names for the new tab is not the one being worked in. --cwd=last_reported
+# takes the shell integration's OSC 7 report, at a prompt or mid-command
+# (gates / kitty_shell_integration keeps `no-cwd` out), as the bar's name
+# does; with no report, or behind ssh, it is the newest foreground process's
+# directory by syscall (kitty 0.51.0's window.py, not its page). `ascii`:
+# under a non-Latin layout a map without it loses to kitty's default new_tab,
+# which carries it.
 [pref.tab_identity.targets.kitty_new_tab_cwd]
 target = "kitty"
 key = "map"
 accumulate = true
-want_any = "--allow-fallback=shifted,ascii cmd+t launch --type=tab --cwd=oldest"
+want_any = "--allow-fallback=shifted,ascii cmd+t launch --type=tab --cwd=last_reported"
 
 # The tmux twin: windows are named by their directory basename and numbered
 # from 1 with no gaps — index plus working directory, the same identity rule.
@@ -1186,26 +1223,46 @@ want_contains = "pane_current_path"
 
 [pref.program_status]
 value = "a tab shows when a program in it is working, waiting on you, done or failed"
-why = "Proactive: a tab steering a long job says it needs you without being looked at. A signal beside the bell's symbol, not part of the name, inside the title cap. kitty draws it from OSC 7501 reports (0.50), which Claude Code sends once kitty answers its probe; tmux 3.8 and 3.6a drop a bare report (3.8 measured, both read), so from inside either it does not show."
+why = "Proactive: a tab steering a long job says it needs you without being looked at. A signal beside the bell's symbol, not part of the name. kitty reads it from OSC 7501 reports (0.50), which Claude Code sends once kitty answers its probe; tmux 3.8 and 3.6a drop a bare report (3.8 measured, both read), so from inside either it does not show."
 
+# The probe's third tab reports a status of `S`, drawn before what runs there.
 [pref.program_status.targets.kitty]
-key = "tab_title_template"
-want_contains = "{tab.program_status}"
+target = "kitty_tabs"
+key = "cards"
+accumulate = true
+want_any_contain = "│  S  shell"
+
+[pref.command_finish_signal]
+value = "a long command that ends out of sight marks its tab"
+why = "A build or a test run reports no program status, so its tab would say nothing when it ends. kitty rings the bell for a command of 30 s or more that finishes out of view, in an inactive tab or a covered window; the speaker is off, so the bell is the tab's symbol. No desktop notification: that interrupts, and the tab waits to be looked at."
+
+[pref.command_finish_signal.targets.kitty]
+key = "notify_on_cmd_finish"
+want = "invisible 30 bell"
+
+[pref.tab_signal_glyphs]
+value = "a tab's signals are plain Nerd Font glyphs, not emoji"
+why = "The bell's symbol sits beside the program-status glyphs kitty draws, single-colour Nerd Font glyphs; kitty's default bell is an emoji, which brings its own colours and weight. The bell is Font Awesome's (U+F0F3), spaced as the status glyphs are, and the drawer colours it red."
+
+# Exact, so it is the bell's gate too: an empty value, `no` or `none` blanks
+# the symbol that enable_audio_bell and command_finish_signal leave as the
+# bell's one signal.
+[pref.tab_signal_glyphs.targets.kitty]
+key = "bell_on_tab"
+want = "\"\uf0f3  \""
+
+# And the drawer draws it: the probe's second tab has rung.
+[pref.tab_signal_glyphs.targets.kitty_drawn]
+target = "kitty_tabs"
+key = "cards"
+accumulate = true
+want_any_contain = "│  \uf0f3  shell"
 
 [pref.horizontal_tab_bar]
 value = "bottom"
-why = "A left sidebar was trialled 25-08-2026 and declined: ~30 of the window's 129 content columns for information the tab title already carries."
+why = "tmux's bar is a row along the bottom. kitty's edge is each screen's own: tab_bar_shape."
 
-# The preference is a position, so it is stated as one; `unset_reads_default`
-# reads kitty's own default for a key the config leaves unwritten. Same trade as
-# the allow_hyperlinks gate: `Bottom` reads red though kitty would honour it.
-[pref.horizontal_tab_bar.targets.kitty]
-key = "tab_bar_edge"
-want = "bottom"
-unset_reads_default = true
-
-# tmux's bar, at the bottom like kitty's. Its default in every version, so the
-# line is what this row reads.
+# Its default in every version, so the line is what this row reads.
 [pref.horizontal_tab_bar.targets.tmux]
 key = "status-position"
 want = "bottom"
@@ -1224,24 +1281,59 @@ target = "tmux"
 key = "status-right"
 want = "#{?#{e|<:#{client_width},60},,#[fg=#b8bb26]#{continuum_status} #[fg=#928374]%-I:%M %p }"
 
-# The look of the bar itself — one look, both halves pinned.
+# kitty's bar. The style row hands the drawing to tab_bar.py, and the four
+# rows on kitty_tabs read each form off a rendered bar. The edge is a host's
+# row.
 [pref.tab_bar_shape]
-value = "slanted powerline"
-why = "The bar reads as one continuous strip of slanted segments, and a 30-cell title cap keeps a deep path from eating it. Held 26-08-2026 against live renders of all six shipped variants."
+value = "a rounded card per tab down the left edge where the screen has columns to spare; a row of soft pills along the bottom elsewhere"
+why = "A tab says two things, where it is and what runs there, and a card holds both. A card's colour is in its outline and text, never a filled slab, and it has its shape before it is selected. kitty's horizontal bar is one row, so there the active pill alone says both."
 
 [pref.tab_bar_shape.targets.kitty]
 key = "tab_bar_style"
-want = "powerline"
+want = "custom"
 
-[pref.tab_bar_shape.targets.kitty_powerline]
+[pref.tab_bar_shape.targets.kitty_margin]
 target = "kitty"
-key = "tab_powerline_style"
-want = "slanted"
+key = "tab_bar_margin_width"
+want = "8"
 
-[pref.tab_bar_shape.targets.kitty_title_cap]
+# A closed card; a panel's divider, which is the next tab's top edge; a bare
+# line with the active tab's bar; and the active pill saying both lines.
+[pref.tab_bar_shape.targets.kitty_cards]
+target = "kitty_tabs"
+key = "cards"
+accumulate = true
+want_any_contain = " ╰──────"
+
+[pref.tab_bar_shape.targets.kitty_panel]
+target = "kitty_tabs"
+key = "panel"
+accumulate = true
+want_any_contain = " ├─  2  ~ "
+
+[pref.tab_bar_shape.targets.kitty_lines]
+target = "kitty_tabs"
+key = "lines"
+accumulate = true
+want_any_contain = " ▌  1  alpha"
+
+[pref.tab_bar_shape.targets.kitty_pills]
+target = "kitty_tabs"
+key = "pills"
+accumulate = true
+want_any_contain = "\ue0b61 alpha · shell\ue0b4"
+
+[pref.tab_bar_shape.targets.kitty_scroll]
 target = "kitty"
-key = "tab_title_max_length"
-want = "30"
+state = "unreachable"
+recheck = "manual"
+evidence = "kitty draws a vertical bar's tabs from the first and stops at the one that does not fit, each at least one row (update_vertical, tab_bar.py at 0.51.0). A drawer chooses a tab's height, never which tabs are shown, so past one tab per row kitty draws an ellipsis in the last row and the tabs that fit above it."
+
+[pref.tab_bar_shape.targets.kitty_second_row]
+target = "kitty"
+state = "unreachable"
+recheck = "manual"
+evidence = "kitty resizes a horizontal bar's screen to one line (layout, tab_bar.py at 0.51.0) and reads tab_title_max_lines for a vertical bar only, so a pill cannot carry the card's second row."
 
 # ── Gates: switches that decide whether a value applies at all ────────────────
 # A row here pins a switch that decides whether a value asserted elsewhere
@@ -2395,7 +2487,7 @@ want_any = "NO_BEEP"
 # The fourth layer, and the one that owns the speaker: zsh, readline and less
 # each silence themselves, and beneath all three, kitty rings at its shipped
 # default for any program that writes BEL and is not silenced individually.
-# The bell's remaining signal is the tab title's {bell_symbol}.
+# The bell's remaining signal is the tab's bell symbol.
 [pref.shell_ergonomics.targets.kitty_quiet]
 target = "kitty"
 key = "enable_audio_bell"
@@ -2801,7 +2893,7 @@ want_any = 'bindkey "^[[3~" delete-char'
 
 [pref.slow_command_report]
 value = "commands over 10s of CPU time report timing unasked"
-why = "The question after a slow command is 'how slow was that?' — answered passively, in-terminal. Distinct from kitty's declined notify_on_cmd_finish, which is a desktop notification. CPU time, not wall clock: a network wait never reports."
+why = "The question after a slow command is 'how slow was that?' — answered passively, in-terminal. Distinct from the desktop notification of kitty's notify_on_cmd_finish, which is declined. CPU time, not wall clock: a network wait never reports."
 
 [pref.slow_command_report.targets.zshrc]
 key = "REPORTTIME"
@@ -2968,9 +3060,8 @@ why = "The link is the address of the thing the eye just found; the click should
 # glob-matches it.)
 # Hovering shows where the click will land — the address half of "a link is the
 # address of what the eye just found". A modifier rather than `always`: a URL
-# painted permanently over every hovered filename in an `ll` listing is the
-# clutter tab_title_max_length exists to prevent, and cmd is free of any
-# default mouse action.
+# painted permanently over every hovered filename in an `ll` listing is
+# clutter, and cmd is free of any default mouse action.
 [pref.hyperlink_actions.targets.kitty_hover_target]
 target = "kitty"
 key = "show_hyperlink_targets"

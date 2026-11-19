@@ -5,6 +5,50 @@ from it. A major release moves where or how a file lands, or drops a flag; a
 minor one adds a piece, a row, a flag or a check; a patch changes values,
 fixes and docs.
 
+## v3.0.0
+
+kitty's tab bar is drawn by a drawer, `terminal/kitty/tab_bar.py`, which
+kitty loads from `~/.config/kitty/tab_bar.py` (`tab_bar_style custom`). The
+slanted powerline bar and its title template are gone.
+
+- Along the bottom, each tab is a soft pill holding its number and its
+  directory's name; the active one adds what runs there. With `tab_bar_edge
+  left` and `tab_title_max_lines 3` in your `local.conf`, each tab is a
+  rounded card of two lines, and a bar that fills joins the cards into a
+  panel, then drops to a line a tab. The kitty page has both.
+- A tab is named by the directory its shell last reported, and cmd+t opens
+  there too (`launch --type=tab --cwd=last_reported`, where it was
+  `--cwd=oldest`): a program's helper processes no longer rename the tab
+  or move where a new one starts.
+- The drawer finds your home when it draws, so no file holds it:
+  `bin/bootstrap` and `terminal/kitty/install.sh` no longer write
+  `tab-title.conf`, `kitty.conf` no longer reads it, and the awk script
+  that wrote it is removed. A `tab-title.conf` an earlier
+  release wrote, in `~/.config/kitty` or `~/.config/kitty/preen`, does
+  nothing now: delete it.
+- `terminal/kitty/install.sh` copies `tab_bar.py` to `~/.config/kitty`, the
+  one place kitty reads it, only where you have none of your own.
+- `taste/pref-check.py` gains the `kittytabs` reader, which runs the deployed
+  drawer in kitty's own Python (`kitty +runpy`, which opens no window) through
+  `taste/kitty-tabs-probe.py`, and `taste/preferences.toml` reads the tab's
+  name, bell, program status and each form of the bar off what it draws. Two
+  ceilings join it: a vertical bar does not scroll, and a horizontal one has
+  one row.
+
+`terminal/kitty/kitty.conf`, swept at kitty 0.51.0, also gains three
+behaviours, each with rows in `taste/preferences.toml`:
+
+- The caret glides to where a jump lands: `cursor_trail 200`, with a 4-cell
+  threshold and a faster decay. The value is a dwell in milliseconds at the
+  new cell, so a cursor a TUI keeps moving draws no trail.
+- A command that ran 30 s or more and ends out of view, in an inactive tab
+  or a covered window, rings the bell: `notify_on_cmd_finish invisible 30
+  bell`. The speaker is off, so the bell is the tab's symbol.
+- That symbol is a plain Nerd Font glyph, U+F0F3, like the ones kitty draws
+  program status in, in place of the emoji kitty ships (`bell_on_tab`).
+
+The kitty page's "What changes" table lists these with their undo lines.
+
 ## v2.6.1
 
 `taste/preferences.toml`'s note on mise's per-prompt hook carries mise

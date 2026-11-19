@@ -5,6 +5,7 @@ shell/atuin/config.toml	~/.config/atuin/config.toml	copy
 terminal/kitty/kitty.conf	~/.config/kitty/kitty.conf	link
 terminal/kitty/current-theme.conf	~/.config/kitty/current-theme.conf	copy
 terminal/kitty/choose-files.conf	~/.config/kitty/choose-files.conf	link
+terminal/kitty/tab_bar.py	~/.config/kitty/tab_bar.py	link
 terminal/tmux/tmux.conf	~/.config/tmux/tmux.conf	link
 terminal/bat/config	~/.config/bat/config	link
 terminal/ncdu/config	~/.config/ncdu/config	link

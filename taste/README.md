@@ -14,6 +14,9 @@ needs them: no installer reads this directory.
   as the doctor's own.
 - `zcap.sh` — starts a login zsh, isolated from your environment, to read
   what your zsh config sets.
+- `kitty-tabs-probe.py` — draws kitty's tab bar on a fixed set of tabs,
+  inside kitty's own Python and with no window, to read what the drawer
+  draws.
 
 ## Run it
 

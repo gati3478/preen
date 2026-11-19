@@ -4,9 +4,9 @@ usage: ./terminal/kitty/install.sh [--dry-run]
 
 Take this kitty configuration alone.
 
-Copies the config, its palette and the tab title for your home into
-~/.config/kitty/preen, copies the files kitty insists on reading from
-~/.config/kitty itself, and appends ONE line to your own kitty.conf:
+Copies the config and its palette into ~/.config/kitty/preen, copies the
+files kitty insists on reading from ~/.config/kitty itself, the tab bar's
+drawer among them, and appends ONE line to your own kitty.conf:
 
   include preen/kitty.conf
 
@@ -15,28 +15,25 @@ and if you have no kitty.conf yet it becomes that line alone. Copies, never
 symlinks, and nothing here points back at this repo afterwards.
 
   from a clone:    ./terminal/kitty/install.sh [flags]
-  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.6.1/terminal/kitty/install.sh | bash
+  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v3.0.0/terminal/kitty/install.sh | bash
 
 There is nothing to ask, so nothing is asked.
 
 kitty reads includes last-wins, so the appended line beats everything above it
 in your kitty.conf. Keep a line of your own by moving it BELOW that line, or
 into ~/.config/kitty/preen/local.conf, which this config reads after
-everything else. That file is yours: nothing here writes it. A tab title in
-it wins over ours; a run names its line, with the path it collapses when that
-is not your home. tab-title.conf beside it is this installer's: a run
-replaces its one line with no backup, and anything else there is backed up
-first.
+everything else. That file is yours: nothing here writes it.
 
-open-actions.conf, mime.types and choose-files.conf are read by kitty from
-~/.config/kitty itself, under those names and no others, so a file of yours at
-one of them is left exactly as it is and said so. bat's config, which sets the
-theme the scrollback pager draws in, is copied to ~/.config/bat/config the
-same way: only where none of yours exists.
+open-actions.conf, mime.types, choose-files.conf and tab_bar.py, which draws
+the tab bar, are read by kitty from ~/.config/kitty itself, under those names
+and no others, so a file of yours at one of them is left exactly as it is and
+said so. With a tab_bar.py of yours there, the bar is drawn by yours. bat's
+config, which sets the theme the scrollback pager draws in, is copied to
+~/.config/bat/config the same way: only where none of yours exists.
 
 To update, run the install line from this piece's page again, which names
 the newest release: an earlier copy this setup shipped is replaced
-with no backup, at those four too; anything else in preen/ is overwritten
+with no backup, at those too; anything else in preen/ is overwritten
 only after a timestamped backup beside it; and a re-run with
 nothing changed rewrites nothing. Every refusal comes before the first
 write; among them, a symlinked ~/.config, ~/.config/kitty or preen/ is
@@ -75,7 +72,7 @@ done
 # otherwise fetched from the mirror exactly as the configs are — same trust,
 # same mechanism — and checked for its marker line before it is sourced.
 PIECE="terminal/kitty"   # this piece's path under the mirror root
-PREEN_REF=v2.6.1   # this installer's release: the tag it fetches from, and the helper's marker
+PREEN_REF=v3.0.0   # this installer's release: the tag it fetches from, and the helper's marker
 # A slash ending an override would double the one joined after it, and leave
 # a root taken from it a level too deep.
 trim_slash() { printf '%s' "$1" | sed 's#/*$##'; }   # trim_slash <url> → it with any trailing slash dropped
@@ -123,22 +120,15 @@ KITTY_CONF="$KITTY_DIR/kitty.conf"
 INCLUDE_LINE="include preen/kitty.conf"
 # Read by kitty from the config directory ROOT under these exact names —
 # measured for open-actions.conf, a bytecode constant for mime.types, the
-# kitten's documented path for choose-files.conf. A drop-in cannot layer under
-# a fixed name, so one of yours there wins by staying.
-ROOT_FILES="open-actions.conf mime.types choose-files.conf"
+# kitten's documented path for choose-files.conf, and for tab_bar.py the one
+# module `tab_bar_style custom` loads. A drop-in cannot layer under a fixed
+# name, so one of yours there wins by staying.
+ROOT_FILES="open-actions.conf mime.types choose-files.conf tab_bar.py"
 BAT_CONF="$CONFIG_HOME/bat/config"
 KITTY_APP="/Applications/kitty.app/Contents/MacOS/kitty"
 FONT_FILE_PREFIX="FiraCodeNerdFontMono"   # how the cask names the files
 FONT_NAME="FiraCode Nerd Font Mono"       # how kitty.conf asks for it
 FONT_CASK="font-fira-code-nerd-font"
-# The home the shipped tab title collapses to '~'. bin/bootstrap carries the
-# same constant for the same line; kitty expands no variable in that option.
-AUTHORED_HOME="/Users/gati3478"
-# HOME as tab-title.awk reads it: without its trailing slashes, so /h/ names
-# /h. A HOME of slashes alone is read as given.
-TITLE_HOME="$HOME"
-while [ "${TITLE_HOME%/}" != "$TITLE_HOME" ]; do TITLE_HOME="${TITLE_HOME%/}"; done
-[ -n "$TITLE_HOME" ] || TITLE_HOME="$HOME"
 
 # ── a home that took the whole setup ─────────────────────────────────────────
 # Its kitty.conf is a link into the setup's clone, which already carries this
@@ -152,29 +142,25 @@ fi
 locate_sources kitty.conf
 if [ "$SRC" = "$WORK/src" ]; then
   # shellcheck disable=SC2086  # ROOT_FILES is a list of names, meant to split
-  for f in current-theme.conf tab-title.awk $ROOT_FILES; do fetch "$f"; done
+  for f in current-theme.conf $ROOT_FILES; do fetch "$f"; done
 fi
 # shellcheck disable=SC2086
-for f in kitty.conf current-theme.conf tab-title.awk $ROOT_FILES; do
+for f in kitty.conf current-theme.conf $ROOT_FILES; do
   [ -s "$SRC/$f" ] || die "$ORIGIN/$f is missing or empty"
 done
 # curl -f already refuses a 404; these refuse a 200 that is not the file, and a
 # foreign file beside a clone. Each line is load-bearing rather than
-# decorative: the tab title and the overlay ride on the globincludes, and
-# kitty.conf's `include current-theme.conf` resolves to a file that has to be a
-# palette.
-grep -q '^globinclude tab-title\.conf$' "$SRC/kitty.conf" \
-  || die "$ORIGIN/kitty.conf is not this config — it must end with \`globinclude tab-title.conf\`, which is what the tab title for your home rides on"
+# decorative: the overlay rides on the globinclude, kitty.conf's
+# `include current-theme.conf` resolves to a file that has to be a palette,
+# and `tab_bar_style custom` draws with the tab_bar.py placed below.
 grep -q '^globinclude local\.conf$' "$SRC/kitty.conf" \
   || die "$ORIGIN/kitty.conf is not this config — it must end with \`globinclude local.conf\`, which is what your own overrides ride on"
 grep -q '^background[[:space:]]' "$SRC/current-theme.conf" \
   || die "$ORIGIN/current-theme.conf is not a kitty colour scheme"
-# The program that writes the tab title. A download cut off between two rules
-# still parses, so it must end on its marker line; one cut mid-block fails to
-# parse, and a file that is not this program lacks the rule local.conf is read by.
-grep -q '^want == "local"' "$SRC/tab-title.awk" && awk -f "$SRC/tab-title.awk" </dev/null >/dev/null 2>&1 \
-  && [ "$(tail -n 1 "$SRC/tab-title.awk")" = '# end of tab-title.awk: install.sh refuses a copy whose last line is not this one' ] \
-  || die "$ORIGIN/tab-title.awk is not the program that writes the tab title, or did not arrive whole"
+# kitty calls draw_tab in the drawer, so a file without it draws no bar, and
+# one cut short raises when kitty loads it.
+whole_with tab_bar.py '# end of tab_bar.py: install.sh refuses a copy whose last line is not this one' 'def draw_tab(' \
+  || die "$ORIGIN/tab_bar.py is not the tab bar's drawer, or did not arrive whole — it must define \`draw_tab\`, which kitty calls for each tab"
 # scrollback_pager runs bat with no theme of its own; the shell piece takes
 # this config too, so it is kept in bat's own directory.
 locate_root_file terminal/bat/config '--theme="ansi"' '--theme="ansi"'
@@ -225,57 +211,6 @@ if [ -n "$subl_bin" ]; then
 else
   echo "subl not found $(tool_where) — open-actions.conf launches it when you click a file path, so a click does nothing until it is there, or until you put your editor's name in that file (brew install --cask sublime-text)"
 fi
-
-# ── the tab title ────────────────────────────────────────────────────────────
-# kitty.conf's tab_title_template collapses the working directory to '~' for a
-# home that is a literal, authored for one machine. The line is read out of
-# kitty.conf rather than repeated here, and rewritten for this HOME by
-# tab-title.awk, the program bin/bootstrap runs too; it says why it is awk.
-echo
-echo "== tab title =="
-title_line=""
-if [ "$TITLE_HOME" = "$AUTHORED_HOME" ]; then
-  echo "this is the home the tab title was authored for — no tab-title.conf needed"
-else
-  title_line="$(awk -v want=title -v authored="$AUTHORED_HOME" -f "$SRC/tab-title.awk" "$SRC/kitty.conf")"
-  # local.conf, read after tab-title.conf, may set a tab title of its own:
-  # tab-title.awk names its line, and the path it collapses when that is not
-  # this home. Their file: named, never written.
-  local_title="$(LC_ALL=C awk -v want=local -f "$SRC/tab-title.awk" "$PREEN_DIR/local.conf" 2>/dev/null)" || local_title=""
-  local_line="${local_title%% *}"; local_path="${local_title#* }"
-  # Said before the refusals and the write, so it is what a run writes, never
-  # what the file holds.
-  if [ -z "$title_line" ]; then
-    echo "$ORIGIN/kitty.conf has no tab_title_template line — no tab-title.conf needed"
-  elif [ -n "$local_path" ]; then
-    echo "$(short "$PREEN_DIR/local.conf") line $local_line, read after tab-title.conf, sets a tab title that collapses $local_path"
-  elif [ -n "$local_title" ]; then
-    echo "$(short "$PREEN_DIR/local.conf") line $local_line, read after tab-title.conf, sets a tab title"
-  else
-    home_lit="${TITLE_HOME//\\/\\\\}"
-    case "$title_line" in
-      *"'$home_lit'"*|*"\"$home_lit\""*) echo "the tab title a run writes to $(short "$PREEN_DIR/tab-title.conf") collapses this home to '~'" ;;
-      *) echo "the tab title a run writes to $(short "$PREEN_DIR/tab-title.conf") does not collapse this home" ;;
-    esac
-  fi
-fi
-
-# tab-title.conf is this installer's, written whole, so the line kitty reads
-# always names this HOME. local.conf, read after it, is the adopter's, and a
-# tab title of theirs there wins. A plain file of one tab_title_template line
-# is this installer's own, for another home or an older kitty.conf: updated
-# with no backup, which the doctor would otherwise warn about on every run
-# after. Anything else there is place()'s to decide.
-TITLE_CONF="$PREEN_DIR/tab-title.conf"
-if [ -n "$title_line" ]; then printf '%s\n' "$title_line" > "$WORK/tab-title.conf"; fi
-title_outcome() { # title_outcome → what the run will do to tab-title.conf: place()'s outcome, or updated for the installer's own line
-  if [ ! -L "$TITLE_CONF" ] && [ -f "$TITLE_CONF" ] && ! cmp -s "$WORK/tab-title.conf" "$TITLE_CONF" \
-    && awk 'NR == 1 { ok = /^tab_title_template / } END { exit !(NR == 1 && ok) }' "$TITLE_CONF" 2>/dev/null; then
-    echo updated
-  else
-    place_outcome "$WORK/tab-title.conf" "$TITLE_CONF"
-  fi
-}
 
 # ── the include in your kitty.conf ───────────────────────────────────────────
 # kitty reads a file once: a later include of one it has read, keyed on its
@@ -409,11 +344,7 @@ overridden() { # overridden <your kitty.conf> <the include's line number, 0 when
 }
 lost=""
 if [ -f "$KITTY_CONF" ] && [ -r "$KITTY_CONF" ]; then
-  if [ -n "$title_line" ]; then
-    lost="$(overridden "$KITTY_CONF" "${include_at:-0}" "$SRC/kitty.conf" "$SRC/current-theme.conf" "$WORK/tab-title.conf")"
-  else
-    lost="$(overridden "$KITTY_CONF" "${include_at:-0}" "$SRC/kitty.conf" "$SRC/current-theme.conf")"
-  fi
+  lost="$(overridden "$KITTY_CONF" "${include_at:-0}" "$SRC/kitty.conf" "$SRC/current-theme.conf")"
 fi
 
 # ── what this run will touch, said before the first write ────────────────────
@@ -422,7 +353,6 @@ fi
 [ -d "$PREEN_DIR" ] || touching "$PREEN_DIR" "this config's own directory, created"
 touching_place "$SRC/kitty.conf" "$PREEN_DIR/kitty.conf" "$PIECE/kitty.conf" "the config"
 touching_place "$SRC/current-theme.conf" "$PREEN_DIR/current-theme.conf" "$PIECE/current-theme.conf" "the palette it includes"
-if [ -n "$title_line" ]; then touching "$TITLE_CONF" "the tab title for this home — $(outcome_words "$(title_outcome)")"; fi
 touching_line "$KITTY_CONF" "$INCLUDE_LINE"
 while IFS= read -r l; do
   [ -z "$l" ] || touching "$KITTY_CONF" "line ${l%% *}: ${l#* } (yours, above the include) loses to this config"
@@ -430,6 +360,7 @@ done <<< "$lost"
 touching_if_absent "$SRC/open-actions.conf" "$KITTY_DIR/open-actions.conf" "$PIECE/open-actions.conf" "what a click on a link does"
 touching_if_absent "$SRC/mime.types" "$KITTY_DIR/mime.types" "$PIECE/mime.types" "the file types behind it"
 touching_if_absent "$SRC/choose-files.conf" "$KITTY_DIR/choose-files.conf" "$PIECE/choose-files.conf" "kitty's file picker, kitten choose-files"
+touching_if_absent "$SRC/tab_bar.py" "$KITTY_DIR/tab_bar.py" "$PIECE/tab_bar.py" "what draws the tab bar"
 touching_dir_for "$BAT_CONF" "bat's config directory, created"
 touching_if_absent "$SRC_ROOT/terminal/bat/config" "$BAT_CONF" terminal/bat/config "bat's theme: the terminal's palette"
 show_plan
@@ -463,12 +394,6 @@ echo
 echo "== installing =="
 copy_into "$SRC/kitty.conf" "$PREEN_DIR/kitty.conf" "$PIECE/kitty.conf"
 copy_into "$SRC/current-theme.conf" "$PREEN_DIR/current-theme.conf" "$PIECE/current-theme.conf"
-if [ -n "$title_line" ] && [ "$(title_outcome)" = updated ]; then
-  { rm -f "$TITLE_CONF" && cp "$WORK/tab-title.conf" "$TITLE_CONF"; } || die "could not replace $(short "$TITLE_CONF")"
-  record "updated         $(short "$TITLE_CONF")"
-elif [ -n "$title_line" ]; then
-  copy_into "$WORK/tab-title.conf" "$TITLE_CONF"
-fi
 # shellcheck disable=SC2086
 for f in $ROOT_FILES; do copy_if_absent "$SRC/$f" "$KITTY_DIR/$f" "$PIECE/$f"; done
 copy_if_absent_into "$SRC_ROOT/terminal/bat/config" "$BAT_CONF" terminal/bat/config

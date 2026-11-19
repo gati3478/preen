@@ -5,12 +5,13 @@ on FiraCode Nerd Font Mono, with ligatures, a dotted zero and oldstyle
 figures turned on in the font itself. The caret is a thick underline that the
 shell is told not to fight; selecting text copies it; fifty thousand lines of
 scrollback page through [bat](https://github.com/sharkdp/bat); the audio bell
-is off and a bell shows as a red symbol in the tab title instead. It also
+is off and a bell shows as a red symbol on its tab instead. Tabs are drawn
+by a small drawer, `tab_bar.py`: soft pills along the bottom, or rounded
+cards down the left edge on a screen with the columns for them. It also
 carries the kitty half of a click seam — a file path printed by `rg` or `eza`
 opens in the editor, at its line, when you click it. Take it alone: the
-installer fetches its helpers from this repository — the installer library
-the pieces share, and `tab-title.awk`, which writes the tab title — and
-nothing it installs points back here.
+installer fetches the installer library the pieces share from this
+repository, and nothing it installs points back here.
 
 ## What you need
 
@@ -69,13 +70,13 @@ There is no light variant.
 The plan, writing nothing:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.6.1/terminal/kitty/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v3.0.0/terminal/kitty/install.sh | bash -s -- --dry-run
 ```
 
 To install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v2.6.1/terminal/kitty/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/v3.0.0/terminal/kitty/install.sh | bash
 ```
 
 Or from a clone, `./terminal/kitty/install.sh`. It asks nothing. The plan
@@ -88,11 +89,11 @@ for a home with no `~/.config` yet:
 ~/.config/kitty/preen                      this config's own directory, created
 ~/.config/kitty/preen/kitty.conf           the config — copied
 ~/.config/kitty/preen/current-theme.conf   the palette it includes — copied
-~/.config/kitty/preen/tab-title.conf       the tab title for this home — copied
 ~/.config/kitty/kitty.conf                 created: include preen/kitty.conf
 ~/.config/kitty/open-actions.conf          what a click on a link does — copied
 ~/.config/kitty/mime.types                 the file types behind it — copied
 ~/.config/kitty/choose-files.conf          kitty's file picker, kitten choose-files — copied
+~/.config/kitty/tab_bar.py                 what draws the tab bar — copied
 ~/.config/bat                              bat's config directory, created
 ~/.config/bat/config                       bat's theme: the terminal's palette — copied
 ```
@@ -113,18 +114,15 @@ It
    `~/.config/kitty/preen/`, a different file there first backed up beside
    itself as `<file>.unpreened.<timestamp>`, an earlier copy this setup
    shipped replaced without one;
-3. writes `preen/tab-title.conf`, the tab title for your home: kitty expands
-   no variable in that option, so the shipped title names the author's home.
-   The file is **the installer's**: a file of that one line is replaced with
-   no backup, anything else there is backed up first, and on the author's
-   machine it is not written at all;
-4. copies `open-actions.conf`, `mime.types` and `choose-files.conf` into
-   `~/.config/kitty` itself, the one place kitty reads them, and bat's config,
-   from [`terminal/bat/`](../bat/), to `~/.config/bat/config` — each only
-   where nothing is there or an earlier copy this setup shipped is. Anything
-   else stays, said `unchanged` or `left alone`. bat's one line,
-   `--theme="ansi"`, draws the pager in the terminal's palette;
-5. appends `include preen/kitty.conf` to `~/.config/kitty/kitty.conf`, once —
+3. copies `open-actions.conf`, `mime.types`, `choose-files.conf` and
+   `tab_bar.py`, which draws the tab bar, into `~/.config/kitty` itself, the
+   one place kitty reads them, and bat's config, from
+   [`terminal/bat/`](../bat/), to `~/.config/bat/config` — each only where
+   nothing is there or an earlier copy this setup shipped is. Anything else
+   stays, said `unchanged` or `left alone`: with a `tab_bar.py` of yours
+   there, yours draws the bar. bat's one line, `--theme="ansi"`, draws the
+   pager in the terminal's palette;
+4. appends `include preen/kitty.conf` to `~/.config/kitty/kitty.conf`, once —
    an include of this config spelled another way counts. Nothing else in your
    file changes, but a last line with no newline gets one. The append is
    last, so a run that stops earlier leaves no include pointing at nothing.
@@ -154,8 +152,6 @@ config, so a line in it wins over this config's. That is where a setting of
 yours belongs.
 
 The file is yours: nothing here creates it, writes it or backs it up.
-`tab-title.conf` beside it is read just before it, so a tab title in
-`local.conf` wins over ours, and the run names its line.
 
 **Lines in your own `kitty.conf` above the include line lose to this
 config**: with `cursor_shape block` there, the caret is an underline after
@@ -174,17 +170,38 @@ the same `--config-file-name local.conf`.
 ## What changes
 
 The choices felt at once, each with the lines that undo it in
-`~/.config/kitty/preen/local.conf`. Each undo is kitty 0.50.0's own default.
+`~/.config/kitty/preen/local.conf`. Each undo is kitty 0.51.0's own default.
 
 | What you notice | Undo |
 | --- | --- |
 | the left Option key is Alt, so characters typed with Option take the right one (`macos_option_as_alt`) | `macos_option_as_alt no` |
 | selecting text copies it, replacing the clipboard (`copy_on_select`) | `copy_on_select no` |
 | cmd+q saves the open windows and tabs, each window's size and position with them, to `~/.config/kitty/last-session.kitty`, and the next launch restores them (`startup_session`); before the first save, kitty logs that it cannot read the file and opens its usual window | `startup_session none`<br>`map cmd+q quit` |
+| a trail sweeps from where the caret was to where a jump of more than 4 cells lands (`cursor_trail`) | `cursor_trail 0` |
+| a command that ran 30 s or more and ends in an inactive tab or a covered window marks its tab with the bell symbol (`notify_on_cmd_finish`) | `notify_on_cmd_finish never` |
+| a tab is a pill holding its number and its directory's name, not kitty's faded title, and the active one adds what runs there (`tab_bar_style custom`, drawn by `tab_bar.py`) | `tab_bar_style fade`<br>`tab_bar_margin_width 0`<br>`tab_bar_margin_height 0 0` |
+| the bell symbol on a tab is a Nerd Font glyph (`bell_on_tab`); in a font without it, a missing-glyph box | `bell_on_tab "🔔 "` |
 | logging out, restarting or shutting down saves every kitty window with its scrollback, and the next launch restores it once and deletes it (`restore_session_after_logout`). On macOS it is encrypted with a key in your login keychain, but kitty's own docs say any process running as you can read it until then; on Linux it is not encrypted, and is saved only where the desktop's Inhibit portal reports the session ending | `restore_session_after_logout no` |
 
 Of the session's two lines, the first stops the session opening at launch,
 the second makes cmd+q quit without saving.
+
+## The tab bar on the left
+
+With columns to spare, three lines in `~/.config/kitty/preen/local.conf` move
+the bar to the left edge, where a tab is a rounded card of two lines: its
+number and directory, then what runs there.
+
+```
+tab_bar_edge left
+tab_title_max_lines 3
+tab_bar_margin_height 0 0
+```
+
+The bar is `tab_title_max_length` plus 8 cells wide, 28 with that unset, and
+never more than a third of the window. kitty does not scroll a vertical bar,
+so as tabs fill it the cards join into one panel, and past that each tab is
+a single line.
 
 ## The click seam
 
@@ -210,8 +227,8 @@ Gruvbox.
    `~/.config/kitty/kitty.conf` — or the file, if that line is all it holds.
 2. Delete `~/.config/kitty/preen/` — keep `local.conf` from it first if you
    made one; that file is yours.
-3. For `open-actions.conf`, `mime.types`, `choose-files.conf` and
-   `~/.config/bat/config`, read what the run said of each: `copied`,
+3. For `open-actions.conf`, `mime.types`, `choose-files.conf`, `tab_bar.py`
+   and `~/.config/bat/config`, read what the run said of each: `copied`,
    `updated` or `unchanged` means the file holds what this setup shipped, so
    it can go unless you had it before the first run; `left alone` means the
    run did not write it. A `--dry-run` says which is which now: `an earlier

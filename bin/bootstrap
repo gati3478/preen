@@ -3,17 +3,16 @@
 #
 # Asks for the values that are personal, sets them in a local
 # overlay, symlinks everything in the manifest into place (preen apply owns
-# that, backups included), and finally writes the one value kitty's config
-# language cannot template into ~/.config/kitty/tab-title.conf. Nothing it does
-# touches this clone. Never runs as root.
+# that, backups included). Nothing it does touches this clone. Never runs as
+# root.
 set -euo pipefail
 
 usage() { cat <<'EOF'
 usage: ./bin/bootstrap [--dry-run]
 
 Takes the whole setup from this clone: names what is missing, asks your name
-and email for git and sets them in ~/.gitconfig.local, deploys every row of
-manifest.tsv through preen apply, and writes kitty's tab title for your home.
+and email for git and sets them in ~/.gitconfig.local, and deploys every row
+of manifest.tsv through preen apply.
 
   --dry-run   print the whole plan; asks nothing and writes nothing
   -h, --help  print this and exit
@@ -44,20 +43,6 @@ done
 # write, and tell picks a line's words, as done or as planned.
 run() { [ "$dry_run" = yes ] || "$@"; }
 tell() { if [ "$dry_run" = yes ]; then printf '%s' "$2"; else printf '%s' "$1"; fi; }
-
-# Every writer in this setup, preen apply and the drop-ins included, names a
-# backup <file>.unpreened.<stamp>, the stamp taken once per run, so a file's
-# backups sort by time whichever of them wrote each. A dry run cannot know the
-# real run's second, so it names the stamp instead.
-if [ "$dry_run" = yes ]; then STAMP='<stamp>'; else STAMP="$(date +%Y%m%d-%H%M%S)"; fi
-backup_name() { # backup_name <file> → a name beside it that nothing holds yet
-  local b="$1.unpreened.$STAMP" n=1
-  while [ -e "$b" ] || [ -L "$b" ]; do
-    b="$1.unpreened.$STAMP.$n"
-    n=$((n + 1))
-  done
-  printf '%s' "$b"
-}
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
@@ -106,25 +91,15 @@ bare_shim() { # bare_shim <tool> → true when <tool> is macOS's /usr/bin stub w
 }
 
 # preen apply refuses before its first write, but this run writes before it
-# calls preen apply — the identity, the ssh move — and after it, the tab title.
-# So its own refusals and preen apply's all come first, and a refused run has
-# changed nothing. The identity is set by key in ~/.gitconfig.local, and a key
+# calls preen apply — the identity, the ssh move. So its own refusals and
+# preen apply's all come first, and a refused run has changed nothing. The
+# identity is set by key in ~/.gitconfig.local, and a key
 # set through a symlink lands in the file it points at.
 GITCONFIG_LOCAL="$HOME/.gitconfig.local"
 GITCONFIG="$HOME/.gitconfig"
 # The git piece's copy of the shipped gitconfig, under ~. Like the shipped
 # file, it includes ~/.gitconfig.local.
 GIT_PIECE_COPY=".config/git/preen/gitconfig"
-# The tab title is written for any home but the one kitty.conf's line names.
-AUTHORED_HOME="/Users/gati3478"
-# HOME as tab-title.awk reads it: without its trailing slashes, so /h/ names
-# /h. A HOME of slashes alone is read as given.
-TITLE_HOME="$HOME"
-while [ "${TITLE_HOME%/}" != "$TITLE_HOME" ]; do TITLE_HOME="${TITLE_HOME%/}"; done
-[ -n "$TITLE_HOME" ] || TITLE_HOME="$HOME"
-KITTY_CONF="$REPO/terminal/kitty/kitty.conf"
-TAB_TITLE_AWK="$REPO/terminal/kitty/tab-title.awk"   # the kitty drop-in runs it too
-TAB_TITLE_CONF="$HOME/.config/kitty/tab-title.conf"
 # Read as text: git may be the Command Line Tools stub. A path is printed as
 # git reads the value — quotes dropped, a comment cut — and an include section
 # counts from its header's own line, `[include] path = …`, as git's does.
@@ -244,11 +219,6 @@ if command -v git >/dev/null 2>&1 && ! bare_shim git; then
     echo "bootstrap: git cannot read ~/.gitconfig, which this run moves to ~/.gitconfig.local to set the identity there — $(sed -n 1p <<< "$err")" >&2
     refused=yes
   fi
-fi
-if [ "$TITLE_HOME" != "$AUTHORED_HOME" ] && grep -q '^tab_title_template ' "$KITTY_CONF" 2>/dev/null \
-  && [ -e "$TAB_TITLE_CONF" ] && [ ! -L "$TAB_TITLE_CONF" ] && [ ! -f "$TAB_TITLE_CONF" ]; then
-  echo "bootstrap: ~/.config/kitty/tab-title.conf is not a file — this run writes the tab title there" >&2
-  refused=yes
 fi
 # Shown as it happens and kept: preen apply's own lines are the one record of
 # what it set aside, and the closing lines name each of those files. Made
@@ -530,86 +500,6 @@ else
   "$REPO/bin/preen" apply | tee "$deploy_log"
 fi
 
-echo
-echo "== tab title =="
-# kitty.conf's tab_title_template collapses the working directory to '~' with
-# a Python .replace() inside kitty's own config language, which expands no
-# environment variable in this setting — measured against kitty 0.48.2, where
-# `${HOME}` in that option comes back verbatim. So the home to collapse must
-# be a literal, authored for one machine: AUTHORED_HOME, above.
-#
-# It is NOT rewritten in the clone: a dirty clone makes `git pull` refuse
-# every upstream change, because the deployed gitconfig sets pull.rebase.
-# kitty.conf ends with `globinclude tab-title.conf` then `globinclude
-# local.conf`, each silent when the file does not exist and last-wins when it
-# does. tab-title.conf is this run's, written whole; local.conf is the
-# adopter's, read after it, and never written here.
-if [ "$TITLE_HOME" = "$AUTHORED_HOME" ]; then
-  echo "this is the home the tab title was authored for — no tab-title.conf needed"
-elif [ ! -f "$KITTY_CONF" ]; then
-  echo "kitty.conf not found — skipped"
-elif [ ! -f "$TAB_TITLE_AWK" ]; then
-  echo "tab-title.awk not found — skipped"
-else
-  # The line is read out of kitty.conf rather than repeated here: two copies
-  # of a taste value is the drift this repo exists to close. tab-title.awk
-  # says how it is rewritten, for the kitty drop-in too.
-  title_line="$(awk -v want=title -v authored="$AUTHORED_HOME" -f "$TAB_TITLE_AWK" "$KITTY_CONF")"
-  if [ -z "$title_line" ]; then
-    echo "kitty.conf has no tab_title_template line — no tab-title.conf needed" >&2
-  else
-    run mkdir -p "$(dirname "$TAB_TITLE_CONF")"
-    # A file replaced whole is never written through: a symlink here is moved
-    # aside, link and all, as preen apply moves one at a copy row. A plain file
-    # of one tab_title_template line is this run's own, for another home or an
-    # older kitty.conf, and is replaced with no backup, which the doctor would
-    # otherwise warn about on every run after. Any other differing file is
-    # kept beside itself, as the kitty drop-in keeps one, and the write is
-    # then a new file. The lines go to the deploy log too, so the closing lines
-    # name the file set aside.
-    title_state="$(tell wrote 'would write')"
-    if [ -L "$TAB_TITLE_CONF" ] || { [ -e "$TAB_TITLE_CONF" ] && ! cmp -s - "$TAB_TITLE_CONF" <<< "$title_line"; }; then
-      if [ ! -L "$TAB_TITLE_CONF" ] && [ -f "$TAB_TITLE_CONF" ] \
-        && awk 'NR == 1 { ok = /^tab_title_template / } END { exit !(NR == 1 && ok) }' "$TAB_TITLE_CONF" 2>/dev/null; then
-        run rm -f "$TAB_TITLE_CONF"
-      else
-        bak="$(backup_name "$TAB_TITLE_CONF")"
-        if [ -L "$TAB_TITLE_CONF" ]; then
-          aside_line="$(tell 'moved aside     ' 'would move aside ')~/.config/kitty/tab-title.conf (a symlink -> $(readlink "$TAB_TITLE_CONF"))"
-        else
-          aside_line="$(tell 'backed up       ' 'would back up ')~/.config/kitty/tab-title.conf -> ~/.config/kitty/tab-title.conf${bak#"$TAB_TITLE_CONF"}"
-        fi
-        run mv "$TAB_TITLE_CONF" "$bak"
-        echo "$aside_line" | tee -a "$deploy_log"
-      fi
-    elif [ -f "$TAB_TITLE_CONF" ]; then
-      title_state=unchanged
-    fi
-    if [ "$title_state" != unchanged ] && [ "$dry_run" = no ]; then
-      printf '%s\n' "$title_line" > "$TAB_TITLE_CONF"
-    fi
-    # local.conf, read after tab-title.conf, may set a tab title of its own:
-    # tab-title.awk names its line, and the path it collapses when that is not
-    # this home. Their file: named, never written.
-    local_title="$(LC_ALL=C awk -v want=local -f "$TAB_TITLE_AWK" "$HOME/.config/kitty/local.conf" 2>/dev/null)" || local_title=""
-    local_line="${local_title%% *}"; local_path="${local_title#* }"
-    # What tab-title.conf's title does is read back off the file, not assumed;
-    # a dry run reads the line it would write.
-    title_now="$title_line"
-    [ "$dry_run" = yes ] || title_now="$(cat "$TAB_TITLE_CONF")"
-    home_lit="${TITLE_HOME//\\/\\\\}"
-    if [ -n "$local_path" ]; then
-      echo "$title_state ~/.config/kitty/tab-title.conf; ~/.config/kitty/local.conf line $local_line, read after it, sets a tab title that collapses $local_path"
-    elif [ -n "$local_title" ]; then
-      echo "$title_state ~/.config/kitty/tab-title.conf; ~/.config/kitty/local.conf line $local_line, read after it, sets a tab title"
-    elif grep -qF -e "'$home_lit'" -e "\"$home_lit\"" <<< "$title_now"; then
-      echo "$title_state ~/.config/kitty/tab-title.conf, whose tab title collapses this home to '~'"
-    else
-      echo "$title_state ~/.config/kitty/tab-title.conf, whose tab title does not collapse this home"
-    fi
-  fi
-fi
-
 # ── what is the adopter's now ────────────────────────────────────────────────
 # Each shipped file read with an overlay, and that overlay: a file the shipped
 # one includes, or, for Zed and Sublime Text, the adopter's own file, which the
@@ -716,10 +606,10 @@ piece_said() { # piece_said <numbers> <~path> → what those lines of a file at 
 # either includes it until git stops every command on "exceeded maximum include
 # depth". A piece's line is read off the file set aside, still in place in a
 # dry run, or the file a link pointed at.
-# A dry run has no log: it reads the lines it planned, preen apply's and the
-# tab title's, worded as done so the same parse reads them.
+# A dry run has no log: it reads the lines preen apply planned, worded as done
+# so the same parse reads them.
 if [ "$dry_run" = yes ]; then
-  log_lines="$(printf '%s\n%s\n' "$deploy_plan" "${aside_line:-}" | sed -e 's/^would back up  */backed up       /' \
+  log_lines="$(printf '%s\n' "$deploy_plan" | sed -e 's/^would back up  */backed up       /' \
     -e 's/^would move aside  */moved aside     /' -e 's/^would replace link  */replaced link   /')"
 else
   log_lines="$(cat "$deploy_log")"

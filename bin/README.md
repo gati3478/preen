@@ -10,9 +10,8 @@ bootstrap's plan first.
 `bootstrap` names each missing tool, an optional one with what goes without
 it, and asks before it goes on without one the setup needs. It asks your
 name and email for git and sets them in `~/.gitconfig.local`, leaving the
-rest of that file as it is; deploys every row of `manifest.tsv`; and writes
-`~/.config/kitty/tab-title.conf`, which holds your home, the one path kitty's
-config language cannot template. Zed's and Sublime Text's settings are linked
+rest of that file as it is, and deploys every row of `manifest.tsv`. Zed's
+and Sublime Text's settings are linked
 where their pieces copy them, `~/.config/zed/global_settings.json` and
 Sublime's `Packages/preen`, beneath your own `~/.config/zed/settings.json` and
 `Packages/User`, which bootstrap never writes. It ends by naming each
@@ -137,10 +136,6 @@ into the clone. From a copied file, delete the setup's lines and keep yours;
 where none are yours, move its earliest backup back ([Leaving](#leaving)),
 or delete the file where it has none.
 
-kitty's tab title does not follow the clone: bootstrap writes its line into
-`~/.config/kitty/tab-title.conf`, which wins over `kitty.conf`, so a change
-to it arrives with a re-run of `./bin/bootstrap`.
-
 ## Leaving
 
 In this order:
@@ -165,8 +160,7 @@ In this order:
 6. Move `~/.gitconfig.local` to `~/.gitconfig` and `~/.ssh/config.local` to
    `~/.ssh/config` where no backup went back: once the links are gone,
    nothing reads them.
-7. Remove `~/.config/kitty/tab-title.conf`, which is the setup's, and the
-   clone.
+7. Remove the clone.
 8. Each piece's page ends with its own Leaving, which names what outlives
    the setup too: kitty's saved session, tmux's plugins and saves, zsh's
    history, and Sublime Text's Terminus colour schemes and `"theme"` line.

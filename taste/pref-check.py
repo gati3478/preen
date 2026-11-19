@@ -431,8 +431,8 @@ def read_toml(path, key, **_opts):
 # one directive stream spanning several files rather than a file plus some
 # appendices. Scanning only the named file therefore reports the parent's value
 # for any key an include also sets — and kitty.conf here includes its theme,
-# then tab-title.conf and local.conf, so a single-file read reports the wrong
-# value for every key those files set.
+# then local.conf, so a single-file read reports the wrong value for every key
+# those files set.
 #
 # Every rule below was measured against kitty's own parser rather than inferred
 # from its docs (`kitty +runpy` -> kitty.config.load_config, kitty 0.48.2,
@@ -2777,6 +2777,55 @@ def read_obsidiancap(path, key, accumulate=False, **_opts):
     return value
 
 
+KITTY_TABS_PROBE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "kitty-tabs-probe.py")
+KITTY_APP_BIN = "/Applications/kitty.app/Contents/MacOS/kitty"
+_KITTYTABS = {}
+
+
+def _kittytabs_capture(path):
+    if path in _KITTYTABS:
+        return _KITTYTABS[path]
+    fixture = os.environ.get("KITTYTABS_FIXTURE")
+    if fixture:
+        with open(fixture, encoding="utf-8") as fh:
+            _KITTYTABS[path] = json.load(fh)
+        return _KITTYTABS[path]
+    # `+runpy` only: it execs Python in-process and opens no window. Any other
+    # form of the binary can reach a running kitty: docs/traps.md,
+    # § "Never `kitty @` or `kitten @` from a script".
+    kitty = shutil.which("kitty") or KITTY_APP_BIN
+    proc = _tool_run(
+        [kitty, "+runpy", "import sys; exec(open(sys.argv[-2]).read(), globals())", KITTY_TABS_PROBE, path],
+        timeout=30, stdin=subprocess.DEVNULL,
+    )
+    try:
+        if proc.returncode != 0:
+            raise ValueError
+        _KITTYTABS[path] = json.loads(proc.stdout)
+    except ValueError:
+        tail = (proc.stderr or proc.stdout).strip().splitlines()[-1:] or ["no output"]
+        raise ReadError(f"the drawer did not draw (rc={proc.returncode}): {tail[0][:200]}")
+    return _KITTYTABS[path]
+
+
+def read_kittytabs(path, key, accumulate=False, **_opts):
+    """What kitty's tab bar drawer draws — the end state of a config that is code.
+
+    `path` is the deployed tab_bar.py. One `kitty +runpy` per process runs
+    kitty-tabs-probe.py on it, which draws a fixed set of tabs with kitty's
+    own Screen and the kitty.conf beside the drawer, and answers with the
+    rows of text of each form: `cards`, `panel` and `lines` for a vertical
+    bar, `pills` for a horizontal one. A key is one of those lists; pair it
+    with accumulate and want_any_contain. The probe's opening comment names
+    the tabs. A machine without kitty is a ReadSkip. KITTYTABS_FIXTURE
+    substitutes a recorded answer (tests; CI has no kitty).
+    """
+    value = _kittytabs_capture(path).get(key)
+    if value is None:
+        return None
+    return value if accumulate else "\n".join(value)
+
+
 def _defaults_array(text):
     """A `defaults` array of SCALARS as one comma-joined line, else None.
 
@@ -2936,6 +2985,7 @@ READERS = {
     "ghcfg": read_ghcfg,
     "sshcfg": read_sshcfg,
     "obsidiancap": read_obsidiancap,
+    "kittytabs": read_kittytabs,
     "nanorc": read_nanorc,
     "javaprops": read_javaprops,
     "literalkv": read_literalkv,
@@ -4385,7 +4435,12 @@ LIVE_FORMATS = ("zshcap", "obsidiancap", "defaults", "lshandler", "lsopen", "tmu
 # provable only where the wanted value differs from the application's default —
 # the rest survive, and survive HONESTLY: the file's content really does not
 # decide them. They are reported as survivors, not exempted.
-EMPTY_DOCUMENT = {"jsonc": "{}\n", "idea": "<application/>\n"}
+EMPTY_DOCUMENT = {
+    "jsonc": "{}\n",
+    "idea": "<application/>\n",
+    # A drawer kitty can load and that draws nothing: the bar comes back blank.
+    "kittytabs": "def draw_tab(draw_data, screen, tab, before, max_tab_length, index, is_last, extra_data):\n    return screen.cursor.x\n",
+}
 RESOLVER_FORMATS = ("ghcfg", "sshcfg")
 
 
