@@ -33,8 +33,7 @@ CARD_ROWS = 3
 
 
 class Child:
-    def get_pid_for_cwd(self, oldest=False):
-        return None
+    child_fd = None
 
 
 class Reported:

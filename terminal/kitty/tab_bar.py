@@ -27,7 +27,7 @@
 # same report, so cmd+t opens where the name says.
 #
 # Whose Claude Code session a tab holds is read from CSHIP_ACCOUNT in the
-# environment of the tab's oldest foreground process, a JSON object whose
+# environment of the command the shell started there, a JSON object whose
 # organization_name a launcher sets. It colours the index, gold for the
 # personal account and purple for any other, and draws a strip in that
 # colour: a heavy run of a card's or panel's top edge, an underline beneath a
@@ -123,12 +123,13 @@ def _account_color(tab: TabBarData) -> int:
 
     kitty_tab = _kitty_tab(tab)
     window = kitty_tab.active_window if kitty_tab else None
-    pid = window.child.get_pid_for_cwd(oldest=True) if window else None
-    if pid is None:
-        return INDEX_PLAIN
-    if pid in _account_colors:
-        return _account_colors[pid]
     try:
+        # The foreground group's leader is the command the shell started, and
+        # its pid is the group's id. By pid order a session's helper can come
+        # first once pids wrap, and a helper need not carry the variable.
+        pid = os.tcgetpgrp(window.child.child_fd)
+        if pid in _account_colors:
+            return _account_colors[pid]
         raw = environ_of_process(pid).get(ACCOUNT_VARIABLE)
         color = GOLD if json.loads(raw).get('organization_name') == PERSONAL_ACCOUNT else PURPLE
     except Exception:

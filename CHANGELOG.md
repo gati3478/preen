@@ -5,6 +5,14 @@ from it. A major release moves where or how a file lands, or drops a flag; a
 minor one adds a piece, a row, a flag or a check; a patch changes values,
 fixes and docs.
 
+## v3.0.1
+
+`terminal/kitty/tab_bar.py` reads a tab's `CSHIP_ACCOUNT` from the command
+the shell started there, the foreground group's leader. It had read the
+lowest process id in the group, which becomes a helper process once ids
+wrap, and a helper need not carry the variable: the account colour went
+out on a long-lived session.
+
 ## v3.0.0
 
 kitty's tab bar is drawn by a drawer, `terminal/kitty/tab_bar.py`, which
