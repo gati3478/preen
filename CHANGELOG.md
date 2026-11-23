@@ -5,6 +5,13 @@ from it. A major release moves where or how a file lands, or drops a flag; a
 minor one adds a piece, a row, a flag or a check; a patch changes values,
 fixes and docs.
 
+## v3.0.3
+
+The cursor trail glides on a long jump: `terminal/kitty/kitty.conf` sets
+`cursor_trail_decay 0.3 0.6`. A trail takes the same time however far the
+caret jumps, so under kitty's `0.1 0.4` a jump across a line or between
+tabs flashed. `caret_motion` in `taste/preferences.toml` asserts it.
+
 ## v3.0.2
 
 kitty asks before a close only when it would end a running program:

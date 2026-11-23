@@ -333,7 +333,7 @@ want = "4"
 [pref.caret_motion.targets.kitty_decay]
 target = "kitty"
 key = "cursor_trail_decay"
-want = "0.1 0.4"
+want = "0.3 0.6"
 
 [pref.caret_motion.targets.zed]
 state = "unreachable"
