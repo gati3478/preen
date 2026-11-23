@@ -2260,7 +2260,7 @@ _ROOTSHELL_NEWLINE = re.compile("[\n\v\f\r\x85\N{LINE SEPARATOR}\N{PARAGRAPH SEP
 
 def read_rootshellconf(path, key, accumulate=False, **_opts):
     """rootshell's `rootshell.conf`, Ghostty-style `key = value` lines, read as
-    its config overlay reads them (tag 1.0.15-172: GhosttyConfigParser.parse,
+    its config overlay reads them (tag 1.0.16-181: GhosttyConfigParser.parse,
     then ConfigOverlayCodec.decode).
 
     Two leading BOMs go — Foundation's UTF-8 decode drops one (measured, macOS
@@ -2311,7 +2311,7 @@ def read_rootshellconf(path, key, accumulate=False, **_opts):
     return found[-1] or None
 
 
-# Each key rootshell's prompt reads (PromptConfig.parse, tag 1.0.15-172), by
+# Each key rootshell's prompt reads (PromptConfig.parse, tag 1.0.16-181), by
 # table, with the type it reads it as; "" is the top level.
 _PROMPTRC_KEYS = {
     "": {"format": str, "right_format": str, "add_newline": bool, "palette": str},
@@ -2419,7 +2419,7 @@ def _promptrc_table(root, path):
 
 def read_promptrc(path, key, **_opts):
     """rootshell's `~/.promptrc.toml`, read as its own TOML subset reads it
-    (tag 1.0.15-172: TOMLParser.parse, then PromptConfig.parse). The `toml`
+    (tag 1.0.16-181: TOMLParser.parse, then PromptConfig.parse). The `toml`
     reader does not fit: the subset refuses files TOML takes and takes files
     TOML refuses, and a refused file drops the whole prompt for the built-in
     theme, so a TOML read would go green over a prompt the phone never shows.

@@ -5,6 +5,21 @@ from it. A major release moves where or how a file lands, or drops a flag; a
 minor one adds a piece, a row, a flag or a check; a patch changes values,
 fixes and docs.
 
+## v3.0.2
+
+kitty asks before a close only when it would end a running program:
+`terminal/kitty/kitty.conf` drops `confirm_os_window_close 2`, so kitty's
+default of -1 applies, which counts only the windows shell integration
+does not mark as at a prompt. Closing two idle windows no longer asks;
+closing one running program now does. `close_confirmation` in
+`taste/preferences.toml` asserts it.
+
+The cursor trail's decay is kitty's own, `0.1 0.4`, written out so its row
+reads it; the sweep is a little longer than under `0.08 0.25`.
+
+Evidence in `taste/preferences.toml` and comments in `taste/pref-check.py`
+cite kitty 0.51.1 and rootshell 1.0.16. No reader changes.
+
 ## v3.0.1
 
 `terminal/kitty/tab_bar.py` reads a tab's `CSHIP_ACCOUNT` from the command

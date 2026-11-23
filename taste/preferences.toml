@@ -333,7 +333,7 @@ want = "4"
 [pref.caret_motion.targets.kitty_decay]
 target = "kitty"
 key = "cursor_trail_decay"
-want = "0.08 0.25"
+want = "0.1 0.4"
 
 [pref.caret_motion.targets.zed]
 state = "unreachable"
@@ -1026,7 +1026,7 @@ key = "pane-scrollbars"
 want = "modal"
 
 [pref.session_persistence]
-value = "tabs, layouts and window geometry survive a quit; a logout or restart brings back the scrollback too"
+value = "tabs, layouts and window geometry survive a quit, and a tab's Claude Code session resumes in it; a logout or restart brings back the scrollback too"
 why = "kitty restores tabs and layouts locally; tmux-resurrect does the same over SSH. Local persistence is save-on-quit plus restore-on-launch — both halves, or neither is real. cmd+q's map never runs at a logout, restart or shutdown, so without kitty's own save there a restart restores the last cmd+q save, however old."
 
 [pref.session_persistence.targets.kitty]
@@ -1076,12 +1076,16 @@ key = "@continuum-save-interval"
 want = "10"
 
 [pref.close_confirmation]
-value = "a close that would take two or more windows asks first"
-why = "One window closing is a decision; several at once is more often an accident. At 2 the count includes prompt-idle windows — the layout is part of what would be lost."
+value = "a close that would end a running program asks first; one at a prompt closes"
+why = "What a close can lose is the program — a Claude Code session, a build, an editor. An idle shell holds nothing its directory does not, so asking there trains a reflexive yes."
 
+# kitty's default: a negative count takes only windows not at a prompt, by
+# shell integration's marks (gates / kitty_shell_integration). It reaches
+# close_tab, the close button and quit alike.
 [pref.close_confirmation.targets.kitty]
 key = "confirm_os_window_close"
-want = "2"
+want = "-1"
+unset_reads_default = true
 
 # ── Window chrome ──────────────────────────────────────────────────────────────
 
@@ -1327,13 +1331,13 @@ want_any_contain = "\ue0b61 alpha · shell\ue0b4"
 target = "kitty"
 state = "unreachable"
 recheck = "manual"
-evidence = "kitty draws a vertical bar's tabs from the first and stops at the one that does not fit, each at least one row (update_vertical, tab_bar.py at 0.51.0). A drawer chooses a tab's height, never which tabs are shown, so past one tab per row kitty draws an ellipsis in the last row and the tabs that fit above it."
+evidence = "kitty draws a vertical bar's tabs from the first and stops at the one that does not fit, each at least one row (update_vertical, tab_bar.py at 0.51.1). A drawer chooses a tab's height, never which tabs are shown, so past one tab per row kitty draws an ellipsis in the last row and the tabs that fit above it."
 
 [pref.tab_bar_shape.targets.kitty_second_row]
 target = "kitty"
 state = "unreachable"
 recheck = "manual"
-evidence = "kitty resizes a horizontal bar's screen to one line (layout, tab_bar.py at 0.51.0) and reads tab_title_max_lines for a vertical bar only, so a pill cannot carry the card's second row."
+evidence = "kitty resizes a horizontal bar's screen to one line (layout, tab_bar.py at 0.51.1) and reads tab_title_max_lines for a vertical bar only, so a pill cannot carry the card's second row."
 
 # ── Gates: switches that decide whether a value applies at all ────────────────
 # A row here pins a switch that decides whether a value asserted elsewhere
